@@ -9,8 +9,6 @@
 
 ### Issues
 
-* sometimes when starting playing a video, this is the popup at the bottom saying "something went wrong" though things appear normal.  But when tap on "Report" in the popup, the app crashes.  Logcat reports a runtime exception
-
 * no such issue on my S21 Android 14 device, but on my Android 9 device:
 	* if auto play is set, play from related items only plays audio; unset auto play makes the video to play normally.
 
