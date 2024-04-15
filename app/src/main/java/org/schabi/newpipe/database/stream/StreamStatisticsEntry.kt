@@ -5,7 +5,7 @@ import androidx.room.Embedded
 import org.schabi.newpipe.database.LocalItem
 import org.schabi.newpipe.database.history.model.StreamHistoryEntity
 import org.schabi.newpipe.database.stream.model.StreamEntity
-import org.schabi.newpipe.database.stream.model.StreamStateEntity.STREAM_PROGRESS_MILLIS
+import org.schabi.newpipe.database.stream.model.StreamStateEntity.Companion.STREAM_PROGRESS_MILLIS
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.util.image.ImageStrategy
 import java.time.OffsetDateTime
@@ -22,6 +22,7 @@ class StreamStatisticsEntry(
     @ColumnInfo(name = STREAM_WATCH_COUNT)
     val watchCount: Long,
 ) : LocalItem {
+
     fun toStreamInfoItem(): StreamInfoItem {
         val item = StreamInfoItem(streamEntity.serviceId, streamEntity.url, streamEntity.title, streamEntity.streamType)
         item.duration = streamEntity.duration
@@ -32,9 +33,8 @@ class StreamStatisticsEntry(
         return item
     }
 
-    override fun getLocalItemType(): LocalItem.LocalItemType {
-        return LocalItem.LocalItemType.STATISTIC_STREAM_ITEM
-    }
+    override val localItemType: LocalItem.LocalItemType
+        get() = LocalItem.LocalItemType.STATISTIC_STREAM_ITEM
 
     companion object {
         const val STREAM_LATEST_DATE = "latestAccess"

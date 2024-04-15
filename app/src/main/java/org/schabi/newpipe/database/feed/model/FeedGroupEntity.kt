@@ -19,10 +19,11 @@ data class FeedGroupEntity(
     @ColumnInfo(name = NAME)
     var name: String,
     @ColumnInfo(name = ICON)
-    var icon: FeedGroupIcon,
+    var icon: FeedGroupIcon?,
     @ColumnInfo(name = SORT_ORDER)
     var sortOrder: Long = -1,
 ) {
+    constructor(): this(0L, "", null, -1)
     companion object {
         const val FEED_GROUP_TABLE = "feed_group"
 

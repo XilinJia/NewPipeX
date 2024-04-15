@@ -49,13 +49,11 @@ class FeedGroupDialogViewModel(
 
     private var actionProcessingDisposable: Disposable? = null
 
-    private var feedGroupDisposable =
-        feedDatabaseManager.getGroup(groupId)
-            .subscribeOn(Schedulers.io())
-            .subscribe(mutableGroupLiveData::postValue)
+    private var feedGroupDisposable = feedDatabaseManager.getGroup(groupId)
+        ?.subscribeOn(Schedulers.io())
+        ?.subscribe(mutableGroupLiveData::postValue)
 
-    private var subscriptionsDisposable =
-        Flowable
+    private var subscriptionsDisposable = Flowable
             .combineLatest(
                 subscriptionsFlowable,
                 feedDatabaseManager.subscriptionIdsForGroup(groupId),
@@ -67,7 +65,7 @@ class FeedGroupDialogViewModel(
         super.onCleared()
         actionProcessingDisposable?.dispose()
         subscriptionsDisposable.dispose()
-        feedGroupDisposable.dispose()
+        feedGroupDisposable?.dispose()
     }
 
     fun createGroup(

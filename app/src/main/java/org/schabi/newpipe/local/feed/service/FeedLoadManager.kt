@@ -61,11 +61,7 @@ class FeedLoadManager(private val context: Context) {
         ignoreOutdatedThreshold: Boolean = false,
     ): Single<List<Notification<FeedUpdateInfo>>> {
         val defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
-        val useFeedExtractor =
-            defaultSharedPreferences.getBoolean(
-                context.getString(R.string.feed_use_dedicated_fetch_method_key),
-                false,
-            )
+        val useFeedExtractor = defaultSharedPreferences.getBoolean(context.getString(R.string.feed_use_dedicated_fetch_method_key), false)
 
         val outdatedThreshold =
             if (ignoreOutdatedThreshold) {
@@ -87,16 +83,13 @@ class FeedLoadManager(private val context: Context) {
         val outdatedSubscriptions =
             when (groupId) {
                 FeedGroupEntity.GROUP_ALL_ID ->
-                    feedDatabaseManager.outdatedSubscriptions(
-                        outdatedThreshold,
-                    )
+                    feedDatabaseManager.outdatedSubscriptions(outdatedThreshold)
                 GROUP_NOTIFICATION_ENABLED ->
-                    feedDatabaseManager.outdatedSubscriptionsWithNotificationMode(
-                        outdatedThreshold,
-                        NotificationMode.ENABLED,
-                    )
+                    feedDatabaseManager.outdatedSubscriptionsWithNotificationMode(outdatedThreshold, NotificationMode.ENABLED)
                 else -> feedDatabaseManager.outdatedSubscriptionsForGroup(groupId, outdatedThreshold)
             }
+
+        if (outdatedSubscriptions == null) return Single.just(emptyList())
 
         return outdatedSubscriptions
             .take(1)
@@ -179,52 +172,47 @@ class FeedLoadManager(private val context: Context) {
                 // the current service does not have a dedicated feed extractor
 
                 val channelInfo =
-                    getChannelInfo(
-                        subscriptionEntity.serviceId,
-                        subscriptionEntity.url,
-                        true,
-                    )
+                    getChannelInfo(subscriptionEntity.serviceId, subscriptionEntity.url?:"", true)
                         .onErrorReturn(storeOriginalErrorAndRethrow)
                         .blockingGet()
                 errors.addAll(channelInfo.errors)
                 originalInfo = channelInfo
 
-                streams =
-                    channelInfo.tabs
-                        .filter { tab ->
-                            ChannelTabHelper.fetchFeedChannelTab(
-                                context,
-                                defaultSharedPreferences,
-                                tab,
-                            )
-                        }
-                        .map {
-                            Pair(
-                                getChannelTab(subscriptionEntity.serviceId, it, true)
-                                    .onErrorReturn(storeOriginalErrorAndRethrow)
-                                    .blockingGet(),
-                                it,
-                            )
-                        }
-                        .flatMap { (channelTabInfo, linkHandler) ->
-                            errors.addAll(channelTabInfo.errors)
-                            if (channelTabInfo.relatedItems.isEmpty() &&
+                streams = channelInfo.tabs
+                    .filter { tab ->
+                        ChannelTabHelper.fetchFeedChannelTab(
+                            context,
+                            defaultSharedPreferences,
+                            tab,
+                        )
+                    }
+                    .map {
+                        Pair(
+                            getChannelTab(subscriptionEntity.serviceId, it, true)
+                                .onErrorReturn(storeOriginalErrorAndRethrow)
+                                .blockingGet(),
+                            it,
+                        )
+                    }
+                    .flatMap { (channelTabInfo, linkHandler) ->
+                        errors.addAll(channelTabInfo.errors)
+                        if (channelTabInfo.relatedItems.isEmpty() &&
                                 channelTabInfo.nextPage != null
-                            ) {
-                                val infoItemsPage =
-                                    getMoreChannelTabItems(
-                                        subscriptionEntity.serviceId,
-                                        linkHandler, channelTabInfo.nextPage,
-                                    )
-                                        .blockingGet()
+                        ) {
+                            val infoItemsPage =
+                                getMoreChannelTabItems(
+                                    subscriptionEntity.serviceId,
+                                    linkHandler, channelTabInfo.nextPage,
+                                )
+                                    .blockingGet()
 
-                                errors.addAll(infoItemsPage.errors)
-                                return@flatMap infoItemsPage.items
-                            } else {
-                                return@flatMap channelTabInfo.relatedItems
-                            }
+                            errors.addAll(infoItemsPage.errors)
+                            return@flatMap infoItemsPage.items
+                        } else {
+                            return@flatMap channelTabInfo.relatedItems
                         }
-                        .filterIsInstance<StreamInfoItem>()
+                    }
+                    .filterIsInstance<StreamInfoItem>()
             }
 
             return Notification.createOnNext(

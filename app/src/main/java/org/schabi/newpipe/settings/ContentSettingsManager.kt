@@ -2,7 +2,7 @@ package org.schabi.newpipe.settings
 
 import android.content.SharedPreferences
 import android.util.Log
-import org.schabi.newpipe.MainActivity.DEBUG
+import org.schabi.newpipe.MainActivity.Companion.DEBUG
 import org.schabi.newpipe.streams.io.SharpOutputStream
 import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.util.ZipHelper

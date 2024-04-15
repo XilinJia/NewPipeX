@@ -19,24 +19,23 @@
 
 package org.schabi.newpipe.local.feed.service
 
+import android.Manifest
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.app.PendingIntentCompat
-import androidx.core.app.ServiceCompat
+import androidx.core.app.*
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.functions.Function
 import org.schabi.newpipe.App
-import org.schabi.newpipe.MainActivity.DEBUG
+import org.schabi.newpipe.MainActivity.Companion.DEBUG
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
 import java.util.concurrent.TimeUnit
@@ -190,6 +189,17 @@ class FeedLoadService : Service() {
             }
         }
 
+        if (ActivityCompat.checkSelfPermission(this,
+                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 

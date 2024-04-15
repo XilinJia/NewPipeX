@@ -15,7 +15,7 @@ import org.schabi.newpipe.local.subscription.FeedGroupIcon
 data class FeedGroupReorderItem(
     val groupId: Long = FeedGroupEntity.GROUP_ALL_ID,
     val name: String,
-    val icon: FeedGroupIcon,
+    val icon: FeedGroupIcon?,
     val dragCallback: ItemTouchHelper,
 ) : BindableItem<FeedGroupReorderItemBinding>() {
     constructor (feedGroupEntity: FeedGroupEntity, dragCallback: ItemTouchHelper) :
@@ -35,7 +35,7 @@ data class FeedGroupReorderItem(
         position: Int,
     ) {
         viewBinding.groupName.text = name
-        viewBinding.groupIcon.setImageResource(icon.getDrawableRes())
+        if (icon != null) viewBinding.groupIcon.setImageResource(icon.getDrawableRes())
     }
 
     override fun bind(

@@ -29,6 +29,8 @@ data class FeedLastUpdatedEntity(
     @ColumnInfo(name = LAST_UPDATED)
     var lastUpdated: OffsetDateTime? = null,
 ) {
+
+    constructor(): this(0L)
     companion object {
         const val FEED_LAST_UPDATED_TABLE = "feed_last_updated"
 

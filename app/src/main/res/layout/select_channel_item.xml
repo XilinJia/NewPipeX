@@ -21,6 +21,7 @@
         android:layout_marginRight="8dp"
         android:src="@drawable/placeholder_person"
         app:shapeAppearance="@style/CircularImageView"
+        app:strokeColor="@null"
         tools:ignore="RtlHardcoded" />
 
     <org.schabi.newpipe.views.NewPipeTextView

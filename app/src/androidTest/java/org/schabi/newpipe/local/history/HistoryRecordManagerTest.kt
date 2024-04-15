@@ -40,7 +40,7 @@ class HistoryRecordManagerTest {
         // For some reason the Flowable returned by getAll() never completes, so we can't assert
         // that the number of Lists it returns is exactly 1, we can only check if the first List is
         // correct. Why on earth has a Flowable been used instead of a Single for getAll()?!?
-        val entities = database.searchHistoryDAO().all.blockingFirst()
+        val entities = database.searchHistoryDAO().getAll().blockingFirst()
         assertThat(entities).hasSize(1)
         assertThat(entities[0].id).isEqualTo(1)
         assertThat(entities[0].serviceId).isEqualTo(0)
@@ -59,25 +59,25 @@ class HistoryRecordManagerTest {
 
         // make sure all 4 were inserted
         database.searchHistoryDAO().insertAll(entries)
-        assertThat(database.searchHistoryDAO().all.blockingFirst()).hasSameSizeAs(entries)
+        assertThat(database.searchHistoryDAO().getAll().blockingFirst()).hasSameSizeAs(entries)
 
         // try to delete only "A" entries, "B" entries should be untouched
         manager.deleteSearchHistory("A").test().await().assertValue(2)
-        val entities = database.searchHistoryDAO().all.blockingFirst()
+        val entities = database.searchHistoryDAO().getAll().blockingFirst()
         assertThat(entities).hasSize(2)
         assertThat(entities).usingElementComparator { o1, o2 -> if (o1.hasEqualValues(o2)) 0 else 1 }
             .containsExactly(*entries.subList(2, 4).toTypedArray())
 
         // assert that nothing happens if we delete a search query that does exist in the db
         manager.deleteSearchHistory("A").test().await().assertValue(0)
-        val entities2 = database.searchHistoryDAO().all.blockingFirst()
+        val entities2 = database.searchHistoryDAO().getAll().blockingFirst()
         assertThat(entities2).hasSize(2)
         assertThat(entities2).usingElementComparator { o1, o2 -> if (o1.hasEqualValues(o2)) 0 else 1 }
             .containsExactly(*entries.subList(2, 4).toTypedArray())
 
         // delete all remaining entries
         manager.deleteSearchHistory("B").test().await().assertValue(2)
-        assertThat(database.searchHistoryDAO().all.blockingFirst()).isEmpty()
+        assertThat(database.searchHistoryDAO().getAll().blockingFirst()).isEmpty()
     }
 
     @Test
@@ -91,11 +91,11 @@ class HistoryRecordManagerTest {
 
         // make sure all 3 were inserted
         database.searchHistoryDAO().insertAll(entries)
-        assertThat(database.searchHistoryDAO().all.blockingFirst()).hasSameSizeAs(entries)
+        assertThat(database.searchHistoryDAO().getAll().blockingFirst()).hasSameSizeAs(entries)
 
         // should remove everything
         manager.deleteCompleteSearchHistory().test().await().assertValue(entries.size)
-        assertThat(database.searchHistoryDAO().all.blockingFirst()).isEmpty()
+        assertThat(database.searchHistoryDAO().getAll().blockingFirst()).isEmpty()
     }
 
     private fun insertShuffledRelatedSearches(relatedSearches: Collection<SearchHistoryEntry>) {
@@ -107,7 +107,7 @@ class HistoryRecordManagerTest {
         // make sure all entries were inserted
         assertEquals(
             relatedSearches.size,
-            database.searchHistoryDAO().all.blockingFirst().size,
+            database.searchHistoryDAO().getAll().blockingFirst().size,
         )
     }
 

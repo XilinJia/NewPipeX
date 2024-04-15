@@ -39,6 +39,9 @@ data class FeedEntity(
     @ColumnInfo(name = SUBSCRIPTION_ID)
     var subscriptionId: Long,
 ) {
+
+    constructor(): this(0L, 0L)
+
     companion object {
         const val FEED_TABLE = "feed"
 

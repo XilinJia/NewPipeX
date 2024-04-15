@@ -7,7 +7,8 @@ import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Maybe
 import io.reactivex.rxjava3.schedulers.Schedulers
-import org.schabi.newpipe.MainActivity.DEBUG
+import org.schabi.newpipe.MainActivity.Companion.DEBUG
+//import org.schabi.newpipe.MainActivity.DEBUG
 import org.schabi.newpipe.NewPipeDatabase
 import org.schabi.newpipe.database.feed.model.FeedEntity
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
@@ -33,8 +34,7 @@ class FeedDatabaseManager(context: Context) {
          * Only items that are newer than this will be saved.
          */
         val FEED_OLDEST_ALLOWED_DATE: OffsetDateTime =
-            LocalDate.now().minusWeeks(13)
-                .atStartOfDay().atOffset(ZoneOffset.UTC)
+            LocalDate.now().minusWeeks(13).atStartOfDay().atOffset(ZoneOffset.UTC)
     }
 
     fun groups() = feedGroupTable.getAll()
@@ -46,8 +46,8 @@ class FeedDatabaseManager(context: Context) {
         includePlayedStreams: Boolean,
         includePartiallyPlayedStreams: Boolean,
         includeFutureStreams: Boolean,
-    ): Maybe<List<StreamWithState>> {
-        return feedTable.getStreams(
+    ): Maybe<List<StreamWithState>>? {
+        return feedTable?.getStreams(
             groupId,
             includePlayedStreams,
             includePartiallyPlayedStreams,
@@ -55,14 +55,15 @@ class FeedDatabaseManager(context: Context) {
         )
     }
 
-    fun outdatedSubscriptions(outdatedThreshold: OffsetDateTime) = feedTable.getAllOutdated(outdatedThreshold)
+    fun outdatedSubscriptions(outdatedThreshold: OffsetDateTime) = feedTable?.getAllOutdated(outdatedThreshold)
 
     fun outdatedSubscriptionsWithNotificationMode(
         outdatedThreshold: OffsetDateTime,
         @NotificationMode notificationMode: Int,
-    ) = feedTable.getOutdatedWithNotificationMode(outdatedThreshold, notificationMode)
+    ) = feedTable?.getOutdatedWithNotificationMode(outdatedThreshold, notificationMode)
 
     fun notLoadedCount(groupId: Long = FeedGroupEntity.GROUP_ALL_ID): Flowable<Long> {
+        if (feedTable == null) return Flowable.empty()
         return when (groupId) {
             FeedGroupEntity.GROUP_ALL_ID -> feedTable.notLoadedCount()
             else -> feedTable.notLoadedCountForGroup(groupId)
@@ -72,14 +73,13 @@ class FeedDatabaseManager(context: Context) {
     fun outdatedSubscriptionsForGroup(
         groupId: Long = FeedGroupEntity.GROUP_ALL_ID,
         outdatedThreshold: OffsetDateTime,
-    ) = feedTable.getAllOutdatedForGroup(groupId, outdatedThreshold)
+    ) = feedTable?.getAllOutdatedForGroup(groupId, outdatedThreshold)
 
     fun markAsOutdated(subscriptionId: Long) =
-        feedTable
-            .setLastUpdatedForSubscription(FeedLastUpdatedEntity(subscriptionId, null))
+        feedTable?.setLastUpdatedForSubscription(FeedLastUpdatedEntity(subscriptionId, null))
 
     fun doesStreamExist(stream: StreamInfoItem): Boolean {
-        return streamTable.exists(stream.serviceId, stream.url)
+        return streamTable?.exists(stream.serviceId, stream.url)?: false
     }
 
     fun upsertAll(
@@ -99,29 +99,29 @@ class FeedDatabaseManager(context: Context) {
                 }
         }
 
-        feedTable.unlinkOldLivestreams(subscriptionId)
+        feedTable?.unlinkOldLivestreams(subscriptionId)
 
         if (itemsToInsert.isNotEmpty()) {
             val streamEntities = itemsToInsert.map { StreamEntity(it) }
-            val streamIds = streamTable.upsertAll(streamEntities)
+            val streamIds = streamTable?.upsertAll(streamEntities)?: listOf()
             val feedEntities = streamIds.map { FeedEntity(it, subscriptionId) }
 
-            feedTable.insertAll(feedEntities)
+            feedTable?.insertAll(feedEntities)
         }
 
-        feedTable.setLastUpdatedForSubscription(
+        feedTable?.setLastUpdatedForSubscription(
             FeedLastUpdatedEntity(subscriptionId, OffsetDateTime.now(ZoneOffset.UTC)),
         )
     }
 
     fun removeOrphansOrOlderStreams(oldestAllowedDate: OffsetDateTime = FEED_OLDEST_ALLOWED_DATE) {
-        feedTable.unlinkStreamsOlderThan(oldestAllowedDate)
-        streamTable.deleteOrphans()
+        feedTable?.unlinkStreamsOlderThan(oldestAllowedDate)
+        streamTable?.deleteOrphans()
     }
 
     fun clear() {
-        feedTable.deleteAll()
-        val deletedOrphans = streamTable.deleteOrphans()
+        feedTable?.deleteAll()
+        val deletedOrphans = streamTable?.deleteOrphans()?:0
         if (DEBUG) {
             Log.d(
                 this::class.java.simpleName,
@@ -187,6 +187,7 @@ class FeedDatabaseManager(context: Context) {
     }
 
     fun oldestSubscriptionUpdate(groupId: Long): Flowable<List<OffsetDateTime>> {
+        if (feedTable == null) return Flowable.empty()
         return when (groupId) {
             FeedGroupEntity.GROUP_ALL_ID -> feedTable.oldestSubscriptionUpdateFromAll()
             else -> feedTable.oldestSubscriptionUpdate(groupId)

@@ -1,5 +1,6 @@
 package org.schabi.newpipe.local.subscription
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.DialogInterface
@@ -18,6 +19,7 @@ import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import com.xwray.groupie.Group
@@ -51,9 +53,12 @@ import org.schabi.newpipe.local.subscription.item.Header
 import org.schabi.newpipe.local.subscription.item.ImportSubscriptionsHintPlaceholderItem
 import org.schabi.newpipe.local.subscription.services.SubscriptionsExportService
 import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService
-import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.KEY_MODE
-import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.KEY_VALUE
-import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.PREVIOUS_EXPORT_MODE
+import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.Companion.KEY_MODE
+import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.Companion.KEY_VALUE
+import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.Companion.PREVIOUS_EXPORT_MODE
+//import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.KEY_MODE
+//import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.KEY_VALUE
+//import org.schabi.newpipe.local.subscription.services.SubscriptionsImportService.PREVIOUS_EXPORT_MODE
 import org.schabi.newpipe.streams.io.NoFileManagerSafeGuard
 import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.util.NavigationHelper
@@ -79,10 +84,8 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     private lateinit var feedGroupsSortMenuItem: GroupsHeader
     private val subscriptionsSection = Section()
 
-    private val requestExportLauncher =
-        registerForActivityResult(StartActivityForResult(), this::requestExportResult)
-    private val requestImportLauncher =
-        registerForActivityResult(StartActivityForResult(), this::requestImportResult)
+    private val requestExportLauncher = registerForActivityResult(StartActivityForResult(), this::requestExportResult)
+    private val requestImportLauncher = registerForActivityResult(StartActivityForResult(), this::requestImportResult)
 
     @State
     @JvmField
@@ -91,6 +94,8 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     @State
     @JvmField
     var feedGroupsCarouselState: Parcelable? = null
+
+    lateinit var fm: FragmentManager
 
     init {
         setHasOptionsMenu(true)
@@ -110,6 +115,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         container: ViewGroup?,
         savedInstanceState: Bundle?,
     ): View? {
+        fm = requireActivity().supportFragmentManager
         return inflater.inflate(R.layout.fragment_subscription, container, false)
     }
 
@@ -133,14 +139,15 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     // Menu
     // ////////////////////////////////////////////////////////////////////////
 
+    @SuppressLint("UseRequireInsteadOfGet")
     override fun onCreateOptionsMenu(
         menu: Menu,
         inflater: MenuInflater,
     ) {
         super.onCreateOptionsMenu(menu, inflater)
 
-        activity.supportActionBar?.setDisplayShowTitleEnabled(true)
-        activity.supportActionBar?.setTitle(R.string.tab_subscriptions)
+        activity!!.supportActionBar?.setDisplayShowTitleEnabled(true)
+        activity!!.supportActionBar?.setTitle(R.string.tab_subscriptions)
 
         buildImportExportMenu(menu)
     }
@@ -206,7 +213,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     private fun onImportPreviousSelected() {
         NoFileManagerSafeGuard.launchSafe(
             requestImportLauncher,
-            StoredFileHelper.getPicker(activity, JSON_MIME_TYPE),
+            StoredFileHelper.getPicker(requireContext(), JSON_MIME_TYPE),
             TAG,
             requireContext(),
         )
@@ -218,7 +225,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
 
         NoFileManagerSafeGuard.launchSafe(
             requestExportLauncher,
-            StoredFileHelper.getNewPicker(activity, exportName, JSON_MIME_TYPE, null),
+            StoredFileHelper.getNewPicker(requireActivity(), exportName, JSON_MIME_TYPE, null),
             TAG,
             requireContext(),
         )
@@ -228,9 +235,10 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         FeedGroupReorderDialog().show(parentFragmentManager, null)
     }
 
+    @SuppressLint("UseRequireInsteadOfGet")
     private fun requestExportResult(result: ActivityResult) {
         if (result.data != null && result.resultCode == Activity.RESULT_OK) {
-            activity.startService(
+            activity!!.startService(
                 Intent(activity, SubscriptionsExportService::class.java)
                     .putExtra(SubscriptionsExportService.KEY_FILE_PATH, result.data?.data),
             )
@@ -252,14 +260,11 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     // Fragment Views
     // ////////////////////////////////////////////////////////////////////////
 
-    override fun initViews(
-        rootView: View,
-        savedInstanceState: Bundle?,
-    ) {
+    override fun initViews(rootView: View, savedInstanceState: Bundle?) {
         super.initViews(rootView, savedInstanceState)
         _binding = FragmentSubscriptionBinding.bind(rootView)
 
-        groupAdapter.spanCount = if (SubscriptionViewModel.shouldUseGridForSubscription(requireContext())) getGridSpanCountChannels(context) else 1
+        groupAdapter.spanCount = if (SubscriptionViewModel.shouldUseGridForSubscription(requireContext())) getGridSpanCountChannels(requireContext()) else 1
         binding.itemsList.layoutManager =
             GridLayoutManager(requireContext(), groupAdapter.spanCount).apply {
                 spanSizeLookup = groupAdapter.spanSizeLookup

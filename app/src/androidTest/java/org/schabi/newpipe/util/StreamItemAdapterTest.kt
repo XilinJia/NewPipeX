@@ -11,6 +11,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.internal.runner.junit4.statement.UiThreadStatement
+import com.google.android.exoplayer2.audio.AudioProcessor
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -282,16 +283,23 @@ class StreamItemAdapterTest {
     private fun getAudioStreams(vararg shouldBeValid: Boolean) =
         getSecondaryStreamsFromList(
             shouldBeValid.map {
-                if (it) {
-                    AudioStream.Builder()
-                        .setId(Stream.ID_UNKNOWN)
-                        .setContent("https://example.com", true)
-                        .setMediaFormat(MediaFormat.OPUS)
-                        .setAverageBitrate(192)
-                        .build()
-                } else {
-                    null
-                }
+//                if (it) {
+//                    AudioStream.Builder()
+//                        .setId(Stream.ID_UNKNOWN)
+//                        .setContent("https://example.com", true)
+//                        .setMediaFormat(MediaFormat.OPUS)
+//                        .setAverageBitrate(192)
+//                        .build()
+//                } else {
+//                    null
+//                }
+//                TODO:
+                AudioStream.Builder()
+                    .setId(Stream.ID_UNKNOWN)
+                    .setContent("https://example.com", true)
+                    .setMediaFormat(MediaFormat.OPUS)
+                    .setAverageBitrate(192)
+                    .build()
             },
         )
 
@@ -338,15 +346,13 @@ class StreamItemAdapterTest {
     /**
      * Helper function that builds a secondary stream list.
      */
-    private fun <T : Stream> getSecondaryStreamsFromList(streams: List<T?>) =
-        SparseArrayCompat<SecondaryStreamHelper<T>?>(streams.size).apply {
+    private fun <T : Stream> getSecondaryStreamsFromList(streams: List<T>) =
+        SparseArrayCompat<SecondaryStreamHelper<T>>(streams.size).apply {
             streams.forEachIndexed { index, stream ->
                 val secondaryStreamHelper: SecondaryStreamHelper<T>? =
                     stream?.let {
-                        SecondaryStreamHelper(
-                            StreamItemAdapter.StreamInfoWrapper(streams, context),
-                            it,
-                        )
+                        val param = StreamInfoWrapper(streams, context)
+                        SecondaryStreamHelper(param, it)
                     }
                 put(index, secondaryStreamHelper)
             }

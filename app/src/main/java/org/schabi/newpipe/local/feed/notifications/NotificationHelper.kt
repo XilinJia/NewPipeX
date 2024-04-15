@@ -1,15 +1,18 @@
 package org.schabi.newpipe.local.feed.notifications
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PendingIntentCompat
@@ -99,6 +102,17 @@ class NotificationHelper(val context: Context) {
                     // one
                     showStreamNotifications(newStreams, data.serviceId, bitmap)
                     // Show summary notification
+                    if (ActivityCompat.checkSelfPermission(context,
+                                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return
+                    }
                     manager.notify(data.pseudoId, summaryBuilder.build())
 
                     iconLoadingTargets.remove(this) // allow it to be garbage-collected
@@ -111,6 +125,17 @@ class NotificationHelper(val context: Context) {
                     // Show individual stream notifications
                     showStreamNotifications(newStreams, data.serviceId, null)
                     // Show summary notification
+                    if (ActivityCompat.checkSelfPermission(context,
+                                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return
+                    }
                     manager.notify(data.pseudoId, summaryBuilder.build())
                     iconLoadingTargets.remove(this) // allow it to be garbage-collected
                 }
@@ -134,6 +159,17 @@ class NotificationHelper(val context: Context) {
     ) {
         for (stream in newStreams) {
             val notification = createStreamNotification(stream, serviceId, channelIcon)
+            if (ActivityCompat.checkSelfPermission(context,
+                        Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return
+            }
             manager.notify(stream.url.hashCode(), notification)
         }
     }

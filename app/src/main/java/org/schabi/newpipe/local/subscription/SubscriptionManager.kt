@@ -27,7 +27,7 @@ class SubscriptionManager(context: Context) {
 
     fun subscriptionTable(): SubscriptionDAO = subscriptionTable
 
-    fun subscriptions() = subscriptionTable.all
+    fun subscriptions() = subscriptionTable.getAll()
 
     fun getSubscriptions(
         currentGroupId: Long = FeedGroupEntity.GROUP_ALL_ID,
@@ -46,15 +46,12 @@ class SubscriptionManager(context: Context) {
                 }
             }
             showOnlyUngrouped -> subscriptionTable.getSubscriptionsOnlyUngrouped(currentGroupId)
-            else -> subscriptionTable.all
+            else -> subscriptionTable.getAll()
         }
     }
 
     fun upsertAll(infoList: List<Pair<ChannelInfo, List<ChannelTabInfo>>>): List<SubscriptionEntity> {
-        val listEntities =
-            subscriptionTable.upsertAll(
-                infoList.map { SubscriptionEntity.from(it.first) },
-            )
+        val listEntities = subscriptionTable.upsertAll(infoList.map { SubscriptionEntity.from(it.first) }, )
 
         database.runInTransaction {
             infoList.forEachIndexed { index, info ->
@@ -139,9 +136,8 @@ class SubscriptionManager(context: Context) {
      * about any one of them.
      */
     private fun rememberAllStreams(subscription: SubscriptionEntity): Completable {
-        return ExtractorHelper.getChannelInfo(subscription.serviceId, subscription.url, false)
-            .flatMap { info ->
-                ExtractorHelper.getChannelTab(subscription.serviceId, info.tabs.first(), false)
+        return ExtractorHelper.getChannelInfo(subscription.serviceId, subscription.url?:"", false)
+            .flatMap { info -> ExtractorHelper.getChannelTab(subscription.serviceId, info.tabs.first(), false)
             }
             .map { channel -> channel.relatedItems.filterIsInstance<StreamInfoItem>().map { stream -> StreamEntity(stream) } }
             .flatMapCompletable { entities ->

@@ -58,38 +58,35 @@ class FeedViewModel(
     private val mutableStateLiveData = MutableLiveData<FeedState>()
     val stateLiveData: LiveData<FeedState> = mutableStateLiveData
 
-    private var combineDisposable =
-        Flowable
-            .combineLatest(
-                FeedEventManager.events(),
-                showPlayedItemsFlowable,
-                showPartiallyPlayedItemsFlowable,
-                showFutureItemsFlowable,
-                feedDatabaseManager.notLoadedCount(groupId),
-                feedDatabaseManager.oldestSubscriptionUpdate(groupId),
-                Function6 {
-                        t1: FeedEventManager.Event,
-                        t2: Boolean,
-                        t3: Boolean,
-                        t4: Boolean,
-                        t5: Long,
-                        t6: List<OffsetDateTime>,
-                    ->
-                    return@Function6 CombineResultEventHolder(t1, t2, t3, t4, t5, t6.firstOrNull())
-                },
-            )
+    private var combineDisposable = Flowable
+        .combineLatest(
+            FeedEventManager.events(),
+            showPlayedItemsFlowable,
+            showPartiallyPlayedItemsFlowable,
+            showFutureItemsFlowable,
+            feedDatabaseManager.notLoadedCount(groupId),
+            feedDatabaseManager.oldestSubscriptionUpdate(groupId),
+            Function6 {
+                    t1: FeedEventManager.Event,
+                    t2: Boolean,
+                    t3: Boolean,
+                    t4: Boolean,
+                    t5: Long,
+                    t6: List<OffsetDateTime>,
+                ->
+                return@Function6 CombineResultEventHolder(t1, t2, t3, t4, t5, t6.firstOrNull())
+            },
+        )
             .throttleLatest(DEFAULT_THROTTLE_TIMEOUT, TimeUnit.MILLISECONDS)
             .subscribeOn(Schedulers.io())
             .observeOn(Schedulers.io())
             .map { (event, showPlayedItems, showPartiallyPlayedItems, showFutureItems, notLoadedCount, oldestUpdate) ->
-                val streamItems =
-                    if (event is SuccessResultEvent || event is IdleEvent) {
-                        feedDatabaseManager
-                            .getStreams(groupId, showPlayedItems, showPartiallyPlayedItems, showFutureItems)
-                            .blockingGet(arrayListOf())
-                    } else {
-                        arrayListOf()
-                    }
+                val streamItems = if (event is SuccessResultEvent || event is IdleEvent) {
+                    feedDatabaseManager.getStreams(groupId, showPlayedItems, showPartiallyPlayedItems, showFutureItems)
+                        ?.blockingGet(arrayListOf()) ?: arrayListOf()
+                } else {
+                    arrayListOf()
+                }
 
                 CombineResultDataHolder(event, streamItems, notLoadedCount, oldestUpdate)
             }

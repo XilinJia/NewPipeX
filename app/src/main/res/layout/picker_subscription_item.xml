@@ -22,6 +22,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             app:shapeAppearance="@style/CircularImageView"
+            app:strokeColor="@null"
             tools:src="@drawable/placeholder_person" />
 
         <org.schabi.newpipe.views.NewPipeTextView

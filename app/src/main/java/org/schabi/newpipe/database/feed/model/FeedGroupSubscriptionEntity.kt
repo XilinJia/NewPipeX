@@ -39,6 +39,8 @@ data class FeedGroupSubscriptionEntity(
     @ColumnInfo(name = SUBSCRIPTION_ID)
     var subscriptionId: Long,
 ) {
+
+    constructor(): this(0L, 0L)
     companion object {
         const val FEED_GROUP_SUBSCRIPTION_TABLE = "feed_group_subscription_join"
 

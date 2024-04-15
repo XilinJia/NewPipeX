@@ -20,6 +20,7 @@
         android:focusable="false"
         android:src="@drawable/placeholder_person"
         app:shapeAppearance="@style/CircularImageView"
+        app:strokeColor="@null"
         tools:ignore="RtlHardcoded" />
 
     <ImageView

@@ -1,18 +1,23 @@
 package org.schabi.newpipe.error
 
+import android.Manifest
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PendingIntentCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import org.schabi.newpipe.R
+import java.lang.Exception
 
 /**
  * This class contains all of the methods that should be used to let the user know that an error has
@@ -39,10 +44,7 @@ class ErrorUtil {
          * @param errorInfo the error info to be reported
          */
         @JvmStatic
-        fun openActivity(
-            context: Context,
-            errorInfo: ErrorInfo,
-        ) {
+        fun openActivity(context: Context, errorInfo: ErrorInfo) {
             context.startActivity(getErrorActivityIntent(context, errorInfo))
         }
 
@@ -56,10 +58,7 @@ class ErrorUtil {
          * @param errorInfo the error info to be reported
          */
         @JvmStatic
-        fun showSnackbar(
-            context: Context,
-            errorInfo: ErrorInfo,
-        ) {
+        fun showSnackbar(context: Context, errorInfo: ErrorInfo) {
             val rootView = if (context is Activity) context.findViewById<View>(R.id.content) else null
             showSnackbar(context, rootView, errorInfo)
         }
@@ -74,10 +73,7 @@ class ErrorUtil {
          * @param errorInfo the error info to be reported
          */
         @JvmStatic
-        fun showSnackbar(
-            fragment: Fragment,
-            errorInfo: ErrorInfo,
-        ) {
+        fun showSnackbar(fragment: Fragment, errorInfo: ErrorInfo) {
             var rootView = fragment.view
             if (rootView == null && fragment.activity != null) {
                 rootView = fragment.requireActivity().findViewById(R.id.content)
@@ -89,11 +85,7 @@ class ErrorUtil {
          * Shortcut to calling [showSnackbar] with an [ErrorInfo] of type [UserAction.UI_ERROR]
          */
         @JvmStatic
-        fun showUiErrorSnackbar(
-            context: Context,
-            request: String,
-            throwable: Throwable,
-        ) {
+        fun showUiErrorSnackbar(context: Context, request: String, throwable: Throwable) {
             showSnackbar(context, ErrorInfo(throwable, UserAction.UI_ERROR, request))
         }
 
@@ -101,11 +93,7 @@ class ErrorUtil {
          * Shortcut to calling [showSnackbar] with an [ErrorInfo] of type [UserAction.UI_ERROR]
          */
         @JvmStatic
-        fun showUiErrorSnackbar(
-            fragment: Fragment,
-            request: String,
-            throwable: Throwable,
-        ) {
+        fun showUiErrorSnackbar(fragment: Fragment, request: String, throwable: Throwable) {
             showSnackbar(fragment, ErrorInfo(throwable, UserAction.UI_ERROR, request))
         }
 
@@ -120,15 +108,9 @@ class ErrorUtil {
          *                  description
          */
         @JvmStatic
-        fun createNotification(
-            context: Context,
-            errorInfo: ErrorInfo,
-        ) {
+        fun createNotification(context: Context, errorInfo: ErrorInfo) {
             val notificationBuilder: NotificationCompat.Builder =
-                NotificationCompat.Builder(
-                    context,
-                    context.getString(R.string.error_report_channel_id),
-                )
+                NotificationCompat.Builder(context, context.getString(R.string.error_report_channel_id))
                     .setSmallIcon(R.drawable.ic_bug_report)
                     .setContentTitle(context.getString(R.string.error_report_notification_title))
                     .setContentText(context.getString(errorInfo.messageStringId))
@@ -143,6 +125,17 @@ class ErrorUtil {
                         ),
                     )
 
+            if (ActivityCompat.checkSelfPermission(context,
+                        Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return
+            }
             NotificationManagerCompat.from(context)
                 .notify(ERROR_REPORT_NOTIFICATION_ID, notificationBuilder.build())
 
@@ -151,10 +144,7 @@ class ErrorUtil {
                 .show()
         }
 
-        private fun getErrorActivityIntent(
-            context: Context,
-            errorInfo: ErrorInfo,
-        ): Intent {
+        private fun getErrorActivityIntent(context: Context, errorInfo: ErrorInfo): Intent {
             val intent = Intent(context, ErrorActivity::class.java)
             intent.putExtra(ErrorActivity.ERROR_INFO, errorInfo)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -166,15 +156,20 @@ class ErrorUtil {
             rootView: View?,
             errorInfo: ErrorInfo,
         ) {
+            Log.d("ErrorUtil", "${errorInfo}}")
             if (rootView == null) {
                 // fallback to showing a notification if no root view is available
                 createNotification(context, errorInfo)
             } else {
-                Snackbar.make(rootView, R.string.error_snackbar_message, Snackbar.LENGTH_LONG)
-                    .setActionTextColor(Color.YELLOW)
-                    .setAction(context.getString(R.string.error_snackbar_action).uppercase()) {
-                        openActivity(context, errorInfo)
-                    }.show()
+                try {
+                    Snackbar.make(rootView, R.string.error_snackbar_message, Snackbar.LENGTH_LONG)
+                        .setActionTextColor(Color.YELLOW)
+                        .setAction(context.getString(R.string.error_snackbar_action).uppercase()) {
+                            openActivity(context, errorInfo)
+                        }.show()
+                } catch (e: RuntimeException) {
+                    Log.e("ErrorUtil", "${errorInfo}}")
+                }
             }
         }
     }

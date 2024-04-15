@@ -18,6 +18,9 @@ data class SearchHistoryEntry(
     ) var serviceId: Int,
     @field:ColumnInfo(name = SEARCH) var search: String?,
 ) {
+
+    constructor(): this(OffsetDateTime.now(), 0, "")
+
     @ColumnInfo(name = ID)
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0

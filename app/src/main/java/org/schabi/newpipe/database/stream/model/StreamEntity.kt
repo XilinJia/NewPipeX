@@ -52,6 +52,8 @@ data class StreamEntity(
     @ColumnInfo(name = STREAM_IS_UPLOAD_DATE_APPROXIMATION)
     var isUploadDateApproximation: Boolean? = null,
 ) : Serializable {
+
+    constructor(): this(0L, 0, "", "", StreamType.NONE, 0L, "")
     @Ignore
     constructor(item: StreamInfoItem) : this(
         serviceId = item.serviceId, url = item.url, title = item.name,

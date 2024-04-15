@@ -114,32 +114,23 @@ class FeedFragment : BaseStateFragment<FeedState>() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        groupId = arguments?.getLong(KEY_GROUP_ID, FeedGroupEntity.GROUP_ALL_ID)
-            ?: FeedGroupEntity.GROUP_ALL_ID
+        groupId = arguments?.getLong(KEY_GROUP_ID, FeedGroupEntity.GROUP_ALL_ID) ?: FeedGroupEntity.GROUP_ALL_ID
         groupName = arguments?.getString(KEY_GROUP_NAME) ?: ""
 
-        onSettingsChangeListener =
-            SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-                if (getString(R.string.list_view_mode_key).equals(key)) {
-                    updateListViewModeOnResume = true
-                }
+        onSettingsChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (getString(R.string.list_view_mode_key).equals(key)) {
+                updateListViewModeOnResume = true
             }
-        PreferenceManager.getDefaultSharedPreferences(activity)
+        }
+        PreferenceManager.getDefaultSharedPreferences(requireActivity())
             .registerOnSharedPreferenceChangeListener(onSettingsChangeListener)
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_feed, container, false)
     }
 
-    override fun onViewCreated(
-        rootView: View,
-        savedInstanceState: Bundle?,
-    ) {
+    override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
         // super.onViewCreated() calls initListeners() which require the binding to be initialized
         _feedBinding = FragmentFeedBinding.bind(rootView)
         super.onViewCreated(rootView, savedInstanceState)
@@ -148,22 +139,16 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         viewModel = ViewModelProvider(this, factory)[FeedViewModel::class.java]
         viewModel.stateLiveData.observe(viewLifecycleOwner) { it?.let(::handleResult) }
 
-        groupAdapter =
-            GroupieAdapter().apply {
-                setOnItemClickListener(listenerStreamItem)
-                setOnItemLongClickListener(listenerStreamItem)
-            }
+        groupAdapter = GroupieAdapter().apply {
+            setOnItemClickListener(listenerStreamItem)
+            setOnItemLongClickListener(listenerStreamItem)
+        }
 
         feedBinding.itemsList.addOnScrollListener(
             object : RecyclerView.OnScrollListener() {
-                override fun onScrollStateChanged(
-                    recyclerView: RecyclerView,
-                    newState: Int,
-                ) {
+                override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                     // Check if we scrolled to the top
-                    if (newState == RecyclerView.SCROLL_STATE_IDLE &&
-                        !recyclerView.canScrollVertically(-1)
-                    ) {
+                    if (newState == RecyclerView.SCROLL_STATE_IDLE && !recyclerView.canScrollVertically(-1)) {
                         if (tryGetNewItemsLoadedButton()?.isVisible == true) {
                             hideNewItemsLoaded(true)
                         }
@@ -171,7 +156,6 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                 }
             },
         )
-
         feedBinding.itemsList.adapter = groupAdapter
         setupListViewMode()
     }
@@ -197,11 +181,10 @@ class FeedFragment : BaseStateFragment<FeedState>() {
 
     private fun setupListViewMode() {
         // does everything needed to setup the layouts for grid or list modes
-        groupAdapter.spanCount = if (shouldUseGridLayout(context)) getGridSpanCountStreams(context) else 1
-        feedBinding.itemsList.layoutManager =
-            GridLayoutManager(requireContext(), groupAdapter.spanCount).apply {
-                spanSizeLookup = groupAdapter.spanSizeLookup
-            }
+        groupAdapter.spanCount = if (shouldUseGridLayout(requireContext())) getGridSpanCountStreams(requireContext()) else 1
+        feedBinding.itemsList.layoutManager = GridLayoutManager(requireContext(), groupAdapter.spanCount).apply {
+            spanSizeLookup = groupAdapter.spanSizeLookup
+        }
     }
 
     override fun initListeners() {
@@ -218,65 +201,57 @@ class FeedFragment : BaseStateFragment<FeedState>() {
     // Menu
     // /////////////////////////////////////////////////////////////////////////
 
-    override fun onCreateOptionsMenu(
-        menu: Menu,
-        inflater: MenuInflater,
-    ) {
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
 
-        activity.supportActionBar?.setDisplayShowTitleEnabled(true)
-        activity.supportActionBar?.setTitle(R.string.fragment_feed_title)
-        activity.supportActionBar?.subtitle = groupName
+        activity?.supportActionBar?.setDisplayShowTitleEnabled(true)
+        activity?.supportActionBar?.setTitle(R.string.fragment_feed_title)
+        activity?.supportActionBar?.subtitle = groupName
 
         inflater.inflate(R.menu.menu_feed_fragment, menu)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (item.itemId == R.id.menu_item_feed_help) {
-            val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
+        when (item.itemId) {
+            R.id.menu_item_feed_help -> {
+                val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
 
-            val usingDedicatedMethod =
-                sharedPreferences
-                    .getBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), false)
-            val enableDisableButtonText =
-                when {
+                val usingDedicatedMethod = sharedPreferences
+                        .getBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), false)
+                val enableDisableButtonText = when {
                     usingDedicatedMethod -> R.string.feed_use_dedicated_fetch_method_disable_button
                     else -> R.string.feed_use_dedicated_fetch_method_enable_button
                 }
 
-            AlertDialog.Builder(requireContext())
-                .setMessage(R.string.feed_use_dedicated_fetch_method_help_text)
-                .setNeutralButton(enableDisableButtonText) { _, _ ->
-                    sharedPreferences.edit {
-                        putBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), !usingDedicatedMethod)
+                AlertDialog.Builder(requireContext())
+                    .setMessage(R.string.feed_use_dedicated_fetch_method_help_text)
+                    .setNeutralButton(enableDisableButtonText) { _, _ ->
+                        sharedPreferences.edit {
+                            putBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), !usingDedicatedMethod)
+                        }
                     }
-                }
-                .setPositiveButton(resources.getString(R.string.ok), null)
-                .show()
-            return true
-        } else if (item.itemId == R.id.menu_item_feed_toggle_played_items) {
-            showStreamVisibilityDialog()
+                    .setPositiveButton(resources.getString(R.string.ok), null)
+                    .show()
+                return true
+            }
+            R.id.menu_item_feed_toggle_played_items -> {
+                showStreamVisibilityDialog()
+            }
         }
 
         return super.onOptionsItemSelected(item)
     }
 
     private fun showStreamVisibilityDialog() {
-        val dialogItems =
-            arrayOf(
-                getString(R.string.feed_show_watched),
-                getString(R.string.feed_show_partially_watched),
-                getString(R.string.feed_show_upcoming),
-            )
+        val dialogItems = arrayOf(getString(R.string.feed_show_watched), getString(R.string.feed_show_partially_watched), getString(R.string.feed_show_upcoming))
 
-        val checkedDialogItems =
-            booleanArrayOf(
-                viewModel.getShowPlayedItemsFromPreferences(),
-                viewModel.getShowPartiallyPlayedItemsFromPreferences(),
-                viewModel.getShowFutureItemsFromPreferences(),
-            )
+        val checkedDialogItems = booleanArrayOf(
+            viewModel.getShowPlayedItemsFromPreferences(),
+            viewModel.getShowPartiallyPlayedItemsFromPreferences(),
+            viewModel.getShowFutureItemsFromPreferences(),
+        )
 
-        AlertDialog.Builder(context!!)
+        AlertDialog.Builder(requireContext())
             .setTitle(R.string.feed_hide_streams_title)
             .setMultiChoiceItems(dialogItems, checkedDialogItems) { _, which, isChecked ->
                 checkedDialogItems[which] = isChecked
@@ -298,7 +273,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
     override fun onDestroy() {
         disposables.dispose()
         if (onSettingsChangeListener != null) {
-            PreferenceManager.getDefaultSharedPreferences(activity)
+            PreferenceManager.getDefaultSharedPreferences(requireActivity())
                 .unregisterOnSharedPreferenceChangeListener(onSettingsChangeListener)
             onSettingsChangeListener = null
         }
@@ -368,21 +343,21 @@ class FeedFragment : BaseStateFragment<FeedState>() {
     private fun handleProgressState(progressState: FeedState.ProgressState) {
         showLoading()
 
-        val isIndeterminate =
-            progressState.currentProgress == -1 &&
-                progressState.maxProgress == -1
+        val isIndeterminate = progressState.currentProgress == -1 && progressState.maxProgress == -1
 
-        feedBinding.loadingProgressText.text =
-            if (!isIndeterminate) {
+        feedBinding.loadingProgressText.text = when {
+            !isIndeterminate -> {
                 "${progressState.currentProgress}/${progressState.maxProgress}"
-            } else if (progressState.progressMessage > 0) {
+            }
+            progressState.progressMessage > 0 -> {
                 getString(progressState.progressMessage)
-            } else {
+            }
+            else -> {
                 "∞/∞"
             }
+        }
 
-        feedBinding.loadingProgressBar.isIndeterminate = isIndeterminate ||
-            (progressState.maxProgress > 0 && progressState.currentProgress == 0)
+        feedBinding.loadingProgressBar.isIndeterminate = isIndeterminate || (progressState.maxProgress > 0 && progressState.currentProgress == 0)
         feedBinding.loadingProgressBar.progress = progressState.currentProgress
 
         feedBinding.loadingProgressBar.max = progressState.maxProgress
@@ -396,46 +371,33 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         InfoItemDialog.Builder(activity, context, this, item).create().show()
     }
 
-    private val listenerStreamItem =
-        object : OnItemClickListener, OnItemLongClickListener {
-            override fun onItemClick(
-                item: Item<*>,
-                view: View,
-            ) {
-                if (item is StreamItem && !isRefreshing) {
-                    val stream = item.streamWithState.stream
-                    NavigationHelper.openVideoDetailFragment(
-                        requireContext(),
-                        fm,
-                        stream.serviceId,
-                        stream.url,
-                        stream.title,
-                        null,
-                        false,
-                    )
-                }
-            }
-
-            override fun onItemLongClick(
-                item: Item<*>,
-                view: View,
-            ): Boolean {
-                if (item is StreamItem && !isRefreshing) {
-                    showInfoItemDialog(item.streamWithState.stream.toStreamInfoItem())
-                    return true
-                }
-                return false
+    private val listenerStreamItem = object : OnItemClickListener, OnItemLongClickListener {
+        override fun onItemClick(item: Item<*>, view: View) {
+            if (item is StreamItem && !isRefreshing) {
+                val stream = item.streamWithState.stream
+                val fm = requireActivity().supportFragmentManager
+                Log.d(TAG, "onItemClick: ${stream.serviceId}, ${stream.url}, ${stream.title}")
+                NavigationHelper.openVideoDetailFragment(requireContext(), fm, stream.serviceId, stream.url, stream.title,
+                    null, false)
             }
         }
 
+        override fun onItemLongClick(item: Item<*>, view: View): Boolean {
+            if (item is StreamItem && !isRefreshing) {
+                showInfoItemDialog(item.streamWithState.stream.toStreamInfoItem())
+                return true
+            }
+            return false
+        }
+    }
+
     @SuppressLint("StringFormatMatches")
     private fun handleLoadedState(loadedState: FeedState.LoadedState) {
-        val itemVersion =
-            when (getItemViewMode(requireContext())) {
-                ItemViewMode.GRID -> StreamItem.ItemVersion.GRID
-                ItemViewMode.CARD -> StreamItem.ItemVersion.CARD
-                else -> StreamItem.ItemVersion.NORMAL
-            }
+        val itemVersion = when (getItemViewMode(requireContext())) {
+            ItemViewMode.GRID -> StreamItem.ItemVersion.GRID
+            ItemViewMode.CARD -> StreamItem.ItemVersion.CARD
+            else -> StreamItem.ItemVersion.NORMAL
+        }
         loadedState.items.forEach { it.itemVersion = itemVersion }
 
         // This need to be saved in a variable as the update occurs async
@@ -455,16 +417,13 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         val feedsNotLoaded = loadedState.notLoadedCount > 0
         feedBinding.refreshSubtitleText.isVisible = feedsNotLoaded
         if (feedsNotLoaded) {
-            feedBinding.refreshSubtitleText.text =
-                getString(
+            feedBinding.refreshSubtitleText.text = getString(
                     R.string.feed_subscription_not_loaded_count,
                     loadedState.notLoadedCount,
                 )
         }
 
-        if (oldestSubscriptionUpdate != loadedState.oldestUpdate ||
-            (oldestSubscriptionUpdate == null && loadedState.oldestUpdate == null)
-        ) {
+        if (oldestSubscriptionUpdate != loadedState.oldestUpdate || (oldestSubscriptionUpdate == null && loadedState.oldestUpdate == null)) {
             // ignore errors if they have already been handled for the current update
             handleItemsErrors(loadedState.itemsErrors)
         }
@@ -489,26 +448,18 @@ class FeedFragment : BaseStateFragment<FeedState>() {
 
     private fun handleItemsErrors(errors: List<Throwable>) {
         errors.forEachIndexed { i, t ->
-            if (t is FeedLoadService.RequestException &&
-                t.cause is ContentNotAvailableException
-            ) {
-                disposables.add(
-                    Single.fromCallable {
-                        NewPipeDatabase.getInstance(requireContext()).subscriptionDAO()
-                            .getSubscription(t.subscriptionId)
-                    }
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                            { subscriptionEntity ->
-                                handleFeedNotAvailable(
-                                    subscriptionEntity,
-                                    t.cause,
-                                    errors.subList(i + 1, errors.size),
-                                )
-                            },
-                            { throwable -> Log.e(TAG, "Unable to process", throwable) },
-                        ),
+            if (t is FeedLoadService.RequestException && t.cause is ContentNotAvailableException) {
+                disposables.add(Single.fromCallable {
+                    NewPipeDatabase.getInstance(requireContext()).subscriptionDAO()!!.getSubscription(t.subscriptionId)
+                }
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                        { subscriptionEntity ->
+                            handleFeedNotAvailable(subscriptionEntity, t.cause, errors.subList(i + 1, errors.size))
+                        },
+                        { throwable -> Log.e(TAG, "Unable to process", throwable) },
+                    ),
                 )
                 // this will be called on the remaining errors by handleFeedNotAvailable()
                 return@handleItemsErrors
@@ -524,57 +475,52 @@ class FeedFragment : BaseStateFragment<FeedState>() {
     private fun handleFeedNotAvailable(
         subscriptionEntity: SubscriptionEntity,
         cause: Throwable?,
-        nextItemsErrors: List<Throwable>,
-    ) {
+        nextItemsErrors: List<Throwable>, ) {
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
         val isFastFeedModeEnabled =
-            sharedPreferences.getBoolean(
-                getString(R.string.feed_use_dedicated_fetch_method_key),
-                false,
-            )
+            sharedPreferences.getBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), false)
 
-        val builder =
-            AlertDialog.Builder(requireContext())
-                .setTitle(R.string.feed_load_error)
-                .setPositiveButton(R.string.unsubscribe) { _, _ ->
-                    SubscriptionManager(requireContext())
-                        .deleteSubscription(subscriptionEntity.serviceId, subscriptionEntity.url)
-                        .subscribe()
-                    handleItemsErrors(nextItemsErrors)
-                }
-                .setNegativeButton(R.string.cancel, null)
+        val builder = AlertDialog.Builder(requireContext())
+            .setTitle(R.string.feed_load_error)
+            .setPositiveButton(R.string.unsubscribe) { _, _ ->
+                SubscriptionManager(requireContext())
+                    .deleteSubscription(subscriptionEntity.serviceId, subscriptionEntity.url?:"")
+                    .subscribe()
+                handleItemsErrors(nextItemsErrors)
+            }
+            .setNegativeButton(R.string.cancel, null)
 
         var message = getString(R.string.feed_load_error_account_info, subscriptionEntity.name)
-        if (cause is AccountTerminatedException) {
-            message += "\n" + getString(R.string.feed_load_error_terminated)
-        } else if (cause is ContentNotAvailableException) {
-            if (isFastFeedModeEnabled) {
-                message += "\n" + getString(R.string.feed_load_error_fast_unknown)
-                builder.setNeutralButton(R.string.feed_use_dedicated_fetch_method_disable_button) { _, _ ->
-                    sharedPreferences.edit {
-                        putBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), false)
+        when (cause) {
+            is AccountTerminatedException -> {
+                message += "\n" + getString(R.string.feed_load_error_terminated)
+            }
+            is ContentNotAvailableException -> {
+                when {
+                    isFastFeedModeEnabled -> {
+                        message += "\n" + getString(R.string.feed_load_error_fast_unknown)
+                        builder.setNeutralButton(R.string.feed_use_dedicated_fetch_method_disable_button) { _, _ ->
+                            sharedPreferences.edit {
+                                putBoolean(getString(R.string.feed_use_dedicated_fetch_method_key), false)
+                            }
+                        }
+                    }
+                    !isNullOrEmpty(cause.message) -> {
+                        message += "\n" + cause.message
                     }
                 }
-            } else if (!isNullOrEmpty(cause.message)) {
-                message += "\n" + cause.message
             }
         }
-        builder.setMessage(message)
-            .show()
+        builder.setMessage(message).show()
     }
 
     private fun updateRelativeTimeViews() {
         updateRefreshViewState()
-        groupAdapter.notifyItemRangeChanged(
-            0,
-            groupAdapter.itemCount,
-            StreamItem.UPDATE_RELATIVE_TIME,
-        )
+        groupAdapter.notifyItemRangeChanged(0, groupAdapter.itemCount, StreamItem.UPDATE_RELATIVE_TIME)
     }
 
     private fun updateRefreshViewState() {
-        feedBinding.refreshText.text =
-            getString(
+        feedBinding.refreshText.text = getString(
                 R.string.feed_oldest_subscription_update,
                 oldestSubscriptionUpdate?.let { Localization.relativeTime(it) } ?: "—",
             )
@@ -603,12 +549,10 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                     typeface = Typeface.DEFAULT_BOLD
                     backgroundSupplier = { ctx: Context ->
                         // Merge the drawables together. Otherwise we would lose the "select" effect
-                        LayerDrawable(
-                            arrayOf(
-                                resolveDrawable(ctx, R.attr.dashed_border),
-                                resolveDrawable(ctx, R.attr.selectableItemBackground),
-                            ),
-                        )
+                        LayerDrawable(arrayOf(
+                            resolveDrawable(ctx, R.attr.dashed_border),
+                            resolveDrawable(ctx, R.attr.selectableItemBackground),
+                        ), )
                     }
                 } else {
                     // Decreases execution time due to the order of the items (newest always on top)
@@ -631,10 +575,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         // Force updates all items so that the highlighting is correct
         // If this isn't done visible items that are already highlighted will stay in a highlighted
         // state until the user scrolls them out of the visible area which causes a update/bind-call
-        groupAdapter.notifyItemRangeChanged(
-            0,
-            highlightCount.coerceIn(lastNewItemsCount, groupAdapter.itemCount),
-        )
+        groupAdapter.notifyItemRangeChanged(0, highlightCount.coerceIn(lastNewItemsCount, groupAdapter.itemCount))
 
         if (highlightCount > 0) {
             showNewItemsLoaded()
@@ -664,10 +605,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
             )
     }
 
-    private fun hideNewItemsLoaded(
-        animate: Boolean,
-        delay: Long = 0,
-    ) {
+    private fun hideNewItemsLoaded(animate: Boolean, delay: Long = 0) {
         tryGetNewItemsLoadedButton()?.clearAnimation()
         if (animate) {
             tryGetNewItemsLoadedButton()?.animate(
@@ -716,10 +654,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         const val KEY_GROUP_NAME = "ARG_GROUP_NAME"
 
         @JvmStatic
-        fun newInstance(
-            groupId: Long = FeedGroupEntity.GROUP_ALL_ID,
-            groupName: String? = null,
-        ): FeedFragment {
+        fun newInstance(groupId: Long = FeedGroupEntity.GROUP_ALL_ID, groupName: String? = null): FeedFragment {
             val feedFragment = FeedFragment()
             feedFragment.arguments = bundleOf(KEY_GROUP_ID to groupId, KEY_GROUP_NAME to groupName)
             return feedFragment

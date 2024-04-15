@@ -271,7 +271,7 @@ class FeedGroupDialog : DialogFragment(), BackPressable {
         }
 
         searchLayoutBinding.toolbarSearchEditText.setOnClickListener {
-            if (DeviceUtils.isTv(context)) {
+            if (DeviceUtils.isTv(requireContext())) {
                 showKeyboardSearch()
             }
         }

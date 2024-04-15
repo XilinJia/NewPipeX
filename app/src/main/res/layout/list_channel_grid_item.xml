@@ -20,6 +20,7 @@
         android:contentDescription="@string/detail_uploader_thumbnail_view_description"
         android:src="@drawable/placeholder_person"
         app:shapeAppearance="@style/CircularImageView"
+        app:strokeColor="@null"
         tools:ignore="RtlHardcoded" />
 
     <TextView

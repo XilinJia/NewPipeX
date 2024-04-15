@@ -17,17 +17,17 @@ import org.schabi.newpipe.player.ui.VideoPlayerUi
  * This class contains the logic for the player gestures like View preparations
  * and provides some abstract methods to make it easier separating the logic from the UI.
  */
-abstract class BasePlayerGestureListener(
-    private val playerUi: VideoPlayerUi,
-) : GestureDetector.SimpleOnGestureListener(), View.OnTouchListener {
+abstract class BasePlayerGestureListener(private val playerUi: VideoPlayerUi)
+    : GestureDetector.SimpleOnGestureListener(), View.OnTouchListener {
+
     protected val player: Player = playerUi.player
-    protected val binding: PlayerBinding = playerUi.binding
+    protected val binding: PlayerBinding = playerUi.binding!!
 
     override fun onTouch(
         v: View,
         event: MotionEvent,
     ): Boolean {
-        playerUi.gestureDetector.onTouchEvent(event)
+        playerUi.gestureDetector?.onTouchEvent(event)
         return false
     }
 

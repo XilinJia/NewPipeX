@@ -30,7 +30,6 @@ data class PlaylistStreamEntry(
         return item
     }
 
-    override fun getLocalItemType(): LocalItem.LocalItemType {
-        return LocalItem.LocalItemType.PLAYLIST_STREAM_ITEM
-    }
+    override val localItemType: LocalItem.LocalItemType
+        get() = LocalItem.LocalItemType.PLAYLIST_STREAM_ITEM
 }

@@ -272,6 +272,7 @@
                                         android:layout_height="@dimen/video_item_detail_uploader_image_size"
                                         android:contentDescription="@string/detail_sub_channel_thumbnail_view_description"
                                         android:src="@drawable/placeholder_person"
+                                        app:strokeColor="@null"
                                         app:shapeAppearance="@style/CircularImageView" />
 
                                     <com.google.android.material.imageview.ShapeableImageView
@@ -281,6 +282,7 @@
                                         android:layout_gravity="bottom|right"
                                         android:contentDescription="@string/detail_uploader_thumbnail_view_description"
                                         android:src="@drawable/placeholder_person"
+                                        app:strokeColor="@null"
                                         app:shapeAppearance="@style/CircularImageView" />
 
                                 </FrameLayout>

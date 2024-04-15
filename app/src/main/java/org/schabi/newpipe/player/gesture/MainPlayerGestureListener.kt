@@ -26,10 +26,10 @@ import kotlin.math.abs
  * this class focuses on the visual aspect like hiding and showing the controls or changing
  * volume/brightness during scrolling for specific events.
  */
-class MainPlayerGestureListener(
-    private val playerUi: MainPlayerUi,
-) : BasePlayerGestureListener(playerUi), OnTouchListener {
-    private var isMoving = false
+class MainPlayerGestureListener(private val playerUi: MainPlayerUi)
+    : BasePlayerGestureListener(playerUi), OnTouchListener {
+
+        private var isMoving = false
 
     override fun onTouch(
         v: View,
@@ -71,7 +71,7 @@ class MainPlayerGestureListener(
 
     private fun onScrollVolume(distanceY: Float) {
         val bar: ProgressBar = binding.volumeProgressBar
-        val audioReactor: AudioReactor = player.audioReactor
+        val audioReactor: AudioReactor = player.audioReactor ?: return
 
         // If we just started sliding, change the progress bar to match the system volume
         if (!binding.volumeRelativeLayout.isVisible) {

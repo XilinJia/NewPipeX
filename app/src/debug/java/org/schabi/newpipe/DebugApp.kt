@@ -25,15 +25,25 @@ class DebugApp : App() {
             )
     }
 
-    override fun getDownloader(): Downloader {
-        val downloader =
-            DownloaderImpl.init(
+//    override fun getDownloader(): Downloader {
+//        val downloader =
+//            DownloaderImpl.init(
+//                OkHttpClient.Builder()
+//                    .addNetworkInterceptor(StethoInterceptor()),
+//            )
+//        setCookiesToDownloader(downloader)
+//        return downloader
+//    }
+
+    override val downloader: Downloader?
+        get() {
+            val downloader = DownloaderImpl.init(
                 OkHttpClient.Builder()
                     .addNetworkInterceptor(StethoInterceptor()),
             )
-        setCookiesToDownloader(downloader)
-        return downloader
-    }
+            setCookiesToDownloader(downloader)
+            return downloader
+        }
 
     private fun initStetho() {
         // Create an InitializerBuilder
@@ -54,8 +64,13 @@ class DebugApp : App() {
         Stetho.initialize(initializer)
     }
 
-    override fun isDisposedRxExceptionsReported(): Boolean {
-        return PreferenceManager.getDefaultSharedPreferences(this)
+//    override fun isDisposedRxExceptionsReported(): Boolean {
+//        return PreferenceManager.getDefaultSharedPreferences(this)
+//            .getBoolean(getString(R.string.allow_disposed_exceptions_key), false)
+//    }
+
+    override val isDisposedRxExceptionsReported: Boolean
+        get() = PreferenceManager.getDefaultSharedPreferences(this)
             .getBoolean(getString(R.string.allow_disposed_exceptions_key), false)
-    }
+
 }
