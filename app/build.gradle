@@ -32,6 +32,17 @@ android {
         }
     }
 
+    signingConfigs {
+        releaseConfig {
+            enableV1Signing true
+            enableV2Signing true
+            storeFile file(project.getProperties().getOrDefault("releaseStoreFile", "keystore"))
+            storePassword project.getProperties().getOrDefault("releaseStorePassword", "password")
+            keyAlias project.getProperties().getOrDefault("releaseKeyAlias", "alias")
+            keyPassword project.getProperties().getOrDefault("releaseKeyPassword", "password")
+        }
+    }
+
     buildTypes {
         debug {
             debuggable true
@@ -51,11 +62,12 @@ android {
         }
 
         release {
-            if (System.properties.containsKey('packageSuffix')) {
-                applicationIdSuffix System.getProperty('packageSuffix')
-                resValue "string", "app_name", "NewPipeX " + System.getProperty('packageSuffix')
-                archivesBaseName = 'NewPipe_' + System.getProperty('packageSuffix')
-            }
+//             if (System.properties.containsKey('packageSuffix')) {
+//                 applicationIdSuffix System.getProperty('packageSuffix')
+//                 resValue "string", "app_name", "NewPipeX " + System.getProperty('packageSuffix')
+//                 archivesBaseName = 'NewPipe_' + System.getProperty('packageSuffix')
+//             }
+            signingConfig signingConfigs.releaseConfig
             minifyEnabled true
             shrinkResources false // disabled to fix F-Droid's reproducible build
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
