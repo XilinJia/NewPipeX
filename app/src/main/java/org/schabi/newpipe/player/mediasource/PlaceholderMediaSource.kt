@@ -1,15 +1,16 @@
 package org.schabi.newpipe.player.mediasource
 
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.Timeline
-import com.google.android.exoplayer2.source.CompositeMediaSource
-import com.google.android.exoplayer2.source.MediaPeriod
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.upstream.Allocator
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Timeline
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.source.CompositeMediaSource
+import androidx.media3.exoplayer.source.MediaPeriod
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.upstream.Allocator
 import org.schabi.newpipe.player.mediaitem.PlaceholderTag
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 
-internal class PlaceholderMediaSource private constructor() : CompositeMediaSource<Void?>(), ManagedMediaSource {
+@UnstableApi internal class PlaceholderMediaSource private constructor() : CompositeMediaSource<Void?>(), ManagedMediaSource {
     override fun getMediaItem(): MediaItem {
         return MEDIA_ITEM
     }

@@ -1,8 +1,12 @@
 package org.schabi.newpipe.player.helper
 
-import com.google.android.exoplayer2.DefaultLoadControl
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 
-class LoadController : DefaultLoadControl() {
+//import com.google.android.exoplayer2.DefaultLoadControl
+
+@OptIn(UnstableApi::class) class LoadController : DefaultLoadControl() {
     private var preloadingEnabled = true
 
     override fun onPrepared() {

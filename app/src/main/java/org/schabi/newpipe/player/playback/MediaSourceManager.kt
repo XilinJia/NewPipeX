@@ -3,7 +3,7 @@ package org.schabi.newpipe.player.playback
 import android.os.Handler
 import android.util.Log
 import androidx.collection.ArraySet
-import com.google.android.exoplayer2.source.MediaSource
+import androidx.media3.exoplayer.source.MediaSource
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Single

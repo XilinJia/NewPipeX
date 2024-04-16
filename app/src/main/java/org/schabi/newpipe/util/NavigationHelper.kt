@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
+import androidx.media3.common.util.UnstableApi
 import com.jakewharton.processphoenix.ProcessPhoenix
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.NewPipeDatabase
@@ -60,7 +61,7 @@ import org.schabi.newpipe.util.ListHelper.getUrlAndNonTorrentStreams
 import org.schabi.newpipe.util.external_communication.ShareUtils.installApp
 import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentInApp
 
-object NavigationHelper {
+@UnstableApi object NavigationHelper {
     const val MAIN_FRAGMENT_TAG: String = "main_fragment_tag"
     const val SEARCH_FRAGMENT_TAG: String = "search_fragment_tag"
 
@@ -120,8 +121,7 @@ object NavigationHelper {
         val item = playQueue.item
         if (item != null) {
             openVideoDetailFragment(activity, activity.supportFragmentManager,
-                item.serviceId, item.url, item.title, playQueue,
-                false)
+                item.serviceId, item.url, item.title, playQueue, false)
         }
     }
 
@@ -129,9 +129,7 @@ object NavigationHelper {
     fun playOnMainPlayer(context: Context, playQueue: PlayQueue, switchingPlayers: Boolean) {
         val item = playQueue.item
         if (item != null) {
-            openVideoDetail(context,
-                item.serviceId, item.url, item.title, playQueue,
-                switchingPlayers)
+            openVideoDetail(context, item.serviceId, item.url, item.title, playQueue, switchingPlayers)
         }
     }
 
@@ -148,8 +146,7 @@ object NavigationHelper {
 
     @JvmStatic
     fun playOnBackgroundPlayer(context: Context, queue: PlayQueue?, resumePlayback: Boolean) {
-        Toast.makeText(context, R.string.background_player_playing_toast, Toast.LENGTH_SHORT)
-            .show()
+        Toast.makeText(context, R.string.background_player_playing_toast, Toast.LENGTH_SHORT).show()
 
         val intent = getPlayerIntent(context, PlayerService::class.java, queue, resumePlayback)
         intent.putExtra(Player.PLAYER_TYPE, PlayerType.AUDIO.valueForIntent())
@@ -207,8 +204,7 @@ object NavigationHelper {
 
         val audioStreamsForExternalPlayers: List<AudioStream?> = getUrlAndNonTorrentStreams(audioStreams)
         if (audioStreamsForExternalPlayers.isEmpty()) {
-            Toast.makeText(context, R.string.no_audio_streams_available_for_external_players,
-                Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, R.string.no_audio_streams_available_for_external_players, Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -269,8 +265,8 @@ object NavigationHelper {
             DeliveryMethod.HLS -> "application/x-mpegURL"
             DeliveryMethod.DASH -> "application/dash+xml"
             DeliveryMethod.SS -> "application/vnd.ms-sstr+xml"
-            else ->                 // Torrent streams are not exposed to external players
-                ""
+            // Torrent streams are not exposed to external players
+            else -> ""
         }
         val intent = Intent()
         intent.setAction(Intent.ACTION_VIEW)
@@ -289,12 +285,10 @@ object NavigationHelper {
                 AlertDialog.Builder(context)
                     .setMessage(R.string.no_player_found)
                     .setPositiveButton(R.string.install) { dialog: DialogInterface?, which: Int ->
-                        installApp(context,
-                            context.getString(R.string.vlc_package))
+                        installApp(context, context.getString(R.string.vlc_package))
                     }
                     .setNegativeButton(R.string.cancel) { dialog: DialogInterface?, which: Int ->
-                        Log.i("NavigationHelper",
-                            "You unlocked a secret unicorn.")
+                        Log.i("NavigationHelper", "You unlocked a secret unicorn.")
                     }
                     .show()
             } else {
@@ -336,8 +330,7 @@ object NavigationHelper {
     fun tryGotoSearchFragment(fragmentManager: FragmentManager): Boolean {
         if (MainActivity.DEBUG) {
             for (i in 0 until fragmentManager.backStackEntryCount) {
-                Log.d("NavigationHelper", "tryGoToSearchFragment() [" + i + "]"
-                        + " = [" + fragmentManager.getBackStackEntryAt(i) + "]")
+                Log.d("NavigationHelper", "tryGoToSearchFragment() [$i] = [${fragmentManager.getBackStackEntryAt(i)}]")
             }
         }
 
@@ -461,8 +454,7 @@ object NavigationHelper {
         if (TextUtils.isEmpty(comment.uploaderUrl)) return
 
         try {
-            openChannelFragment(activity.supportFragmentManager, comment.serviceId,
-                comment.uploaderUrl, comment.uploaderName)
+            openChannelFragment(activity.supportFragmentManager, comment.serviceId, comment.uploaderUrl, comment.uploaderName)
         } catch (e: Exception) {
             showUiErrorSnackbar(activity, "Opening channel fragment", e)
         }
@@ -471,8 +463,7 @@ object NavigationHelper {
     @JvmStatic
     fun openCommentRepliesFragment(activity: FragmentActivity, comment: CommentsInfoItem) {
         defaultTransaction(activity.supportFragmentManager)
-            .replace(R.id.fragment_holder, CommentRepliesFragment(comment),
-                CommentRepliesFragment.TAG)
+            .replace(R.id.fragment_holder, CommentRepliesFragment(comment), CommentRepliesFragment.TAG)
             .addToBackStack(CommentRepliesFragment.TAG)
             .commit()
     }
@@ -583,8 +574,7 @@ object NavigationHelper {
      */
     @JvmStatic
     fun openChannelFragmentUsingIntent(context: Context, serviceId: Int, url: String?, title: String) {
-        val intent = getOpenIntent(context, url, serviceId,
-            LinkType.CHANNEL)
+        val intent = getOpenIntent(context, url, serviceId, LinkType.CHANNEL)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.putExtra(KEY_TITLE, title)
 

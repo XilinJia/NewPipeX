@@ -1,19 +1,20 @@
 package org.schabi.newpipe.player.mediasource
 
 import android.util.Log
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.Timeline
-import com.google.android.exoplayer2.source.*
-import com.google.android.exoplayer2.upstream.Allocator
-import com.google.android.exoplayer2.upstream.DefaultAllocator
-import com.google.android.exoplayer2.upstream.TransferListener
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Timeline
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.TransferListener
+import androidx.media3.exoplayer.source.*
+import androidx.media3.exoplayer.upstream.Allocator
+import androidx.media3.exoplayer.upstream.DefaultAllocator
 import org.schabi.newpipe.player.mediaitem.ExceptionTag
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 import java.io.IOException
 import java.util.List
 import java.util.concurrent.TimeUnit
 
-class FailedMediaSource(val stream: PlayQueueItem, val error: Exception, private val retryTimestamp: Long)
+@UnstableApi class FailedMediaSource(val stream: PlayQueueItem, val error: Exception, private val retryTimestamp: Long)
     : BaseMediaSource(), ManagedMediaSource {
 
     private val TAG = "FailedMediaSource@" + Integer.toHexString(hashCode())
@@ -55,10 +56,10 @@ class FailedMediaSource(val stream: PlayQueueItem, val error: Exception, private
      * If the error is not known, e.g. network issue, then the exception is not swallowed here in
      * [FailedMediaSource]. The exception is then propagated to the player, which
      * [Player][org.schabi.newpipe.player.Player] can react to inside
-     * [com.google.android.exoplayer2.Player.Listener.onPlayerError].
+     * [androidx.media3.common.Player.Listener.onPlayerError].
      *
      * @throws IOException An error which will always result in
-     * [com.google.android.exoplayer2.PlaybackException.ERROR_CODE_IO_UNSPECIFIED].
+     * [androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED].
      */
     @Throws(IOException::class)
     override fun maybeThrowSourceInfoRefreshError() {

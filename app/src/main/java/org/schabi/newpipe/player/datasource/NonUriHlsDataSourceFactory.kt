@@ -1,9 +1,10 @@
 package org.schabi.newpipe.player.datasource
 
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.source.hls.HlsDataSourceFactory
-import com.google.android.exoplayer2.upstream.ByteArrayDataSource
-import com.google.android.exoplayer2.upstream.DataSource
+import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.ByteArrayDataSource
+import androidx.media3.datasource.DataSource
+import androidx.media3.exoplayer.hls.HlsDataSourceFactory
 import org.schabi.newpipe.extractor.utils.Utils
 import java.nio.charset.StandardCharsets
 
@@ -25,7 +26,7 @@ import java.nio.charset.StandardCharsets
  * See [.createDataSource] for changes and implementation details.
  *
  */
-class NonUriHlsDataSourceFactory
+@UnstableApi class NonUriHlsDataSourceFactory
 /**
  * Create a [NonUriHlsDataSourceFactory] instance.
  *

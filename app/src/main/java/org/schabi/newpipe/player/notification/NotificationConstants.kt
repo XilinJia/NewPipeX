@@ -15,15 +15,14 @@ object NotificationConstants {
     ////////////////////////////////////////////////////////////////////////// */
     private const val BASE_ACTION = App.PACKAGE_NAME + ".player.MainPlayer."
     const val ACTION_CLOSE: String = BASE_ACTION + "CLOSE"
-    const val ACTION_PLAY_PAUSE: String = BASE_ACTION + ".player.MainPlayer.PLAY_PAUSE"
-    const val ACTION_REPEAT: String = BASE_ACTION + ".player.MainPlayer.REPEAT"
-    const val ACTION_PLAY_NEXT: String = BASE_ACTION + ".player.MainPlayer.ACTION_PLAY_NEXT"
-    const val ACTION_PLAY_PREVIOUS: String = BASE_ACTION + ".player.MainPlayer.ACTION_PLAY_PREVIOUS"
-    const val ACTION_FAST_REWIND: String = BASE_ACTION + ".player.MainPlayer.ACTION_FAST_REWIND"
-    const val ACTION_FAST_FORWARD: String = BASE_ACTION + ".player.MainPlayer.ACTION_FAST_FORWARD"
-    const val ACTION_SHUFFLE: String = BASE_ACTION + ".player.MainPlayer.ACTION_SHUFFLE"
-    const val ACTION_RECREATE_NOTIFICATION: String = BASE_ACTION + ".player.MainPlayer.ACTION_RECREATE_NOTIFICATION"
-
+    const val ACTION_PLAY_PAUSE: String = "$BASE_ACTION.player.MainPlayer.PLAY_PAUSE"
+    const val ACTION_REPEAT: String = "$BASE_ACTION.player.MainPlayer.REPEAT"
+    const val ACTION_PLAY_NEXT: String = "$BASE_ACTION.player.MainPlayer.ACTION_PLAY_NEXT"
+    const val ACTION_PLAY_PREVIOUS: String = "$BASE_ACTION.player.MainPlayer.ACTION_PLAY_PREVIOUS"
+    const val ACTION_FAST_REWIND: String = "$BASE_ACTION.player.MainPlayer.ACTION_FAST_REWIND"
+    const val ACTION_FAST_FORWARD: String = "$BASE_ACTION.player.MainPlayer.ACTION_FAST_FORWARD"
+    const val ACTION_SHUFFLE: String = "$BASE_ACTION.player.MainPlayer.ACTION_SHUFFLE"
+    const val ACTION_RECREATE_NOTIFICATION: String = "$BASE_ACTION.player.MainPlayer.ACTION_RECREATE_NOTIFICATION"
 
     const val NOTHING: Int = 0
     const val PREVIOUS: Int = 1
@@ -59,7 +58,6 @@ object NotificationConstants {
         R.drawable.ic_close,
     )
 
-
     @JvmField
     @Action
     val SLOT_DEFAULTS: IntArray = intArrayOf(
@@ -91,27 +89,27 @@ object NotificationConstants {
 
     fun getActionName(context: Context, @Action action: Int): String {
         return when (action) {
-            PREVIOUS -> context.getString(R.string.exo_controls_previous_description)
-            NEXT -> context.getString(R.string.exo_controls_next_description)
-            REWIND -> context.getString(R.string.exo_controls_rewind_description)
-            FORWARD -> context.getString(R.string.exo_controls_fastforward_description)
-            SMART_REWIND_PREVIOUS -> concatenateStrings(
+            Action.PREVIOUS -> context.getString(R.string.exo_controls_previous_description)
+            Action.NEXT -> context.getString(R.string.exo_controls_next_description)
+            Action.REWIND -> context.getString(R.string.exo_controls_rewind_description)
+            Action.FORWARD -> context.getString(R.string.exo_controls_fastforward_description)
+            Action.SMART_REWIND_PREVIOUS -> concatenateStrings(
                 context.getString(R.string.exo_controls_rewind_description),
                 context.getString(R.string.exo_controls_previous_description))
-            SMART_FORWARD_NEXT -> concatenateStrings(
+            Action.SMART_FORWARD_NEXT -> concatenateStrings(
                 context.getString(R.string.exo_controls_fastforward_description),
                 context.getString(R.string.exo_controls_next_description))
-            PLAY_PAUSE -> concatenateStrings(
+            Action.PLAY_PAUSE -> concatenateStrings(
                 context.getString(R.string.exo_controls_play_description),
                 context.getString(R.string.exo_controls_pause_description))
-            PLAY_PAUSE_BUFFERING -> concatenateStrings(
+            Action.PLAY_PAUSE_BUFFERING -> concatenateStrings(
                 context.getString(R.string.exo_controls_play_description),
                 context.getString(R.string.exo_controls_pause_description),
                 context.getString(R.string.notification_action_buffering))
-            REPEAT -> context.getString(R.string.notification_action_repeat)
-            SHUFFLE -> context.getString(R.string.notification_action_shuffle)
-            CLOSE -> context.getString(R.string.close)
-            NOTHING -> context.getString(R.string.notification_action_nothing)
+            Action.REPEAT -> context.getString(R.string.notification_action_repeat)
+            Action.SHUFFLE -> context.getString(R.string.notification_action_shuffle)
+            Action.CLOSE -> context.getString(R.string.close)
+            Action.NOTHING -> context.getString(R.string.notification_action_nothing)
             else -> context.getString(R.string.notification_action_nothing)
         }
     }

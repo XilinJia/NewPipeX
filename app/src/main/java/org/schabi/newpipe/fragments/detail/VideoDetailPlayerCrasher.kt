@@ -10,9 +10,9 @@ import android.view.ViewGroup
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.ExoPlaybackException
-import com.google.android.exoplayer2.PlaybackException
+import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
+import androidx.media3.exoplayer.ExoPlaybackException
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.ListRadioIconItemBinding
 import org.schabi.newpipe.databinding.SingleChoiceDialogViewBinding

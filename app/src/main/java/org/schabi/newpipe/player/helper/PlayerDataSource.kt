@@ -2,20 +2,25 @@ package org.schabi.newpipe.player.helper
 
 import android.content.Context
 import android.util.Log
-import com.google.android.exoplayer2.database.StandaloneDatabaseProvider
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.source.SingleSampleMediaSource
-import com.google.android.exoplayer2.source.dash.DashMediaSource
-import com.google.android.exoplayer2.source.dash.DefaultDashChunkSource
-import com.google.android.exoplayer2.source.hls.HlsDataSourceFactory
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.source.hls.playlist.DefaultHlsPlaylistTracker
-import com.google.android.exoplayer2.source.hls.playlist.HlsPlaylistParserFactory
-import com.google.android.exoplayer2.source.smoothstreaming.DefaultSsChunkSource
-import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource
-import com.google.android.exoplayer2.upstream.*
-import com.google.android.exoplayer2.upstream.cache.LeastRecentlyUsedCacheEvictor
-import com.google.android.exoplayer2.upstream.cache.SimpleCache
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.database.StandaloneDatabaseProvider
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.dash.DefaultDashChunkSource
+import androidx.media3.exoplayer.hls.HlsDataSourceFactory
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.hls.playlist.DefaultHlsPlaylistTracker
+import androidx.media3.exoplayer.hls.playlist.HlsPlaylistParserFactory
+import androidx.media3.exoplayer.smoothstreaming.DefaultSsChunkSource
+import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.source.SingleSampleMediaSource
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import org.schabi.newpipe.DownloaderImpl
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeOtfDashManifestCreator
@@ -27,9 +32,7 @@ import org.schabi.newpipe.player.helper.PlayerHelper.getProgressiveLoadIntervalB
 import org.schabi.newpipe.player.helper.PlayerHelper.preferredCacheSize
 import java.io.File
 
-class PlayerDataSource(context: Context,
-                       transferListener: TransferListener?
-) {
+@UnstableApi class PlayerDataSource(context: Context, transferListener: TransferListener?) {
     private val progressiveLoadIntervalBytes = getProgressiveLoadIntervalBytes(context)
 
     // Generic Data Source Factories (without or with cache)
@@ -135,7 +138,7 @@ class PlayerDataSource(context: Context,
             .setContinueLoadingCheckIntervalBytes(progressiveLoadIntervalBytes)
 
 
-    companion object {
+    @UnstableApi companion object {
         val TAG: String = PlayerDataSource::class.java.simpleName
 
         const val LIVE_STREAM_EDGE_GAP_MILLIS: Int = 10000
@@ -195,8 +198,7 @@ class PlayerDataSource(context: Context,
                     Log.w(TAG, "instantiateCacheIfNeeded: could not create cache dir")
                 }
 
-                val evictor =
-                    LeastRecentlyUsedCacheEvictor(preferredCacheSize)
+                val evictor = LeastRecentlyUsedCacheEvictor(preferredCacheSize)
                 cache = SimpleCache(cacheDir, evictor, StandaloneDatabaseProvider(context))
             }
         } //endregion

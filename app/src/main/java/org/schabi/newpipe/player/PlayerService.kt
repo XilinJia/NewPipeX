@@ -94,8 +94,8 @@ class PlayerService : Service() {
 
         if (player != null) {
             player!!.handleIntent(intent)
-            player!!.UIs().get(MediaSessionPlayerUi::class.java)
-                .ifPresent { ui: MediaSessionPlayerUi -> ui.handleMediaButtonIntent(intent) }
+//            player!!.UIs().get(MediaSessionPlayerUi::class.java)
+//                .ifPresent { ui: MediaSessionPlayerUi -> ui.handleMediaButtonIntent(intent) }
         }
 
         return START_NOT_STICKY

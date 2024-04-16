@@ -1,12 +1,14 @@
 package org.schabi.newpipe.player.mediasource
 
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.source.WrappingMediaSource
+import androidx.annotation.OptIn
+import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.WrappingMediaSource
 import org.schabi.newpipe.player.mediaitem.MediaItemTag
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 
-class LoadedMediaSource(source: MediaSource,
+@OptIn(UnstableApi::class) class LoadedMediaSource(source: MediaSource,
                         tag: MediaItemTag,
                         val stream: PlayQueueItem,
                         private val expireTimestamp: Long

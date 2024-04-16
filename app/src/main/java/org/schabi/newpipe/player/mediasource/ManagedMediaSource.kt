@@ -1,6 +1,6 @@
 package org.schabi.newpipe.player.mediasource
 
-import com.google.android.exoplayer2.source.MediaSource
+import androidx.media3.exoplayer.source.MediaSource
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 
 interface ManagedMediaSource : MediaSource {

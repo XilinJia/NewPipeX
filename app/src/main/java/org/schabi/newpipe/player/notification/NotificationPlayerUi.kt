@@ -61,7 +61,7 @@ class NotificationPlayerUi(player: Player) : PlayerUi(player) {
         notificationUtil.createNotificationIfNeededAndUpdate(false)
     }
 
-    override fun onRepeatModeChanged(repeatMode: @com.google.android.exoplayer2.Player.RepeatMode Int) {
+    override fun onRepeatModeChanged(repeatMode: @androidx.media3.common.Player.RepeatMode Int) {
         super.onRepeatModeChanged(repeatMode)
         notificationUtil.createNotificationIfNeededAndUpdate(false)
     }

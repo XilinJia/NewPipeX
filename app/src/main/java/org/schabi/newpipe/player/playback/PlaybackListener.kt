@@ -1,6 +1,6 @@
 package org.schabi.newpipe.player.playback
 
-import com.google.android.exoplayer2.source.MediaSource
+import androidx.media3.exoplayer.source.MediaSource
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 

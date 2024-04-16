@@ -3,11 +3,12 @@ package org.schabi.newpipe.player.resolver
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.C.RoleFlags
-import com.google.android.exoplayer2.MediaItem.SubtitleConfiguration
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.source.MergingMediaSource
+import androidx.media3.common.C
+import androidx.media3.common.C.RoleFlags
+import androidx.media3.common.MediaItem.SubtitleConfiguration
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.MergingMediaSource
 import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.SubtitlesStream
@@ -28,7 +29,7 @@ import org.schabi.newpipe.util.ListHelper.getUrlAndNonTorrentStreams
 import java.util.*
 import java.util.function.Function
 
-class VideoPlaybackResolver(private val context: Context,
+@UnstableApi class VideoPlaybackResolver(private val context: Context,
                             private val dataSource: PlayerDataSource,
                             private val qualityResolver: QualityResolver)
     : PlaybackResolver {

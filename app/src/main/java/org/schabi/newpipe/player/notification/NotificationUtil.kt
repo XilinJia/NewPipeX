@@ -1,18 +1,18 @@
 package org.schabi.newpipe.player.notification
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.os.Build
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.app.PendingIntentCompat
-import androidx.core.app.ServiceCompat
+import androidx.core.app.*
 import androidx.core.content.ContextCompat
+import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.player.Player
@@ -25,7 +25,7 @@ import kotlin.math.min
 /**
  * This is a utility class for player notifications.
  */
-class NotificationUtil(private val player: Player) {
+@UnstableApi class NotificationUtil(private val player: Player) {
     @NotificationConstants.Action
     private val notificationSlots = NotificationConstants.SLOT_DEFAULTS.clone()
 
@@ -48,6 +48,17 @@ class NotificationUtil(private val player: Player) {
             notificationBuilder = createNotification()
         }
         updateNotification()
+        if (ActivityCompat.checkSelfPermission(player.context,
+                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
         notificationManager!!.notify(NOTIFICATION_ID, notificationBuilder!!.build())
     }
 
@@ -62,6 +73,17 @@ class NotificationUtil(private val player: Player) {
             }
 
             setLargeIcon(notificationBuilder!!)
+            if (ActivityCompat.checkSelfPermission(player.context,
+                        Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return
+            }
             notificationManager!!.notify(NOTIFICATION_ID, notificationBuilder!!.build())
         }
     }
@@ -73,8 +95,7 @@ class NotificationUtil(private val player: Player) {
         }
         notificationManager = NotificationManagerCompat.from(player.context)
         val builder =
-            NotificationCompat.Builder(player.context,
-                player.context.getString(R.string.notification_channel_id))
+            NotificationCompat.Builder(player.context, player.context.getString(R.string.notification_channel_id))
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
 
         // setup media style (compact notification slots and media session)
@@ -96,10 +117,8 @@ class NotificationUtil(private val player: Player) {
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setShowWhen(false)
             .setSmallIcon(R.drawable.ic_newpipe_triangle_white)
-            .setColor(ContextCompat.getColor(player.context,
-                R.color.dark_background_color))
-            .setColorized(player.prefs.getBoolean(
-                player.context.getString(R.string.notification_colorize_key), true))
+            .setColor(ContextCompat.getColor(player.context, R.color.dark_background_color))
+            .setColorized(player.prefs.getBoolean(player.context.getString(R.string.notification_colorize_key), true))
             .setDeleteIntent(PendingIntentCompat.getBroadcast(player.context,
                 NOTIFICATION_ID, Intent(NotificationConstants.ACTION_CLOSE), PendingIntent.FLAG_UPDATE_CURRENT, false))
 
@@ -169,9 +188,8 @@ class NotificationUtil(private val player: Player) {
     fun cancelNotificationAndStopForeground() {
         ServiceCompat.stopForeground(player.service, ServiceCompat.STOP_FOREGROUND_REMOVE)
 
-        if (notificationManager != null) {
-            notificationManager!!.cancel(NOTIFICATION_ID)
-        }
+        notificationManager?.cancel(NOTIFICATION_ID)
+
         notificationManager = null
         notificationBuilder = null
     }
@@ -190,14 +208,12 @@ class NotificationUtil(private val player: Player) {
      * sent to the system
      */
     private fun initializeNotificationSlots(): IntArray {
-        val settingsCompactSlots = NotificationConstants
-            .getCompactSlotsFromPreferences(player.context, player.prefs)
+        val settingsCompactSlots = NotificationConstants.getCompactSlotsFromPreferences(player.context, player.prefs)
         val adjustedCompactSlots: MutableList<Int> = ArrayList()
 
         var nonNothingIndex = 0
         for (i in 0..4) {
-            notificationSlots[i] = player.prefs.getInt(
-                player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]),
+            notificationSlots[i] = player.prefs.getInt(player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]),
                 NotificationConstants.SLOT_DEFAULTS[i])
 
             if (notificationSlots[i] != NotificationConstants.NOTHING) {
@@ -222,8 +238,7 @@ class NotificationUtil(private val player: Player) {
     private fun addAction(builder: NotificationCompat.Builder?,
                           @NotificationConstants.Action slot: Int
     ) {
-        val data =
-            NotificationActionData.fromNotificationActionEnum(player, slot) ?: return
+        val data = NotificationActionData.fromNotificationActionEnum(player, slot) ?: return
 
         val intent = PendingIntentCompat.getBroadcast(player.context,
             NOTIFICATION_ID, Intent(data.action()), PendingIntent.FLAG_UPDATE_CURRENT, false)
@@ -237,8 +252,7 @@ class NotificationUtil(private val player: Player) {
                 return getPlayQueueActivityIntent(player.context)
             } else {
                 // We are playing in fragment. Don't open another activity just show fragment. That's it
-                val intent = getPlayerIntent(
-                    player.context, MainActivity::class.java, null, true)
+                val intent = getPlayerIntent(player.context, MainActivity::class.java, null, true)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 intent.setAction(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_LAUNCHER)
@@ -251,8 +265,7 @@ class NotificationUtil(private val player: Player) {
     // BITMAP
     /////////////////////////////////////////////////////
     private fun setLargeIcon(builder: NotificationCompat.Builder) {
-        val showThumbnail = player.prefs.getBoolean(
-            player.context.getString(R.string.show_thumbnail_key), true)
+        val showThumbnail = player.prefs.getBoolean(player.context.getString(R.string.show_thumbnail_key), true)
         val thumbnail = player.thumbnail
         if (thumbnail == null || !showThumbnail) {
             // since the builder is reused, make sure the thumbnail is unset if there is not one
@@ -260,9 +273,7 @@ class NotificationUtil(private val player: Player) {
             return
         }
 
-        val scaleImageToSquareAspectRatio = player.prefs.getBoolean(
-            player.context.getString(R.string.scale_to_square_image_in_notifications_key),
-            false)
+        val scaleImageToSquareAspectRatio = player.prefs.getBoolean(player.context.getString(R.string.scale_to_square_image_in_notifications_key), false)
         if (scaleImageToSquareAspectRatio) {
             builder.setLargeIcon(getBitmapWithSquareAspectRatio(thumbnail))
         } else {

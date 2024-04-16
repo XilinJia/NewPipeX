@@ -1,4 +1,4 @@
-/*
+ /*
  * Based on ExoPlayer's DefaultHttpDataSource, version 2.18.1.
  *
  * Original source code copyright (C) 2016 The Android Open Source Project, licensed under the
@@ -7,13 +7,13 @@
 package org.schabi.newpipe.player.datasource
 
 import android.net.Uri
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.PlaybackException
-import com.google.android.exoplayer2.upstream.*
-import com.google.android.exoplayer2.upstream.HttpDataSource.*
-import com.google.android.exoplayer2.util.Assertions
-import com.google.android.exoplayer2.util.Log
-import com.google.android.exoplayer2.util.Util
+import android.util.Log
+import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.util.Assertions
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
+import androidx.media3.datasource.*
 import com.google.common.base.Predicate
 import com.google.common.collect.ForwardingMap
 import com.google.common.collect.ImmutableMap
@@ -46,12 +46,12 @@ import kotlin.math.min
  * There are many unused methods in this class because everything was copied from [ ] with as little changes as possible.
  * SonarQube warnings were also suppressed for the same reason.
  */
-class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis: Int,
+ @UnstableApi class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis: Int,
                                                 private val readTimeoutMillis: Int,
                                                 private val allowCrossProtocolRedirects: Boolean,
                                                 private val rangeParameterEnabled: Boolean,
                                                 private val rnParameterEnabled: Boolean,
-                                                private val defaultRequestProperties: RequestProperties?,
+                                                private val defaultRequestProperties: HttpDataSource.RequestProperties?,
                                                 private val contentTypePredicate: Predicate<String>?,
                                                 keepPostFor302Redirects: Boolean
 ) : BaseDataSource(true), HttpDataSource {
@@ -59,7 +59,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
      * [DataSource.Factory] for [YoutubeHttpDataSource] instances.
      */
     class Factory : HttpDataSource.Factory {
-        private val defaultRequestProperties = RequestProperties()
+        private val defaultRequestProperties = HttpDataSource.RequestProperties()
 
         private var transferListener: TransferListener? = null
         private var contentTypePredicate: Predicate<String>? = null
@@ -241,7 +241,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
         }
     }
 
-    private val requestProperties = RequestProperties()
+    private val requestProperties = HttpDataSource.RequestProperties()
     private val keepPostFor302Redirects: Boolean
 
     private var dataSpec: DataSpec? = null
@@ -302,7 +302,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
     /**
      * Opens the source to read the specified data.
      */
-    @Throws(HttpDataSourceException::class)
+    @Throws(HttpDataSource.HttpDataSourceException::class)
     override fun open(dataSpecParameter: DataSpec): Long {
         this.dataSpec = dataSpecParameter
         bytesRead = 0
@@ -318,8 +318,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
             responseMessage = httpURLConnection.responseMessage
         } catch (e: IOException) {
             closeConnectionQuietly()
-            throw HttpDataSourceException.createForIOException(e, dataSpec!!,
-                HttpDataSourceException.TYPE_OPEN)
+            throw HttpDataSource.HttpDataSourceException.createForIOException(e, dataSpec!!, HttpDataSource.HttpDataSourceException.TYPE_OPEN)
         }
 
         // Check for a valid response code.
@@ -339,9 +338,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
 
             val errorStream = httpURLConnection.errorStream
             var errorResponseBody = try {
-                if (errorStream != null
-                ) Util.toByteArray(errorStream)
-                else Util.EMPTY_BYTE_ARRAY
+                if (errorStream != null) Util.toByteArray(errorStream) else Util.EMPTY_BYTE_ARRAY
             } catch (e: IOException) {
                 Util.EMPTY_BYTE_ARRAY
             }
@@ -350,7 +347,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
             val cause: IOException? = if (responseCode == 416) DataSourceException(
                 PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE)
             else null
-            throw InvalidResponseCodeException(responseCode, responseMessage, cause, headers,
+            throw HttpDataSource.InvalidResponseCodeException(responseCode, responseMessage, cause, headers,
                 dataSpec!!, errorResponseBody)
         }
 
@@ -358,7 +355,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
         val contentType = httpURLConnection.contentType
         if (contentTypePredicate != null && !contentTypePredicate.apply(contentType)) {
             closeConnectionQuietly()
-            throw InvalidContentTypeException(contentType, dataSpecParameter)
+            throw HttpDataSource.InvalidContentTypeException(contentType, dataSpecParameter)
         }
         val bytesToSkip = if (!rangeParameterEnabled) {
             // If we requested a range starting from a non-zero position and received a 200 rather
@@ -399,9 +396,9 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
             }
         } catch (e: IOException) {
             closeConnectionQuietly()
-            throw HttpDataSourceException(e, dataSpec!!,
+            throw HttpDataSource.HttpDataSourceException(e, dataSpec!!,
                 PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
-                HttpDataSourceException.TYPE_OPEN)
+                HttpDataSource.HttpDataSourceException.TYPE_OPEN)
         }
 
         opened = true
@@ -411,28 +408,28 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
             skipFully(bytesToSkip, dataSpec!!)
         } catch (e: IOException) {
             closeConnectionQuietly()
-            if (e is HttpDataSourceException) {
+            if (e is HttpDataSource.HttpDataSourceException) {
                 throw e
             }
-            throw HttpDataSourceException(e, dataSpec!!,
+            throw HttpDataSource.HttpDataSourceException(e, dataSpec!!,
                 PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
-                HttpDataSourceException.TYPE_OPEN)
+                HttpDataSource.HttpDataSourceException.TYPE_OPEN)
         }
 
         return bytesToRead
     }
 
-    @Throws(HttpDataSourceException::class)
+    @Throws(HttpDataSource.HttpDataSourceException::class)
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         try {
             return readInternal(buffer, offset, length)
         } catch (e: IOException) {
-            throw HttpDataSourceException.createForIOException(e, Util.castNonNull(dataSpec),
-                HttpDataSourceException.TYPE_READ)
+            throw HttpDataSource.HttpDataSourceException.createForIOException(e, Util.castNonNull(dataSpec),
+                HttpDataSource.HttpDataSourceException.TYPE_READ)
         }
     }
 
-    @Throws(HttpDataSourceException::class)
+    @Throws(HttpDataSource.HttpDataSourceException::class)
     override fun close() {
         try {
             val connectionInputStream = this.inputStream
@@ -446,9 +443,9 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
                 try {
                     connectionInputStream.close()
                 } catch (e: IOException) {
-                    throw HttpDataSourceException(e, Util.castNonNull(dataSpec),
+                    throw HttpDataSource.HttpDataSourceException(e, Util.castNonNull(dataSpec),
                         PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
-                        HttpDataSourceException.TYPE_CLOSE)
+                        HttpDataSource.HttpDataSourceException.TYPE_CLOSE)
                 }
             }
         } finally {
@@ -506,11 +503,11 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
         }
 
         // If we get here we've been redirected more times than are permitted.
-        throw HttpDataSourceException(
+        throw HttpDataSource.HttpDataSourceException(
             NoRouteToHostException("Too many redirects: $redirectCount"),
             dataSpecToUse,
             PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-            HttpDataSourceException.TYPE_OPEN)
+            HttpDataSource.HttpDataSourceException.TYPE_OPEN)
     }
 
     /**
@@ -646,15 +643,15 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
      * @return The next URL.
      * @throws HttpDataSourceException If redirection isn't possible.
      */
-    @Throws(HttpDataSourceException::class)
+    @Throws(HttpDataSource.HttpDataSourceException::class)
     private fun handleRedirect(originalUrl: URL,
                                location: String?,
                                dataSpecToHandleRedirect: DataSpec
     ): URL {
         if (location == null) {
-            throw HttpDataSourceException("Null location redirect", dataSpecToHandleRedirect,
+            throw HttpDataSource.HttpDataSourceException("Null location redirect", dataSpecToHandleRedirect,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                HttpDataSourceException.TYPE_OPEN)
+                HttpDataSource.HttpDataSourceException.TYPE_OPEN)
         }
 
         // Form the new url.
@@ -662,22 +659,22 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
         try {
             url = URL(originalUrl, location)
         } catch (e: MalformedURLException) {
-            throw HttpDataSourceException(e, dataSpecToHandleRedirect,
+            throw HttpDataSource.HttpDataSourceException(e, dataSpecToHandleRedirect,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                HttpDataSourceException.TYPE_OPEN)
+                HttpDataSource.HttpDataSourceException.TYPE_OPEN)
         }
 
         // Check that the protocol of the new url is supported.
         val protocol = url.protocol
         if ("https" != protocol && "http" != protocol) {
-            throw HttpDataSourceException("Unsupported protocol redirect: $protocol",
+            throw HttpDataSource.HttpDataSourceException("Unsupported protocol redirect: $protocol",
                 dataSpecToHandleRedirect,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                HttpDataSourceException.TYPE_OPEN)
+                HttpDataSource.HttpDataSourceException.TYPE_OPEN)
         }
 
         if (!allowCrossProtocolRedirects && protocol != originalUrl.protocol) {
-            throw HttpDataSourceException(
+            throw HttpDataSource.HttpDataSourceException(
                 "Disallowed cross-protocol redirect ("
                         + originalUrl.protocol
                         + " to "
@@ -685,7 +682,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
                         + ")",
                 dataSpecToHandleRedirect,
                 PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                HttpDataSourceException.TYPE_OPEN)
+                HttpDataSource.HttpDataSourceException.TYPE_OPEN)
         }
 
         return url
@@ -711,18 +708,18 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
             val readLength = min(bytesToSkip.toDouble(), skipBuffer.size.toDouble()).toInt()
             val read = Util.castNonNull(inputStream).read(skipBuffer, 0, readLength)
             if (Thread.currentThread().isInterrupted) {
-                throw HttpDataSourceException(
+                throw HttpDataSource.HttpDataSourceException(
                     InterruptedIOException(),
                     dataSpecToUse,
                     PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
-                    HttpDataSourceException.TYPE_OPEN)
+                    HttpDataSource.HttpDataSourceException.TYPE_OPEN)
             }
 
             if (read == -1) {
-                throw HttpDataSourceException(
+                throw HttpDataSource.HttpDataSourceException(
                     dataSpecToUse,
                     PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
-                    HttpDataSourceException.TYPE_OPEN)
+                    HttpDataSource.HttpDataSourceException.TYPE_OPEN)
             }
 
             bytesToSkip -= read.toLong()
@@ -825,7 +822,7 @@ class YoutubeHttpDataSource private constructor(private val connectTimeoutMillis
         }
     }
 
-    companion object {
+    @UnstableApi companion object {
         private val TAG: String = YoutubeHttpDataSource::class.java.simpleName
         private const val MAX_REDIRECTS = 20 // Same limit as okhttp.
         private const val HTTP_STATUS_TEMPORARY_REDIRECT = 307

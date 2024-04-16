@@ -2,21 +2,14 @@ package org.schabi.newpipe.util
 
 import android.content.Context
 import android.view.View
-import android.view.View.GONE
-import android.view.View.INVISIBLE
-import android.view.View.VISIBLE
+import android.view.View.*
 import android.widget.Spinner
 import androidx.collection.SparseArrayCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import androidx.test.internal.runner.junit4.statement.UiThreadStatement
-import com.google.android.exoplayer2.audio.AudioProcessor
-import org.junit.Assert
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
+import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -95,7 +88,7 @@ class StreamItemAdapterTest {
     fun subtitleStreams_noIcon() {
         val adapter =
             StreamItemAdapter<SubtitlesStream, Stream>(
-                StreamItemAdapter.StreamInfoWrapper(
+                StreamInfoWrapper(
                     (0 until 5).map {
                         SubtitlesStream.Builder()
                             .setContent("https://example.com", true)
@@ -117,7 +110,7 @@ class StreamItemAdapterTest {
     fun audioStreams_noIcon() {
         val adapter =
             StreamItemAdapter<AudioStream, Stream>(
-                StreamItemAdapter.StreamInfoWrapper(
+                StreamInfoWrapper(
                     (0 until 5).map {
                         AudioStream.Builder()
                             .setId(Stream.ID_UNKNOWN)
@@ -263,7 +256,7 @@ class StreamItemAdapterTest {
      * [videoOnly] vararg.
      */
     private fun getVideoStreams(vararg videoOnly: Boolean) =
-        StreamItemAdapter.StreamInfoWrapper(
+        StreamInfoWrapper(
             videoOnly.map {
                 VideoStream.Builder()
                     .setId(Stream.ID_UNKNOWN)
@@ -328,14 +321,14 @@ class StreamItemAdapterTest {
     ) {
         spinner.setSelection(position)
         spinner.adapter.getView(position, null, spinner).run {
-            Assert.assertEquals(
+            assertEquals(
                 "normal visibility (pos=[$position]) is not correct",
                 findViewById<View>(R.id.wo_sound_icon).visibility,
                 normalVisibility,
             )
         }
         spinner.adapter.getDropDownView(position, null, spinner).run {
-            Assert.assertEquals(
+            assertEquals(
                 "drop down visibility (pos=[$position]) is not correct",
                 findViewById<View>(R.id.wo_sound_icon).visibility,
                 dropDownVisibility,
@@ -350,7 +343,7 @@ class StreamItemAdapterTest {
         SparseArrayCompat<SecondaryStreamHelper<T>>(streams.size).apply {
             streams.forEachIndexed { index, stream ->
                 val secondaryStreamHelper: SecondaryStreamHelper<T>? =
-                    stream?.let {
+                    stream.let {
                         val param = StreamInfoWrapper(streams, context)
                         SecondaryStreamHelper(param, it)
                     }

@@ -5,8 +5,10 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
-import com.google.android.exoplayer2.util.Util
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import okio.ByteString
 import org.schabi.newpipe.R
 import org.schabi.newpipe.streams.io.SharpInputStream
@@ -154,7 +156,7 @@ object Utility {
         }
     }
 
-    @Throws(IOException::class)
+    @OptIn(UnstableApi::class) @Throws(IOException::class)
     fun checksum(source: StoredFileHelper, algorithmId: Int): String {
         var byteString: ByteString
         SharpInputStream(source.stream).use { inputStream ->

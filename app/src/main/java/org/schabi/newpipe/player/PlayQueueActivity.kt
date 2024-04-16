@@ -14,7 +14,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.exoplayer2.PlaybackParameters
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.QueueItemMenuUtil.openPopupMenu
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.ActivityPlayerQueueControlBinding
@@ -45,7 +46,7 @@ import java.util.function.Function
 import kotlin.math.abs
 import kotlin.math.min
 
-class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarChangeListener, View.OnClickListener,
+@UnstableApi class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarChangeListener, View.OnClickListener,
     PlaybackParameterDialog.Callback {
     private var player: Player? = null
 
@@ -127,7 +128,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
                 return true
             }
             R.id.action_mute -> {
-                player!!.toggleMute()
+                player?.toggleMute()
                 return true
             }
             R.id.action_system_audio -> {
@@ -135,20 +136,22 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
                 return true
             }
             R.id.action_switch_main -> {
-                player!!.setRecovery()
+                player?.setRecovery()
                 playOnMainPlayer(this, player!!.playQueue!!, true)
                 return true
             }
             R.id.action_switch_popup -> {
-                if (isPopupEnabledElseAsk(this)) {
-                    player!!.setRecovery()
+                if (player != null && isPopupEnabledElseAsk(this)) {
+                    player?.setRecovery()
                     playOnPopupPlayer(this, player!!.playQueue, true)
                 }
                 return true
             }
             R.id.action_switch_background -> {
-                player!!.setRecovery()
-                playOnBackgroundPlayer(this, player!!.playQueue, true)
+                if (player != null) {
+                    player?.setRecovery()
+                    playOnBackgroundPlayer(this, player!!.playQueue, true)
+                }
                 return true
             }
         }
@@ -181,14 +184,10 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
         if (serviceBound) {
             unbindService(serviceConnection!!)
             serviceBound = false
-            if (player != null) {
-                player!!.removeActivityListener(this)
-            }
+            player?.removeActivityListener(this)
 
             onQueueUpdate(null)
-            if (itemTouchHelper != null) {
-                itemTouchHelper!!.attachToRecyclerView(null)
-            }
+            itemTouchHelper?.attachToRecyclerView(null)
 
             itemTouchHelper = null
             player = null
@@ -213,9 +212,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
                 } else {
                     onQueueUpdate(player!!.playQueue)
                     buildComponents()
-                    if (player != null) {
-                        player!!.setActivityListener(this@PlayQueueActivity)
-                    }
+                    player?.setActivityListener(this@PlayQueueActivity)
                 }
             }
         }
@@ -278,9 +275,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
     private val itemTouchCallback: ItemTouchHelper.SimpleCallback
         get() = object : PlayQueueItemTouchCallback() {
             override fun onMove(sourceIndex: Int, targetIndex: Int) {
-                if (player != null) {
-                    player!!.playQueue!!.move(sourceIndex, targetIndex)
-                }
+                player?.playQueue?.move(sourceIndex, targetIndex)
             }
 
             override fun onSwiped(index: Int) {
@@ -309,9 +304,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
         }
 
     private fun scrollToSelected() {
-        if (player == null) {
-            return
-        }
+        if (player == null) return
 
         val currentPlayingIndex = player!!.playQueue!!.index
         val currentVisibleIndex: Int
@@ -335,28 +328,36 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
     // Component On-Click Listener
     ////////////////////////////////////////////////////////////////////////////
     override fun onClick(view: View) {
-        if (player == null) {
-            return
-        }
+        if (player == null) return
 
-        if (view.id == queueControlBinding!!.controlRepeat.id) {
-            player!!.cycleNextRepeatMode()
-        } else if (view.id == queueControlBinding!!.controlBackward.id) {
-            player!!.playPrevious()
-        } else if (view.id == queueControlBinding!!.controlFastRewind.id) {
-            player!!.fastRewind()
-        } else if (view.id == queueControlBinding!!.controlPlayPause.id) {
-            player!!.playPause()
-        } else if (view.id == queueControlBinding!!.controlFastForward.id) {
-            player!!.fastForward()
-        } else if (view.id == queueControlBinding!!.controlForward.id) {
-            player!!.playNext()
-        } else if (view.id == queueControlBinding!!.controlShuffle.id) {
-            player!!.toggleShuffleModeEnabled()
-        } else if (view.id == queueControlBinding!!.metadata.id) {
-            scrollToSelected()
-        } else if (view.id == queueControlBinding!!.liveSync.id) {
-            player!!.seekToDefault()
+        when (view.id) {
+            queueControlBinding!!.controlRepeat.id -> {
+                player!!.cycleNextRepeatMode()
+            }
+            queueControlBinding!!.controlBackward.id -> {
+                player!!.playPrevious()
+            }
+            queueControlBinding!!.controlFastRewind.id -> {
+                player!!.fastRewind()
+            }
+            queueControlBinding!!.controlPlayPause.id -> {
+                player!!.playPause()
+            }
+            queueControlBinding!!.controlFastForward.id -> {
+                player!!.fastForward()
+            }
+            queueControlBinding!!.controlForward.id -> {
+                player!!.playNext()
+            }
+            queueControlBinding!!.controlShuffle.id -> {
+                player!!.toggleShuffleModeEnabled()
+            }
+            queueControlBinding!!.metadata.id -> {
+                scrollToSelected()
+            }
+            queueControlBinding!!.liveSync.id -> {
+                player!!.seekToDefault()
+            }
         }
     }
 
@@ -364,9 +365,8 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
     // Playback Parameters
     ////////////////////////////////////////////////////////////////////////////
     private fun openPlaybackParameterDialog() {
-        if (player == null) {
-            return
-        }
+        if (player == null) return
+
         PlaybackParameterDialog.newInstance(player!!.playbackSpeed.toDouble(), player!!.playbackPitch.toDouble(),
             player!!.playbackSkipSilence, this).show(supportFragmentManager, TAG)
     }
@@ -420,8 +420,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
     }
 
     override fun onPlaybackUpdate(state: Int, repeatMode: Int, shuffled: Boolean,
-                                  parameters: PlaybackParameters?
-    ) {
+                                  parameters: PlaybackParameters?) {
         onStateChanged(state)
         onPlayModeChanged(repeatMode, shuffled)
         onPlaybackParameterChanged(parameters)
@@ -429,8 +428,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
     }
 
     override fun onProgressUpdate(currentProgress: Int, duration: Int,
-                                  bufferPercent: Int
-    ) {
+                                  bufferPercent: Int) {
         // Set buffer progress
         queueControlBinding!!.seekBar.secondaryProgress = (queueControlBinding!!.seekBar.max
                 * (bufferPercent.toFloat() / 100)).toInt()
@@ -450,8 +448,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
         }
 
         // this will make sure progressCurrentTime has the same width as progressEndTime
-        val currentTimeParams =
-            queueControlBinding!!.currentTime.layoutParams
+        val currentTimeParams = queueControlBinding!!.currentTime.layoutParams
         currentTimeParams.width = queueControlBinding!!.endTime.width
         queueControlBinding!!.currentTime.layoutParams = currentTimeParams
     }
@@ -464,8 +461,7 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
             queueControlBinding!!.endTime.visibility = View.GONE
             queueControlBinding!!.liveSync.visibility = View.GONE
             when (info.streamType) {
-                StreamType.LIVE_STREAM, StreamType.AUDIO_LIVE_STREAM -> queueControlBinding!!.liveSync.visibility =
-                    View.VISIBLE
+                StreamType.LIVE_STREAM, StreamType.AUDIO_LIVE_STREAM -> queueControlBinding!!.liveSync.visibility = View.VISIBLE
                 else -> queueControlBinding!!.endTime.visibility = View.VISIBLE
             }
             scrollToSelected()
@@ -513,12 +509,12 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
 
     private fun onPlayModeChanged(repeatMode: Int, shuffled: Boolean) {
         when (repeatMode) {
-            com.google.android.exoplayer2.Player.REPEAT_MODE_OFF -> queueControlBinding!!.controlRepeat
-                .setImageResource(R.drawable.exo_controls_repeat_off)
-            com.google.android.exoplayer2.Player.REPEAT_MODE_ONE -> queueControlBinding!!.controlRepeat
-                .setImageResource(R.drawable.exo_controls_repeat_one)
-            com.google.android.exoplayer2.Player.REPEAT_MODE_ALL -> queueControlBinding!!.controlRepeat
-                .setImageResource(R.drawable.exo_controls_repeat_all)
+            androidx.media3.common.Player.REPEAT_MODE_OFF -> queueControlBinding!!.controlRepeat
+                .setImageResource(R.drawable.exo_styled_controls_repeat_off)
+            androidx.media3.common.Player.REPEAT_MODE_ONE -> queueControlBinding!!.controlRepeat
+                .setImageResource(R.drawable.exo_styled_controls_repeat_one)
+            androidx.media3.common.Player.REPEAT_MODE_ALL -> queueControlBinding!!.controlRepeat
+                .setImageResource(R.drawable.exo_styled_controls_repeat_all)
         }
         val shuffleAlpha = if (shuffled) 255 else 77
         queueControlBinding!!.controlShuffle.imageAlpha = shuffleAlpha
@@ -550,19 +546,15 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
     }
 
     private fun buildAudioTrackMenu() {
-        if (menu == null) {
-            return
-        }
+        if (menu == null) return
 
         val audioTrackSelector = menu!!.findItem(R.id.action_audio_track)
-        val availableStreams =
-            Optional.ofNullable<Player>(player)
-                .map<MediaItemTag>(Player::currentMetadata)
-                .flatMap<MediaItemTag.AudioTrack> { obj: MediaItemTag -> obj.maybeAudioTrack }
-                .map<List<AudioStream>?>(Function<MediaItemTag.AudioTrack, List<AudioStream>?> { it.audioStreams })
-                .orElse(null)
-        val selectedAudioStream = Optional.ofNullable(player)
-            .flatMap(Player::selectedAudioStream)
+        val availableStreams = Optional.ofNullable<Player>(player)
+            .map<MediaItemTag>(Player::currentMetadata)
+            .flatMap<MediaItemTag.AudioTrack> { obj: MediaItemTag -> obj.maybeAudioTrack }
+            .map<List<AudioStream>?>(Function<MediaItemTag.AudioTrack, List<AudioStream>?> { it.audioStreams })
+            .orElse(null)
+        val selectedAudioStream = Optional.ofNullable(player).flatMap(Player::selectedAudioStream)
 
         if (availableStreams == null || availableStreams.size < 2 || selectedAudioStream.isEmpty) {
             audioTrackSelector.setVisible(false)
@@ -572,19 +564,15 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
 
             for (i in availableStreams.indices) {
                 val audioStream = availableStreams[i]
-                audioTrackMenu.add(MENU_ID_AUDIO_TRACK, i, Menu.NONE,
-                    audioTrackName(this, audioStream))
+                audioTrackMenu.add(MENU_ID_AUDIO_TRACK, i, Menu.NONE, audioTrackName(this, audioStream))
             }
 
             val s = selectedAudioStream.get()
             val trackName = audioTrackName(this, s)
-            audioTrackSelector.setTitle(
-                getString(R.string.play_queue_audio_track, trackName))
+            audioTrackSelector.setTitle(getString(R.string.play_queue_audio_track, trackName))
 
-            val shortName = if (s.audioLocale != null
-            ) s.audioLocale!!.language else trackName!!
-            audioTrackSelector.setTitleCondensed(
-                shortName.substring(0, min(shortName.length.toDouble(), 2.0).toInt()))
+            val shortName = if (s.audioLocale != null) s.audioLocale!!.language else trackName!!
+            audioTrackSelector.setTitleCondensed(shortName.substring(0, min(shortName.length.toDouble(), 2.0).toInt()))
             audioTrackSelector.setVisible(true)
         }
     }
@@ -595,15 +583,12 @@ class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarCha
      * @param itemId index of the selected item
      */
     private fun onAudioTrackClick(itemId: Int) {
-        if (player!!.currentMetadata == null) {
-            return
-        }
+        if (player!!.currentMetadata == null) return
+
         player!!.currentMetadata!!.maybeAudioTrack.ifPresent { audioTrack: MediaItemTag.AudioTrack ->
             val availableStreams = audioTrack.audioStreams
             val selectedStreamIndex = audioTrack.selectedAudioStreamIndex
-            if (selectedStreamIndex == itemId || availableStreams.size <= itemId) {
-                return@ifPresent
-            }
+            if (selectedStreamIndex == itemId || availableStreams.size <= itemId) return@ifPresent
 
             val newAudioTrack = availableStreams[itemId].audioTrackId
             player!!.setAudioTrack(newAudioTrack)

@@ -3,10 +3,10 @@ package org.schabi.newpipe.views
 import android.content.Context
 import android.util.AttributeSet
 import android.view.SurfaceView
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.ResizeMode
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.AspectRatioFrameLayout
 
-class ExpandableSurfaceView(context: Context?, attrs: AttributeSet?) : SurfaceView(context, attrs) {
+@UnstableApi class ExpandableSurfaceView(context: Context?, attrs: AttributeSet?) : SurfaceView(context, attrs) {
     private var resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
     private var baseHeight = 0
     private var maxHeight = 0
@@ -76,7 +76,7 @@ class ExpandableSurfaceView(context: Context?, attrs: AttributeSet?) : SurfaceVi
         requestLayout()
     }
 
-    fun setResizeMode(newResizeMode: @ResizeMode Int) {
+    fun setResizeMode(newResizeMode: @AspectRatioFrameLayout.ResizeMode Int) {
         if (resizeMode == newResizeMode) {
             return
         }
@@ -85,7 +85,7 @@ class ExpandableSurfaceView(context: Context?, attrs: AttributeSet?) : SurfaceVi
         requestLayout()
     }
 
-    fun getResizeMode(): @ResizeMode Int {
+    fun getResizeMode(): @AspectRatioFrameLayout.ResizeMode Int {
         return resizeMode
     }
 

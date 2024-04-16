@@ -15,8 +15,9 @@ import android.view.animation.AnticipateInterpolator
 import android.widget.LinearLayout
 import androidx.core.content.ContextCompat
 import androidx.core.math.MathUtils
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
-import com.google.android.exoplayer2.ui.SubtitleView
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.SubtitleView
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.PlayerBinding
@@ -28,9 +29,7 @@ import org.schabi.newpipe.player.helper.PlayerHelper
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-class PopupPlayerUi(player: Player,
-                    playerBinding: PlayerBinding
-) : VideoPlayerUi(player, playerBinding) {
+@UnstableApi class PopupPlayerUi(player: Player, playerBinding: PlayerBinding) : VideoPlayerUi(player, playerBinding) {
     /*//////////////////////////////////////////////////////////////////////////
     // Popup player
     ////////////////////////////////////////////////////////////////////////// */

@@ -1,4 +1,5 @@
  
+## 0.26.1
 
 * disabled checkstyle and ktlint in build.gradle
 * updated most existing dependencies
@@ -19,3 +20,7 @@
 ACRA caught a RuntimeException for org.schabi.newpipe.debug.main                                                                                                  java.lang.RuntimeException: Failure from system
 Caused by: android.os.TransactionTooLargeException: data parcel size 1257884 bytes                                                                                                at android.os.BinderProxy.transactNative(Native Method)
 ```
+## 0.26.2
+
+* introductory migration to androidx.media3: removed exoplayer2 et al, commented out functions related to MediaSessionConnector etc.
+* though not thoroughly tested, app appears working

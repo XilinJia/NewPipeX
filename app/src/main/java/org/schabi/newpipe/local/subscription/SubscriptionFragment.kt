@@ -68,7 +68,7 @@ import org.schabi.newpipe.util.ThemeHelper.getGridSpanCountChannels
 import org.schabi.newpipe.util.external_communication.ShareUtils
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
+import java.util.*
 
 class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     private var _binding: FragmentSubscriptionBinding? = null

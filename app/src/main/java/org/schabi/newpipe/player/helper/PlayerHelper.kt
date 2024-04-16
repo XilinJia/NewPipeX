@@ -9,16 +9,16 @@ import android.view.accessibility.CaptioningManager
 import androidx.annotation.IntDef
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
-import com.google.android.exoplayer2.PlaybackParameters
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.SeekParameters
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.trackselection.AdaptiveTrackSelection
-import com.google.android.exoplayer2.trackselection.ExoTrackSelection
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.ResizeMode
-import com.google.android.exoplayer2.ui.CaptionStyleCompat
-import com.google.android.exoplayer2.util.MimeTypes
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Player
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
+import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection
+import androidx.media3.exoplayer.trackselection.ExoTrackSelection
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.CaptionStyleCompat
 import org.schabi.newpipe.R
 import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.stream.StreamInfo
@@ -34,7 +34,7 @@ import java.text.NumberFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-object PlayerHelper {
+@UnstableApi object PlayerHelper {
     private val STRING_BUILDER = StringBuilder()
     private val STRING_FORMATTER = Formatter(STRING_BUILDER, Locale.getDefault())
     private val SPEED_FORMATTER: NumberFormat = DecimalFormat("0.##x")
@@ -92,7 +92,7 @@ object PlayerHelper {
         return language.split("\\(".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[0].trim { it <= ' ' }
     }
 
-    fun resizeTypeOf(context: Context, resizeMode: @ResizeMode Int): String {
+    fun resizeTypeOf(context: Context, resizeMode: @AspectRatioFrameLayout.ResizeMode Int): String {
         return when (resizeMode) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT -> context.resources.getString(R.string.resize_fit)
             AspectRatioFrameLayout.RESIZE_MODE_FILL -> context.resources.getString(R.string.resize_fill)
@@ -334,12 +334,12 @@ object PlayerHelper {
         }
     }
 
-    fun retrieveResizeModeFromPrefs(player: org.schabi.newpipe.player.Player): @ResizeMode Int {
+    fun retrieveResizeModeFromPrefs(player: org.schabi.newpipe.player.Player): @AspectRatioFrameLayout.ResizeMode Int {
         return player.prefs.getInt(player.context.getString(R.string.last_resize_mode), AspectRatioFrameLayout.RESIZE_MODE_FIT)
     }
 
     @SuppressLint("SwitchIntDef") // only fit, fill and zoom are supported by NewPipe
-    fun nextResizeModeAndSaveToPrefs(player: org.schabi.newpipe.player.Player, resizeMode: @ResizeMode Int): @ResizeMode Int {
+    fun nextResizeModeAndSaveToPrefs(player: org.schabi.newpipe.player.Player, resizeMode: @AspectRatioFrameLayout.ResizeMode Int): @AspectRatioFrameLayout.ResizeMode Int {
         val newResizeMode = when (resizeMode) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
             AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM

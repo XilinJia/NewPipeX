@@ -2,8 +2,9 @@ package org.schabi.newpipe.player.playback
 
 import android.content.Context
 import android.view.SurfaceHolder
-import com.google.android.exoplayer2.Player
-import com.google.android.exoplayer2.video.PlaceholderSurface
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.video.PlaceholderSurface
 
 /**
  * Prevent error message: 'Unrecoverable player error occurred'
@@ -24,7 +25,7 @@ import com.google.android.exoplayer2.video.PlaceholderSurface
  * -> exoplayer fix suggestion link
  * https://github.com/google/ExoPlayer/issues/2703#issuecomment-300599981
  */
-class SurfaceHolderCallback(private val context: Context, private val player: Player) : SurfaceHolder.Callback {
+@UnstableApi class SurfaceHolderCallback(private val context: Context, private val player: Player) : SurfaceHolder.Callback {
     private var placeholderSurface: PlaceholderSurface? = null
 
     override fun surfaceCreated(holder: SurfaceHolder) {

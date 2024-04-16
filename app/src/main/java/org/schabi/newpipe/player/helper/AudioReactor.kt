@@ -9,16 +9,16 @@ import android.media.AudioManager
 import android.media.AudioManager.OnAudioFocusChangeListener
 import android.media.audiofx.AudioEffect
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
-import com.google.android.exoplayer2.ExoPlayer
-import com.google.android.exoplayer2.analytics.AnalyticsListener
-import com.google.android.exoplayer2.analytics.AnalyticsListener.EventTime
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 
-class AudioReactor(private val context: Context,
-                   private val player: ExoPlayer
-) : OnAudioFocusChangeListener, AnalyticsListener {
+@OptIn(UnstableApi::class) class AudioReactor(private val context: Context, private val player: ExoPlayer)
+    : OnAudioFocusChangeListener, AnalyticsListener {
     private val audioManager = ContextCompat.getSystemService(context, AudioManager::class.java)
 
     private val request: AudioFocusRequestCompat
@@ -115,7 +115,7 @@ class AudioReactor(private val context: Context,
     /*//////////////////////////////////////////////////////////////////////////
     // Audio Processing
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onAudioSessionIdChanged(eventTime: EventTime,
+    override fun onAudioSessionIdChanged(eventTime: AnalyticsListener.EventTime,
                                          audioSessionId: Int
     ) {
         notifyAudioSessionUpdate(true, audioSessionId)

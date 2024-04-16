@@ -6,7 +6,7 @@ import org.ocpsoft.prettytime.PrettyTime
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.util.Locale
+import java.util.*
 
 class LocalizationTest {
     @Test(expected = NullPointerException::class)

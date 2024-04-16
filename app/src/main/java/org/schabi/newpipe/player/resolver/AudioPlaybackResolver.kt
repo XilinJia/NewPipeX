@@ -2,7 +2,8 @@ package org.schabi.newpipe.player.resolver
 
 import android.content.Context
 import android.util.Log
-import com.google.android.exoplayer2.source.MediaSource
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.source.MediaSource
 import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.Stream
 import org.schabi.newpipe.extractor.stream.StreamInfo
@@ -19,9 +20,8 @@ import org.schabi.newpipe.util.ListHelper.getDefaultResolutionIndex
 import org.schabi.newpipe.util.ListHelper.getFilteredAudioStreams
 import org.schabi.newpipe.util.ListHelper.getPlayableStreams
 
-class AudioPlaybackResolver(private val context: Context,
-                            private val dataSource: PlayerDataSource
-) : PlaybackResolver {
+@UnstableApi class AudioPlaybackResolver(private val context: Context,
+                            private val dataSource: PlayerDataSource) : PlaybackResolver {
     var audioTrack: String? = null
 
     /**

@@ -2,18 +2,19 @@ package org.schabi.newpipe.player.resolver
 
 import android.net.Uri
 import android.util.Log
-import com.google.android.exoplayer2.C
-import com.google.android.exoplayer2.MediaItem
-import com.google.android.exoplayer2.MediaItem.LiveConfiguration
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.source.ProgressiveMediaSource
-import com.google.android.exoplayer2.source.dash.DashMediaSource
-import com.google.android.exoplayer2.source.dash.manifest.DashManifest
-import com.google.android.exoplayer2.source.dash.manifest.DashManifestParser
-import com.google.android.exoplayer2.source.hls.HlsMediaSource
-import com.google.android.exoplayer2.source.smoothstreaming.SsMediaSource
-import com.google.android.exoplayer2.source.smoothstreaming.manifest.SsManifest
-import com.google.android.exoplayer2.source.smoothstreaming.manifest.SsManifestParser
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaItem.LiveConfiguration
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.dash.manifest.DashManifest
+import androidx.media3.exoplayer.dash.manifest.DashManifestParser
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
+import androidx.media3.exoplayer.smoothstreaming.manifest.SsManifest
+import androidx.media3.exoplayer.smoothstreaming.manifest.SsManifestParser
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.CreationException
 import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeOtfDashManifestCreator
@@ -24,7 +25,6 @@ import org.schabi.newpipe.player.datasource.NonUriHlsDataSourceFactory
 import org.schabi.newpipe.player.helper.PlayerDataSource
 import org.schabi.newpipe.player.mediaitem.MediaItemTag
 import org.schabi.newpipe.player.mediaitem.StreamInfoTag
-import org.schabi.newpipe.player.resolver.PlaybackResolver.ResolverException
 import org.schabi.newpipe.util.StreamTypeUtil.isLiveStream
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -36,7 +36,7 @@ import java.util.*
  * [MediaSource] as product. It contains many static methods that can be used by classes
  * implementing this interface, and nothing else.
  */
-interface PlaybackResolver : Resolver<StreamInfo, MediaSource> {
+@UnstableApi interface PlaybackResolver : Resolver<StreamInfo, MediaSource> {
     //endregion
     //region Resolver exception
     class ResolverException : Exception {
@@ -45,7 +45,7 @@ interface PlaybackResolver : Resolver<StreamInfo, MediaSource> {
         constructor(message: String?, cause: Throwable?) : super(message, cause)
     } //endregion
 
-    companion object {
+    @UnstableApi companion object {
         //region Cache key generation
         private fun commonCacheKeyOf(info: StreamInfo,
                                      stream: Stream,

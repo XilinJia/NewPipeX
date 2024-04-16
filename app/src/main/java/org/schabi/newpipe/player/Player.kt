@@ -8,16 +8,17 @@ import android.os.Build
 import android.util.Log
 import android.view.LayoutInflater
 import androidx.core.math.MathUtils
+import androidx.media3.common.*
+import androidx.media3.common.Player.DiscontinuityReason
+import androidx.media3.common.Player.PositionInfo
+import androidx.media3.common.text.CueGroup
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.preference.PreferenceManager
-import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.Player.DiscontinuityReason
-import com.google.android.exoplayer2.Player.PositionInfo
-import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.text.CueGroup
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector
-import com.google.android.exoplayer2.trackselection.MappingTrackSelector.MappedTrackInfo
-import com.google.android.exoplayer2.upstream.DefaultBandwidthMeter
-import com.google.android.exoplayer2.video.VideoSize
 import com.squareup.picasso.Picasso.LoadedFrom
 import com.squareup.picasso.Target
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
@@ -34,7 +35,6 @@ import org.schabi.newpipe.error.ErrorUtil.Companion.createNotification
 import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.extractor.Image
 import org.schabi.newpipe.extractor.ServiceList
-import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
 import org.schabi.newpipe.extractor.stream.VideoStream
@@ -72,12 +72,12 @@ import org.schabi.newpipe.util.image.PicassoHelper.cancelTag
 import org.schabi.newpipe.util.image.PicassoHelper.loadScaledDownThumbnail
 import java.util.*
 import java.util.concurrent.TimeUnit
-import java.util.function.Function
 import java.util.stream.IntStream
 import kotlin.math.max
 
 //TODO try to remove and replace everything with context
-class Player(@JvmField val service: PlayerService) : PlaybackListener, com.google.android.exoplayer2.Player.Listener {
+@UnstableApi
+class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.media3.common.Player.Listener {
     /*//////////////////////////////////////////////////////////////////////////
     // Playback
     ////////////////////////////////////////////////////////////////////////// */
@@ -288,7 +288,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
                             && newQueue.item!!.recoveryPosition != PlayQueueItem.RECOVERY_UNSET -> {
                         // Player can have state = IDLE when playback is stopped or failed
                         // and we should retry in this case
-                        if (exoPlayer!!.playbackState == com.google.android.exoplayer2.Player.STATE_IDLE) {
+                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) {
                             exoPlayer!!.prepare()
                         }
                         exoPlayer!!.seekTo(playQueue!!.index, newQueue.item!!.recoveryPosition)
@@ -298,7 +298,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
                         // Do not re-init the same PlayQueue. Save time
                         // Player can have state = IDLE when playback is stopped or failed
                         // and we should retry in this case
-                        if (exoPlayer!!.playbackState == com.google.android.exoplayer2.Player.STATE_IDLE) {
+                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) {
                             exoPlayer!!.prepare()
                         }
                         exoPlayer!!.playWhenReady = playWhenReady
@@ -380,7 +380,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
     }
 
     private fun initPlayback(queue: PlayQueue,
-                             repeatMode: @com.google.android.exoplayer2.Player.RepeatMode Int,
+                             repeatMode: @androidx.media3.common.Player.RepeatMode Int,
                              playbackSpeed: Float,
                              playbackPitch: Float,
                              playbackSkipSilence: Boolean,
@@ -762,7 +762,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
         if (DEBUG) {
             Log.d(TAG, "ExoPlayer - onPlayWhenReadyChanged() called with: playWhenReady = [$playWhenReady], reason = [$reason]")
         }
-        val playbackState = if (exoPlayerIsNull()) com.google.android.exoplayer2.Player.STATE_IDLE else exoPlayer!!.playbackState
+        val playbackState = if (exoPlayerIsNull()) androidx.media3.common.Player.STATE_IDLE else exoPlayer!!.playbackState
         updatePlaybackState(playWhenReady, playbackState)
     }
 
@@ -786,18 +786,18 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
         }
 
         when (playbackState) {
-            com.google.android.exoplayer2.Player.STATE_IDLE -> isPrepared = false
-            com.google.android.exoplayer2.Player.STATE_BUFFERING -> if (isPrepared) {
+            androidx.media3.common.Player.STATE_IDLE -> isPrepared = false
+            androidx.media3.common.Player.STATE_BUFFERING -> if (isPrepared) {
                 changeState(STATE_BUFFERING)
             }
-            com.google.android.exoplayer2.Player.STATE_READY -> {
+            androidx.media3.common.Player.STATE_READY -> {
                 if (!isPrepared) {
                     isPrepared = true
                     onPrepared(playWhenReady)
                 }
                 changeState(if (playWhenReady) STATE_PLAYING else STATE_PAUSED)
             }
-            com.google.android.exoplayer2.Player.STATE_ENDED -> {
+            androidx.media3.common.Player.STATE_ENDED -> {
                 changeState(STATE_COMPLETED)
                 saveStreamProgressStateCompleted()
                 isPrepared = false
@@ -941,9 +941,9 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
     }
 
 
-    var repeatMode: @com.google.android.exoplayer2.Player.RepeatMode Int
+    var repeatMode: @androidx.media3.common.Player.RepeatMode Int
         //endregion
-        get() = if (exoPlayerIsNull()) com.google.android.exoplayer2.Player.REPEAT_MODE_OFF else exoPlayer!!.repeatMode
+        get() = if (exoPlayerIsNull()) androidx.media3.common.Player.REPEAT_MODE_OFF else exoPlayer!!.repeatMode
         set(repeatMode) {
             if (!exoPlayerIsNull()) {
                 exoPlayer!!.repeatMode = repeatMode
@@ -954,7 +954,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
         repeatMode = PlayerHelper.nextRepeatMode(repeatMode)
     }
 
-    override fun onRepeatModeChanged(repeatMode: @com.google.android.exoplayer2.Player.RepeatMode Int) {
+    override fun onRepeatModeChanged(repeatMode: @androidx.media3.common.Player.RepeatMode Int) {
         if (DEBUG) {
             Log.d(TAG, "ExoPlayer - onRepeatModeChanged() called with: "
                     + "repeatMode = [" + repeatMode + "]")
@@ -1022,11 +1022,11 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
      * This is done because not all source resolution errors are [PlaybackException], which
      * are also captured by [ExoPlayer] and stops the playback.
      *
-     * @param player The [com.google.android.exoplayer2.Player] whose state changed.
-     * @param events The [com.google.android.exoplayer2.Player.Events] that has triggered
+     * @param player The [androidx.media3.common.Player] whose state changed.
+     * @param events The [androidx.media3.common.Player.Events] that has triggered
      * the player state changes.
      */
-    override fun onEvents(player: com.google.android.exoplayer2.Player, events: com.google.android.exoplayer2.Player.Events) {
+    override fun onEvents(player: androidx.media3.common.Player, events: androidx.media3.common.Player.Events) {
         super.onEvents(player, events)
         MediaItemTag.from(player.currentMediaItem).ifPresent { tag: MediaItemTag ->
             if (tag === currentMetadata) return@ifPresent  // we still have the same metadata, no need to do anything
@@ -1087,10 +1087,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
         // Refresh the playback if there is a transition to the next video
         val newIndex = newPosition.mediaItemIndex
         when (discontinuityReason) {
-            com.google.android.exoplayer2.Player.DISCONTINUITY_REASON_AUTO_TRANSITION, com.google.android.exoplayer2.Player.DISCONTINUITY_REASON_REMOVE -> {
+            androidx.media3.common.Player.DISCONTINUITY_REASON_AUTO_TRANSITION, androidx.media3.common.Player.DISCONTINUITY_REASON_REMOVE -> {
                 // When player is in single repeat mode and a period transition occurs,
                 // we need to register a view count here since no metadata has changed
-                if (repeatMode == com.google.android.exoplayer2.Player.REPEAT_MODE_ONE && newIndex == playQueue!!.index) {
+                if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE && newIndex == playQueue!!.index) {
                     registerStreamViewed()
                 } else {
                     if (DEBUG) {
@@ -1106,7 +1106,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
                     }
                 }
             }
-            com.google.android.exoplayer2.Player.DISCONTINUITY_REASON_SEEK -> {
+            androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK -> {
                 if (DEBUG) {
                     Log.d(TAG, "ExoPlayer - onSeekProcessed() called")
                 }
@@ -1118,12 +1118,12 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
                     playQueue!!.index = newIndex
                 }
             }
-            com.google.android.exoplayer2.Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT, com.google.android.exoplayer2.Player.DISCONTINUITY_REASON_INTERNAL ->
+            androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT, androidx.media3.common.Player.DISCONTINUITY_REASON_INTERNAL ->
                 if (currentState != STATE_BLOCKED && newIndex != playQueue!!.index) {
                     saveStreamProgressStateCompleted()
                     playQueue!!.index = newIndex
                 }
-            com.google.android.exoplayer2.Player.DISCONTINUITY_REASON_SKIP -> {}
+            androidx.media3.common.Player.DISCONTINUITY_REASON_SKIP -> {}
         }
     }
 
@@ -1169,7 +1169,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
      * create a notification so users are aware.
      *
      *
-     * @see com.google.android.exoplayer2.Player.Listener.onPlayerError
+     * @see androidx.media3.common.Player.Listener.onPlayerError
      */
     // Any error code not explicitly covered here are either unrelated to NewPipe use case
     // (e.g. DRM) or not recoverable (e.g. Decoder error). In both cases, the player should
@@ -1524,7 +1524,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, com.googl
     //region Play queue, segments and streams
     private fun maybeAutoQueueNextStream(info: StreamInfo) {
         if (playQueue == null || playQueue!!.index != playQueue!!.size() - 1
-                || repeatMode != com.google.android.exoplayer2.Player.REPEAT_MODE_OFF
+                || repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF
                 || !PlayerHelper.isAutoQueueEnabled(context)) {
             return
         }

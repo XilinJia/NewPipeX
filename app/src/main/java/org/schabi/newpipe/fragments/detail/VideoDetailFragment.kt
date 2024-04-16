@@ -35,8 +35,8 @@ import androidx.appcompat.widget.Toolbar
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
-import com.google.android.exoplayer2.PlaybackException
-import com.google.android.exoplayer2.PlaybackParameters
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
@@ -670,9 +670,7 @@ class VideoDetailFragment
     // Info loading and handling
     ////////////////////////////////////////////////////////////////////////// */
     override fun doInitialLoadLogic() {
-        if (wasCleared()) {
-            return
-        }
+        if (wasCleared()) return
 
         if (currentInfo == null) {
             prepareAndLoadInfo()
@@ -681,11 +679,7 @@ class VideoDetailFragment
         }
     }
 
-    fun selectAndLoadVideo(newServiceId: Int,
-                           newUrl: String?,
-                           newTitle: String,
-                           newQueue: PlayQueue?
-    ) {
+    fun selectAndLoadVideo(newServiceId: Int, newUrl: String?, newTitle: String, newQueue: PlayQueue?) {
         if (isPlayerAvailable && newQueue != null && playQueue?.item?.url != newUrl) {
             // Preloading can be disabled since playback is surely being replaced.
             player!!.disablePreloadingOfCurrentTrack()

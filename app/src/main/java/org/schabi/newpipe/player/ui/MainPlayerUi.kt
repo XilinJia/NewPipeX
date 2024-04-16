@@ -20,7 +20,7 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.exoplayer2.video.VideoSize
+import androidx.media3.common.VideoSize
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.QueueItemMenuUtil.openPopupMenu
 import org.schabi.newpipe.R

@@ -1,13 +1,15 @@
 package org.schabi.newpipe.player.mediasource
 
 import android.os.Handler
-import com.google.android.exoplayer2.source.ConcatenatingMediaSource
-import com.google.android.exoplayer2.source.ShuffleOrder.UnshuffledShuffleOrder
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.source.ConcatenatingMediaSource
+import androidx.media3.exoplayer.source.ShuffleOrder
 import org.schabi.newpipe.player.mediaitem.MediaItemTag
 
-class ManagedMediaSourcePlaylist {
+@UnstableApi class ManagedMediaSourcePlaylist {
     /*isPlaylistAtomic=*/
-    val parentMediaSource: ConcatenatingMediaSource = ConcatenatingMediaSource( false, UnshuffledShuffleOrder(0))
+    val parentMediaSource: ConcatenatingMediaSource = ConcatenatingMediaSource( false,
+        ShuffleOrder.UnshuffledShuffleOrder(0))
 
     /*//////////////////////////////////////////////////////////////////////////
     // MediaSource Delegations

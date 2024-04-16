@@ -25,15 +25,21 @@ import androidx.core.graphics.Insets
 import androidx.core.math.MathUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.android.exoplayer2.*
-import com.google.android.exoplayer2.source.TrackGroup
-import com.google.android.exoplayer2.text.Cue
-import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.ResizeMode
-import com.google.android.exoplayer2.ui.CaptionStyleCompat
-import com.google.android.exoplayer2.video.VideoSize
+import androidx.media3.common.C
+import androidx.media3.common.Format
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Tracks
+import androidx.media3.common.TrackGroup
+import androidx.media3.common.text.Cue
+import androidx.media3.common.VideoSize
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.CaptionStyleCompat
 import org.schabi.newpipe.App
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
+//import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.PlayerBinding
 import org.schabi.newpipe.extractor.MediaFormat
 import org.schabi.newpipe.extractor.stream.AudioStream
@@ -66,7 +72,7 @@ import java.util.function.Function
 import java.util.function.Predicate
 import java.util.stream.Collectors
 
-abstract class VideoPlayerUi protected constructor(player: Player, playerBinding: PlayerBinding)
+@UnstableApi abstract class VideoPlayerUi protected constructor(player: Player, playerBinding: PlayerBinding)
     : PlayerUi(player), OnSeekBarChangeListener, PopupMenu.OnMenuItemClickListener, PopupMenu.OnDismissListener {
     private enum class PlayButtonAction {
         PLAY, PAUSE, REPLAY
@@ -809,18 +815,18 @@ abstract class VideoPlayerUi protected constructor(player: Player, playerBinding
         player.toggleShuffleModeEnabled()
     }
 
-    override fun onRepeatModeChanged(repeatMode: @com.google.android.exoplayer2.Player.RepeatMode Int) {
+    override fun onRepeatModeChanged(repeatMode: @androidx.media3.common.Player.RepeatMode Int) {
         super.onRepeatModeChanged(repeatMode)
 
         when (repeatMode) {
-            com.google.android.exoplayer2.Player.REPEAT_MODE_ALL -> {
-                binding.repeatButton.setImageResource(R.drawable.exo_controls_repeat_all)
+            androidx.media3.common.Player.REPEAT_MODE_ALL -> {
+                binding.repeatButton.setImageResource(R.drawable.exo_styled_controls_repeat_all)
             }
-            com.google.android.exoplayer2.Player.REPEAT_MODE_ONE -> {
-                binding.repeatButton.setImageResource(R.drawable.exo_controls_repeat_one)
+            androidx.media3.common.Player.REPEAT_MODE_ONE -> {
+                binding.repeatButton.setImageResource(R.drawable.exo_styled_controls_repeat_one)
             }
             else -> /* repeatMode == REPEAT_MODE_OFF */ {
-                binding.repeatButton.setImageResource(R.drawable.exo_controls_repeat_off)
+                binding.repeatButton.setImageResource(R.drawable.exo_styled_controls_repeat_off)
             }
         }
     }
@@ -1329,7 +1335,7 @@ abstract class VideoPlayerUi protected constructor(player: Player, playerBinding
     // Video size
     ////////////////////////////////////////////////////////////////////////// */
     //region Video size
-    protected fun setResizeMode(resizeMode: @ResizeMode Int) {
+    protected fun setResizeMode(resizeMode: @AspectRatioFrameLayout.ResizeMode Int) {
         binding.surfaceView.setResizeMode(resizeMode)
         binding.resizeTextView.text = PlayerHelper.resizeTypeOf(context, resizeMode)
     }
