@@ -36,11 +36,11 @@ class NotificationsSettingsFragment : BasePreferenceFragment(), OnSharedPreferen
 
     override fun onStart() {
         super.onStart()
-        defaultPreferences?.registerOnSharedPreferenceChangeListener(this)
+        defaultPreferences.registerOnSharedPreferenceChangeListener(this)
     }
 
     override fun onStop() {
-        defaultPreferences?.unregisterOnSharedPreferenceChangeListener(this)
+        defaultPreferences.unregisterOnSharedPreferenceChangeListener(this)
         super.onStop()
     }
 

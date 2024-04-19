@@ -97,7 +97,7 @@ class ContentSettingsFragment : BasePreferenceFragment() {
 
         initialSelectedLocalization = getPreferredLocalization(requireContext())
         initialSelectedContentCountry = getPreferredContentCountry(requireContext())
-        initialLanguage = defaultPreferences!!.getString(getString(R.string.app_language_key), "en")
+        initialLanguage = defaultPreferences.getString(getString(R.string.app_language_key), "en")
 
         val imageQualityPreference = requirePreference(R.string.image_quality_key)
         imageQualityPreference.onPreferenceChangeListener =
@@ -133,8 +133,7 @@ class ContentSettingsFragment : BasePreferenceFragment() {
 
         val selectedLocalization = getPreferredLocalization(requireContext())
         val selectedContentCountry = getPreferredContentCountry(requireContext())
-        val selectedLanguage =
-            defaultPreferences!!.getString(getString(R.string.app_language_key), "en")
+        val selectedLanguage = defaultPreferences.getString(getString(R.string.app_language_key), "en")
 
         if (selectedLocalization != initialSelectedLocalization
                 || selectedContentCountry != initialSelectedContentCountry
@@ -286,12 +285,12 @@ class ContentSettingsFragment : BasePreferenceFragment() {
 
     private val importExportDataUri: Uri?
         get() {
-            val path = defaultPreferences!!.getString(importExportDataPathKey, null)
+            val path = defaultPreferences.getString(importExportDataPathKey, null)
             return if (Utils.isBlank(path)) null else Uri.parse(path)
         }
 
     private fun saveLastImportExportDataUri(importExportDataUri: Uri?) {
-        val editor = defaultPreferences!!.edit()
+        val editor = defaultPreferences.edit()
             .putString(importExportDataPathKey, importExportDataUri.toString())
         editor.apply()
     }

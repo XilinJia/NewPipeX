@@ -20,8 +20,8 @@ android {
         resValue "string", "app_name", "NewPipeX"
         minSdk 24
         targetSdk 33
-        versionCode 997
-        versionName "0.26.2"
+        versionCode 998
+        versionName "0.26.3"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

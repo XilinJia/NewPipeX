@@ -35,10 +35,8 @@ import java.util.stream.Collectors
  * @param <T> the primary stream type's class extending [Stream]
  * @param <U> the secondary stream type's class extending [Stream]
 </U></T> */
-class StreamItemAdapter<T : Stream, U : Stream>(
-        private val streamsWrapper: StreamInfoWrapper<T>,
-        val allSecondary: SparseArrayCompat<SecondaryStreamHelper<U>>
-) : BaseAdapter() {
+class StreamItemAdapter<T : Stream, U : Stream>(private val streamsWrapper: StreamInfoWrapper<T>,
+        val allSecondary: SparseArrayCompat<SecondaryStreamHelper<U>>) : BaseAdapter() {
     /**
      * Indicates that at least one of the primary streams is an instance of [VideoStream],
      * has no audio ([VideoStream.isVideoOnly] returns true) and has no secondary stream
@@ -71,21 +69,13 @@ class StreamItemAdapter<T : Stream, U : Stream>(
         return getCustomView(position, convertView, parent, true)
     }
 
-    override fun getView(position: Int, convertView: View, parent: ViewGroup): View {
+    override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
         return getCustomView((parent as Spinner).selectedItemPosition, convertView, parent, false)
     }
 
-    private fun getCustomView(position: Int,
-                              view: View,
-                              parent: ViewGroup,
-                              isDropdownItem: Boolean
-    ): View {
+    private fun getCustomView(position: Int, view: View?, parent: ViewGroup, isDropdownItem: Boolean): View {
         val context = parent.context
-        var convertView = view
-        if (convertView == null) {
-            convertView = LayoutInflater.from(context).inflate(
-                R.layout.stream_quality_item, parent, false)
-        }
+        val convertView = view ?: LayoutInflater.from(context).inflate(R.layout.stream_quality_item, parent, false)
 
         val woSoundIconView = convertView.findViewById<ImageView>(R.id.wo_sound_icon)
         val formatNameView = convertView.findViewById<TextView>(R.id.stream_format_name)
@@ -105,12 +95,13 @@ class StreamItemAdapter<T : Stream, U : Stream>(
 
                 if (hasAnyVideoOnlyStreamWithNoSecondaryStream) {
                     if (videoStream.isVideoOnly()) {
-                        woSoundIconVisibility =
-                            if (allSecondary[position] != null // It has a secondary stream associated with it, so check if it's a
-                            // dropdown view so it doesn't look out of place (missing margin)
-                            // compared to those that don't.
-                            ) (if (isDropdownItem) View.INVISIBLE else View.GONE) // It doesn't have a secondary stream, icon is visible no matter what.
-                            else View.VISIBLE
+                        // It has a secondary stream associated with it, so check if it's a
+                        // dropdown view so it doesn't look out of place (missing margin)
+                        // compared to those that don't.
+                        // It doesn't have a secondary stream, icon is visible no matter what.
+                        woSoundIconVisibility = if (allSecondary[position] != null) {
+                            if (isDropdownItem) View.INVISIBLE else View.GONE
+                        } else View.VISIBLE
                     } else if (isDropdownItem) {
                         woSoundIconVisibility = View.INVISIBLE
                     }

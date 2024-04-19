@@ -14,8 +14,7 @@ import java.util.*
 abstract class BasePreferenceFragment : PreferenceFragmentCompat() {
     @JvmField
     protected val TAG: String = javaClass.simpleName + "@" + Integer.toHexString(hashCode())
-    @JvmField
-    var defaultPreferences: SharedPreferences? = null
+    lateinit var defaultPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         defaultPreferences = PreferenceManager.getDefaultSharedPreferences(requireActivity())
@@ -23,13 +22,10 @@ abstract class BasePreferenceFragment : PreferenceFragmentCompat() {
     }
 
     protected fun addPreferencesFromResourceRegistry() {
-        addPreferencesFromResource(
-            SettingsResourceRegistry.instance.getPreferencesResId(this.javaClass))
+        addPreferencesFromResource(SettingsResourceRegistry.instance.getPreferencesResId(this.javaClass))
     }
 
-    override fun onViewCreated(rootView: View,
-                               savedInstanceState: Bundle?
-    ) {
+    override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
         super.onViewCreated(rootView, savedInstanceState)
         setDivider(null)
         setTitleToAppCompatActivity(activity, preferenceScreen.title)

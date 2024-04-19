@@ -21,7 +21,7 @@ class MainSettingsFragment : BasePreferenceFragment() {
             preferenceScreen.removePreference(
                 findPreference(getString(R.string.update_pref_screen_key))!!)
 
-            defaultPreferences!!.edit().putBoolean(getString(R.string.update_app_key), false).apply()
+            defaultPreferences.edit().putBoolean(getString(R.string.update_app_key), false).apply()
         }
 
         // Hide debug preferences in RELEASE build variant

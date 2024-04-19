@@ -17,11 +17,7 @@ import java.io.File
 import java.io.IOException
 import java.util.*
 
-class DownloadManager internal constructor(context: Context,
-                                           handler: Handler,
-                                           storageVideo: StoredDirectoryHelper,
-                                           storageAudio: StoredDirectoryHelper
-) {
+class DownloadManager internal constructor(context: Context, handler: Handler, storageVideo: StoredDirectoryHelper?, storageAudio: StoredDirectoryHelper?) {
     enum class NetworkState {
         Unavailable, Operating, MeteredOperating
     }
@@ -45,9 +41,9 @@ class DownloadManager internal constructor(context: Context,
     private var mSelfMissionsControl = false
 
     @JvmField
-    var mMainStorageAudio: StoredDirectoryHelper
+    var mMainStorageAudio: StoredDirectoryHelper?
     @JvmField
-    var mMainStorageVideo: StoredDirectoryHelper
+    var mMainStorageVideo: StoredDirectoryHelper?
 
     /**
      * Create a new instance
@@ -57,8 +53,7 @@ class DownloadManager internal constructor(context: Context,
      */
     init {
         if (BuildConfig.DEBUG) {
-            Log.d(TAG, "new DownloadManager instance. 0x" + Integer.toHexString(
-                this.hashCode()))
+            Log.d(TAG, "new DownloadManager instance. 0x" + Integer.toHexString(this.hashCode()))
         }
 
         mFinishedMissionStore = FinishedMissionStore(context)

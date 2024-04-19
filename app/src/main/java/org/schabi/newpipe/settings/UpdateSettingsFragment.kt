@@ -9,7 +9,7 @@ import org.schabi.newpipe.R
 class UpdateSettingsFragment : BasePreferenceFragment() {
     private val updatePreferenceChange = Preference.OnPreferenceChangeListener { p: Preference?, nVal: Any ->
         val checkForUpdates = nVal as Boolean
-        defaultPreferences!!.edit()
+        defaultPreferences.edit()
             .putBoolean(getString(R.string.update_app_key), checkForUpdates)
             .apply()
 

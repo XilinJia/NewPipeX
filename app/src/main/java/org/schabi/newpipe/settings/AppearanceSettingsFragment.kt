@@ -17,7 +17,7 @@ class AppearanceSettingsFragment : BasePreferenceFragment() {
 
         val themeKey = getString(R.string.theme_key)
         // the key of the active theme when settings were opened (or recreated after theme change)
-        val startThemeKey = defaultPreferences?.getString(themeKey, getString(R.string.default_theme_value))
+        val startThemeKey = defaultPreferences.getString(themeKey, getString(R.string.default_theme_value))
         val autoDeviceThemeKey = getString(R.string.auto_device_theme_key)
         findPreference<Preference>(themeKey)!!.onPreferenceChangeListener =
             Preference.OnPreferenceChangeListener { preference: Preference?, newValue: Any ->
@@ -31,7 +31,7 @@ class AppearanceSettingsFragment : BasePreferenceFragment() {
 
         val nightThemeKey = getString(R.string.night_theme_key)
         if (startThemeKey == autoDeviceThemeKey) {
-            val startNightThemeKey = defaultPreferences?.getString(nightThemeKey, getString(R.string.default_night_theme_value))
+            val startNightThemeKey = defaultPreferences.getString(nightThemeKey, getString(R.string.default_night_theme_value))
 
             findPreference<Preference>(nightThemeKey)!!.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { preference: Preference?, newValue: Any ->
@@ -65,8 +65,8 @@ class AppearanceSettingsFragment : BasePreferenceFragment() {
                                  themeKey: String,
                                  newValue: Any
     ) {
-        defaultPreferences!!.edit().putBoolean(KEY_THEME_CHANGE, true).apply()
-        defaultPreferences!!.edit().putString(themeKey, newValue.toString()).apply()
+        defaultPreferences.edit().putBoolean(KEY_THEME_CHANGE, true).apply()
+        defaultPreferences.edit().putString(themeKey, newValue.toString()).apply()
 
         setDayNightMode(requireContext(), newValue.toString())
 

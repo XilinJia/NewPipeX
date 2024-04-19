@@ -37,9 +37,9 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
     private var prefStorageAsk: Preference? = null
 
     private var ctx: Context? = null
-    private val requestDownloadVideoPathLauncher = registerForActivityResult<Intent, ActivityResult>(
+    private val requestDownloadVideoPathLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()) { result: ActivityResult -> this.requestDownloadVideoPathResult(result) }
-    private val requestDownloadAudioPathLauncher = registerForActivityResult<Intent, ActivityResult>(
+    private val requestDownloadAudioPathLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()) { result: ActivityResult -> this.requestDownloadAudioPathResult(result) }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -59,18 +59,17 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             prefUseSaf.isEnabled = false
             prefUseSaf.setSummary(R.string.downloads_storage_use_saf_summary_api_29)
-            prefStorageAsk!!.setSummary(R.string.downloads_storage_ask_summary_no_saf_notice)
+            prefStorageAsk?.setSummary(R.string.downloads_storage_ask_summary_no_saf_notice)
         }
 
         updatePreferencesSummary()
-        updatePathPickers(!defaultPreferences!!.getBoolean(downloadStorageAsk, false))
+        updatePathPickers(!defaultPreferences.getBoolean(downloadStorageAsk, false))
 
-        if (hasInvalidPath(downloadPathVideoPreference!!)
-                || hasInvalidPath(downloadPathAudioPreference!!)) {
+        if (hasInvalidPath(downloadPathVideoPreference!!) || hasInvalidPath(downloadPathAudioPreference!!)) {
             updatePreferencesSummary()
         }
 
-        prefStorageAsk!!.onPreferenceChangeListener =
+        prefStorageAsk?.onPreferenceChangeListener =
             Preference.OnPreferenceChangeListener { preference: Preference?, value: Any? ->
                 updatePathPickers(!(value as Boolean))
                 true
@@ -85,21 +84,19 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
     override fun onDetach() {
         super.onDetach()
         ctx = null
-        prefStorageAsk!!.onPreferenceChangeListener = null
+        prefStorageAsk?.onPreferenceChangeListener = null
     }
 
     private fun updatePreferencesSummary() {
-        showPathInSummary(downloadPathVideoPreference, R.string.download_path_summary,
-            prefPathVideo)
-        showPathInSummary(downloadPathAudioPreference, R.string.download_path_audio_summary,
-            prefPathAudio)
+        showPathInSummary(downloadPathVideoPreference, R.string.download_path_summary, prefPathVideo)
+        showPathInSummary(downloadPathAudioPreference, R.string.download_path_audio_summary, prefPathAudio)
     }
 
     private fun showPathInSummary(prefKey: String?, @StringRes defaultString: Int,
                                   target: Preference?
     ) {
-        var rawUri = defaultPreferences!!.getString(prefKey, null)
-        if (rawUri == null || rawUri.isEmpty()) {
+        var rawUri = defaultPreferences.getString(prefKey, null)
+        if (rawUri.isNullOrEmpty()) {
             target!!.summary = getString(defaultString)
             return
         }
@@ -127,30 +124,25 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
     }
 
     private fun hasInvalidPath(prefKey: String): Boolean {
-        val value = defaultPreferences!!.getString(prefKey, null)
-        return value == null || value.isEmpty()
+        val value = defaultPreferences.getString(prefKey, null)
+        return value.isNullOrEmpty()
     }
 
     private fun updatePathPickers(enabled: Boolean) {
-        prefPathVideo!!.isEnabled = enabled
-        prefPathAudio!!.isEnabled = enabled
+        prefPathVideo?.isEnabled = enabled
+        prefPathAudio?.isEnabled = enabled
     }
 
     // FIXME: after releasing the old path, all downloads created on the folder becomes inaccessible
     private fun forgetSAFTree(context: Context, oldPath: String?) {
-        if (IGNORE_RELEASE_ON_OLD_PATH) {
-            return
-        }
+        if (IGNORE_RELEASE_ON_OLD_PATH) return
 
-        if (oldPath == null || oldPath.isEmpty() || isFileUri(oldPath)) {
-            return
-        }
+        if (oldPath.isNullOrEmpty() || isFileUri(oldPath)) return
 
         try {
             val uri = Uri.parse(oldPath)
 
-            context.contentResolver
-                .releasePersistableUriPermission(uri, StoredDirectoryHelper.PERMISSION_FLAGS)
+            context.contentResolver.releasePersistableUriPermission(uri, StoredDirectoryHelper.PERMISSION_FLAGS)
             context.revokeUriPermission(uri, StoredDirectoryHelper.PERMISSION_FLAGS)
 
             Log.i(TAG, "Revoke old path permissions success on $oldPath")
@@ -169,8 +161,7 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
         if (DEBUG) {
-            Log.d(TAG, "onPreferenceTreeClick() called with: "
-                    + "preference = [" + preference + "]")
+            Log.d(TAG, "onPreferenceTreeClick() called with: preference = [$preference]")
         }
 
         val key = preference.key
@@ -181,7 +172,7 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
                     NewPipeSettings.saveDefaultVideoDownloadDirectory(requireContext())
                     NewPipeSettings.saveDefaultAudioDownloadDirectory(requireContext())
                 } else {
-                    defaultPreferences!!.edit().putString(downloadPathVideoPreference, null)
+                    defaultPreferences.edit().putString(downloadPathVideoPreference, null)
                         .putString(downloadPathAudioPreference, null).apply()
                 }
                 updatePreferencesSummary()
@@ -216,9 +207,7 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
     private fun requestDownloadPathResult(result: ActivityResult, key: String?) {
         assureCorrectAppLanguage(requireContext())
 
-        if (result.resultCode != Activity.RESULT_OK) {
-            return
-        }
+        if (result.resultCode != Activity.RESULT_OK) return
 
         var uri: Uri? = null
         if (result.data != null) {
@@ -229,19 +218,17 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
             return
         }
 
-
         // revoke permissions on the old save path (required for SAF only)
         val context = requireContext()
 
-        forgetSAFTree(context, defaultPreferences!!.getString(key, ""))
+        forgetSAFTree(context, defaultPreferences.getString(key, ""))
 
         if (!isOwnFileUri(context, uri)) {
             // steps to acquire the selected path:
             //     1. acquire permissions on the new save path
             //     2. save the new path, if step(2) was successful
             try {
-                context.grantUriPermission(context.packageName, uri,
-                    StoredDirectoryHelper.PERMISSION_FLAGS)
+                context.grantUriPermission(context.packageName, uri, StoredDirectoryHelper.PERMISSION_FLAGS)
 
                 val mainStorage = StoredDirectoryHelper(context, uri, "")
                 Log.i(TAG, "Acquiring tree success from $uri")
@@ -257,14 +244,13 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
         } else {
             val target = com.nononsenseapps.filepicker.Utils.getFileForUri(uri)
             if (!target.canWrite()) {
-                showMessageDialog(R.string.download_to_sdcard_error_title,
-                    R.string.download_to_sdcard_error_message)
+                showMessageDialog(R.string.download_to_sdcard_error_title, R.string.download_to_sdcard_error_message)
                 return
             }
             uri = Uri.fromFile(target)
         }
 
-        defaultPreferences!!.edit().putString(key, uri.toString()).apply()
+        defaultPreferences.edit().putString(key, uri.toString()).apply()
         updatePreferencesSummary()
     }
 

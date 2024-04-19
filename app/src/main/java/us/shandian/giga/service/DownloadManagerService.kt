@@ -41,12 +41,20 @@ import java.io.IOException
 import java.util.*
 
 class DownloadManagerService : Service() {
-    private var mBinder: DownloadManagerBinder? = null
-    private var mManager: DownloadManager? = null
-    private var mNotification: Notification? = null
+    private lateinit var mBinder: DownloadManagerBinder
+    private lateinit var mManager: DownloadManager
+    private lateinit var mNotification: Notification
+    private lateinit var mPrefs: SharedPreferences
+    private lateinit var mNetworkStateListenerL: ConnectivityManager.NetworkCallback
+    private lateinit var mLock: LockManager
+
+    private var icLauncher: Bitmap? = null
+
     private var mHandler: Handler? = null
-    private var mForeground = false
     private var mNotificationManager: NotificationManager? = null
+    private var mConnectivityManager: ConnectivityManager? = null
+
+    private var mForeground = false
     private var mDownloadNotificationEnable = true
 
     private var downloadDoneCount = 0
@@ -55,27 +63,21 @@ class DownloadManagerService : Service() {
 
     private val mEchoObservers: MutableList<Handler.Callback> = ArrayList(1)
 
-    private var mConnectivityManager: ConnectivityManager? = null
-    private var mNetworkStateListenerL: ConnectivityManager.NetworkCallback? = null
-
-    private var mPrefs: SharedPreferences? = null
     private val mPrefChangeListener = OnSharedPreferenceChangeListener { prefs: SharedPreferences?, key: String? ->
-        this.handlePreferenceChange(prefs,
-            key!!)
+        this.handlePreferenceChange(prefs, key!!)
     }
 
     private var mLockAcquired = false
-    private var mLock: LockManager? = null
 
     private var downloadFailedNotificationID = DOWNLOADS_NOTIFICATION_ID + 1
     private var downloadFailedNotification: NotificationCompat.Builder? = null
     private val mFailedDownloads = SparseArrayCompat<DownloadMission>(5)
 
-    private var icLauncher: Bitmap? = null
     private var icDownloadDone: Bitmap? = null
     private var icDownloadFailed: Bitmap? = null
 
     private var mOpenDownloadList: PendingIntent? = null
+
 
     /**
      * notify media scanner on downloaded media file ...
@@ -98,14 +100,11 @@ class DownloadManagerService : Service() {
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this)
 
-        mManager = DownloadManager(this, mHandler!!, loadMainVideoStorage()!!, loadMainAudioStorage()!!)
+        mManager = DownloadManager(this, mHandler!!, loadMainVideoStorage(), loadMainAudioStorage())
 
-        val openDownloadListIntent = Intent(this, DownloadActivity::class.java)
-            .setAction(Intent.ACTION_MAIN)
+        val openDownloadListIntent = Intent(this, DownloadActivity::class.java).setAction(Intent.ACTION_MAIN)
 
-        mOpenDownloadList = PendingIntentCompat.getActivity(this, 0,
-            openDownloadListIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT, false)
+        mOpenDownloadList = PendingIntentCompat.getActivity(this, 0, openDownloadListIntent, PendingIntent.FLAG_UPDATE_CURRENT, false)
 
         icLauncher = BitmapFactory.decodeResource(this.resources, R.mipmap.ic_launcher)
 
@@ -118,10 +117,8 @@ class DownloadManagerService : Service() {
 
         mNotification = builder.build()
 
-        mNotificationManager = ContextCompat.getSystemService(this,
-            NotificationManager::class.java)
-        mConnectivityManager = ContextCompat.getSystemService(this,
-            ConnectivityManager::class.java)
+        mNotificationManager = ContextCompat.getSystemService(this, NotificationManager::class.java)
+        mConnectivityManager = ContextCompat.getSystemService(this, ConnectivityManager::class.java)
 
         mNetworkStateListenerL = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
@@ -132,9 +129,9 @@ class DownloadManagerService : Service() {
                 handleConnectivityState(false)
             }
         }
-        mConnectivityManager!!.registerNetworkCallback(NetworkRequest.Builder().build(), mNetworkStateListenerL!!)
+        mConnectivityManager!!.registerNetworkCallback(NetworkRequest.Builder().build(), mNetworkStateListenerL)
 
-        mPrefs?.registerOnSharedPreferenceChangeListener(mPrefChangeListener)
+        mPrefs.registerOnSharedPreferenceChangeListener(mPrefChangeListener)
 
         handlePreferenceChange(mPrefs, getString(R.string.downloads_cross_network))
         handlePreferenceChange(mPrefs, getString(R.string.downloads_maximum_retry))
@@ -189,19 +186,19 @@ class DownloadManagerService : Service() {
 
         manageLock(false)
 
-        mConnectivityManager!!.unregisterNetworkCallback(mNetworkStateListenerL!!)
+        mConnectivityManager!!.unregisterNetworkCallback(mNetworkStateListenerL)
 
-        mPrefs!!.unregisterOnSharedPreferenceChangeListener(mPrefChangeListener)
+        mPrefs.unregisterOnSharedPreferenceChangeListener(mPrefChangeListener)
 
-        if (icDownloadDone != null) icDownloadDone!!.recycle()
-        if (icDownloadFailed != null) icDownloadFailed!!.recycle()
-        if (icLauncher != null) icLauncher!!.recycle()
+        icDownloadDone?.recycle()
+        icDownloadFailed?.recycle()
+        icLauncher?.recycle()
 
         mHandler = null
-        mManager!!.pauseAllMissions(true)
+        mManager.pauseAllMissions(true)
     }
 
-    override fun onBind(intent: Intent): IBinder? {
+    override fun onBind(intent: Intent): IBinder {
         return mBinder
     }
 
@@ -214,17 +211,17 @@ class DownloadManagerService : Service() {
             MESSAGE_FINISHED -> {
                 notifyMediaScanner(mission.storage!!.uri)
                 notifyFinishedDownload(mission.storage!!.name)
-                mManager!!.setFinished(mission)
+                mManager.setFinished(mission)
                 handleConnectivityState(false)
-                updateForegroundState(mManager!!.runMissions())
+                updateForegroundState(mManager.runMissions())
             }
             MESSAGE_RUNNING -> updateForegroundState(true)
             MESSAGE_ERROR -> {
                 notifyFailedDownload(mission)
                 handleConnectivityState(false)
-                updateForegroundState(mManager!!.runMissions())
+                updateForegroundState(mManager.runMissions())
             }
-            MESSAGE_PAUSED -> updateForegroundState(mManager!!.runningMissionsCount > 0)
+            MESSAGE_PAUSED -> updateForegroundState(mManager.runningMissionsCount > 0)
         }
         if (msg.what != MESSAGE_ERROR) mFailedDownloads.remove(mFailedDownloads.indexOfValue(mission))
 
@@ -253,26 +250,32 @@ class DownloadManagerService : Service() {
 
         if (mManager == null) return  // avoid race-conditions while the service is starting
 
-        mManager!!.handleConnectivityState(status, updateOnly)
+        mManager.handleConnectivityState(status, updateOnly)
     }
 
     private fun handlePreferenceChange(prefs: SharedPreferences?, key: String) {
-        if (getString(R.string.downloads_maximum_retry) == key) {
-            try {
-                val value = prefs!!.getString(key, getString(R.string.downloads_maximum_retry_default))
-                mManager!!.mPrefMaxRetry = value?.toInt() ?: 0
-            } catch (e: Exception) {
-                mManager!!.mPrefMaxRetry = 0
+        when (key) {
+            getString(R.string.downloads_maximum_retry) -> {
+                try {
+                    val value = prefs?.getString(key, getString(R.string.downloads_maximum_retry_default))
+                    mManager.mPrefMaxRetry = value?.toInt() ?: 0
+                } catch (e: Exception) {
+                    mManager.mPrefMaxRetry = 0
+                }
+                mManager.updateMaximumAttempts()
             }
-            mManager!!.updateMaximumAttempts()
-        } else if (getString(R.string.downloads_cross_network) == key) {
-            mManager!!.mPrefMeteredDownloads = prefs!!.getBoolean(key, false)
-        } else if (getString(R.string.downloads_queue_limit) == key) {
-            mManager!!.mPrefQueueLimit = prefs!!.getBoolean(key, true)
-        } else if (getString(R.string.download_path_video_key) == key) {
-            mManager!!.mMainStorageVideo = loadMainVideoStorage()!!
-        } else if (getString(R.string.download_path_audio_key) == key) {
-            mManager!!.mMainStorageAudio = loadMainAudioStorage()!!
+            getString(R.string.downloads_cross_network) -> {
+                mManager.mPrefMeteredDownloads = prefs?.getBoolean(key, false) ?: false
+            }
+            getString(R.string.downloads_queue_limit) -> {
+                mManager.mPrefQueueLimit = prefs?.getBoolean(key, true) ?: true
+            }
+            getString(R.string.download_path_video_key) -> {
+                mManager.mMainStorageVideo = loadMainVideoStorage()
+            }
+            getString(R.string.download_path_audio_key) -> {
+                mManager.mMainStorageAudio = loadMainAudioStorage()
+            }
         }
     }
 
@@ -301,8 +304,7 @@ class DownloadManagerService : Service() {
         val source = intent.getStringExtra(EXTRA_SOURCE)
         val nearLength = intent.getLongExtra(EXTRA_NEAR_LENGTH, 0)
         val tag = intent.getStringExtra(EXTRA_STORAGE_TAG)
-        val recovery = IntentCompat.getParcelableArrayListExtra(intent, EXTRA_RECOVERY_INFO,
-            MissionRecoveryInfo::class.java)
+        val recovery = IntentCompat.getParcelableArrayListExtra(intent, EXTRA_RECOVERY_INFO, MissionRecoveryInfo::class.java)
         Objects.requireNonNull(recovery)
 
         val storage: StoredFileHelper
@@ -318,19 +320,16 @@ class DownloadManagerService : Service() {
         mission.threadCount = threads
         mission.source = source
         mission.nearLength = nearLength
-        mission.recoveryInfo = recovery!!.toArray<MissionRecoveryInfo> { size -> arrayOfNulls<MissionRecoveryInfo>(size) }
-
+        mission.recoveryInfo = recovery?.toTypedArray()
         ps?.setTemporalDir(pickAvailableTemporalDir(this)!!)
 
         handleConnectivityState(true) // first check the actual network status
 
-        mManager!!.startMission(mission)
+        mManager.startMission(mission)
     }
 
     fun notifyFinishedDownload(name: String?) {
-        if (!mDownloadNotificationEnable || mNotificationManager == null) {
-            return
-        }
+        if (!mDownloadNotificationEnable || mNotificationManager == null) return
 
         if (downloadDoneNotification == null) {
             downloadDoneList = StringBuilder(name!!.length)
@@ -351,8 +350,7 @@ class DownloadManagerService : Service() {
             downloadDoneNotification!!.setContentTitle(null)
             downloadDoneNotification!!.setContentText(downloadCount(this, downloadDoneCount))
             downloadDoneNotification!!.setStyle(NotificationCompat.BigTextStyle()
-                .setBigContentTitle(downloadCount(this, downloadDoneCount))
-                .bigText(name)
+                .setBigContentTitle(downloadCount(this, downloadDoneCount)).bigText(name)
             )
         } else {
             downloadDoneList!!.append('\n')
@@ -383,8 +381,7 @@ class DownloadManagerService : Service() {
 
         downloadFailedNotification!!.setContentTitle(getString(R.string.download_failed))
         downloadFailedNotification!!.setContentText(mission.storage!!.name)
-        downloadFailedNotification!!.setStyle(NotificationCompat.BigTextStyle()
-            .bigText(mission.storage!!.name))
+        downloadFailedNotification!!.setStyle(NotificationCompat.BigTextStyle().bigText(mission.storage!!.name))
 
         mNotificationManager!!.notify(id, downloadFailedNotification!!.build())
     }
@@ -398,8 +395,8 @@ class DownloadManagerService : Service() {
     private fun manageLock(acquire: Boolean) {
         if (acquire == mLockAcquired) return
 
-        if (acquire) mLock!!.acquireWifiAndCpu()
-        else mLock!!.releaseWifiAndCpu()
+        if (acquire) mLock.acquireWifiAndCpu()
+        else mLock.releaseWifiAndCpu()
 
         mLockAcquired = acquire
     }
@@ -413,14 +410,18 @@ class DownloadManagerService : Service() {
     }
 
     private fun loadMainStorage(@StringRes prefKey: Int, tag: String): StoredDirectoryHelper? {
-        var path = mPrefs!!.getString(getString(prefKey), null)
+        var path = mPrefs.getString(getString(prefKey), null)
 
-        if (path == null || path.isEmpty()) return null
+        if (path.isNullOrEmpty()) {
+            Log.e(TAG, "loadMainStorage path: $path")
+            Toast.makeText(this, R.string.no_available_dir, Toast.LENGTH_LONG).show()
+            return null
+        }
 
         if (path[0] == File.separatorChar) {
             Log.i(TAG, "Old save path style present: $path")
             path = ""
-            mPrefs!!.edit().putString(getString(prefKey), "").apply()
+            mPrefs.edit().putString(getString(prefKey), "").apply()
         }
 
         try {
@@ -437,17 +438,17 @@ class DownloadManagerService : Service() {
     // Wrappers for DownloadManager
     ////////////////////////////////////////////////////////////////////////////////////////////////
     inner class DownloadManagerBinder : Binder() {
-        val downloadManager: DownloadManager?
+        val downloadManager: DownloadManager
             get() = mManager
 
         val mainStorageVideo: StoredDirectoryHelper?
-            get() = mManager!!.mMainStorageVideo
+            get() = mManager.mMainStorageVideo
 
         val mainStorageAudio: StoredDirectoryHelper?
-            get() = mManager!!.mMainStorageAudio
+            get() = mManager.mMainStorageAudio
 
         fun askForSavePath(): Boolean {
-            return mPrefs!!.getBoolean(
+            return mPrefs.getBoolean(
                 this@DownloadManagerService.getString(R.string.downloads_storage_ask),
                 false
             )

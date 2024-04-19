@@ -19,9 +19,7 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.stream.Collectors
 
-class StoredDirectoryHelper(context: Context, path: Uri,
-                            @JvmField val tag: String
-) {
+class StoredDirectoryHelper(context: Context, path: Uri, @JvmField val tag: String) {
     private var ioTree: Path? = null
     private val docTree: DocumentFile?
 
@@ -59,8 +57,7 @@ class StoredDirectoryHelper(context: Context, path: Uri,
             try {
                 Files.list(ioTree).use { stream ->
                     matches.addAll(stream.map { path: Path ->
-                        path.fileName.toString().lowercase(
-                            Locale.getDefault())
+                        path.fileName.toString().lowercase(Locale.getDefault())
                     }
                         .filter { fileName: String -> fileName.startsWith(lcFileName) }
                         .collect(Collectors.toList()))
@@ -101,13 +98,10 @@ class StoredDirectoryHelper(context: Context, path: Uri,
         }
 
         // create file if filename not in use
-        if (lcName != null) {
-            return createFile(name, mime, true)
-        }
+        if (lcName != null) return createFile(name, mime, true)
 
-        Collections.sort(matches) { obj: String, anotherString: String? ->
-            obj.compareTo(
-                anotherString!!)
+        matches.sortWith { obj: String, anotherString: String? ->
+            obj.compareTo(anotherString!!)
         }
 
         for (i in 1..999) {
@@ -116,13 +110,10 @@ class StoredDirectoryHelper(context: Context, path: Uri,
             }
         }
 
-        return createFile(System.currentTimeMillis().toString() + filename[1], mime,
-            false)
+        return createFile(System.currentTimeMillis().toString() + filename[1], mime, false)
     }
 
-    private fun createFile(filename: String, mime: String,
-                           safe: Boolean
-    ): StoredFileHelper? {
+    private fun createFile(filename: String, mime: String, safe: Boolean): StoredFileHelper? {
         val storage: StoredFileHelper
 
         try {
@@ -175,9 +166,7 @@ class StoredDirectoryHelper(context: Context, path: Uri,
             return Files.exists(ioTree)
         }
 
-        if (docTree.exists()) {
-            return true
-        }
+        if (docTree.exists()) return true
 
         try {
             var parent: DocumentFile?
@@ -185,12 +174,9 @@ class StoredDirectoryHelper(context: Context, path: Uri,
 
             while (true) {
                 parent = docTree.parentFile
-                if (parent == null || child == null) {
-                    break
-                }
-                if (parent.exists()) {
-                    return true
-                }
+                if (parent == null || child == null) break
+
+                if (parent.exists()) return true
 
                 parent.createDirectory(child)
 
@@ -240,9 +226,8 @@ class StoredDirectoryHelper(context: Context, path: Uri,
         private fun addIfStartWith(list: MutableList<String>, base: String,
                                    str: String
         ) {
-            if (Utils.isNullOrEmpty(str)) {
-                return
-            }
+            if (Utils.isNullOrEmpty(str)) return
+
             val lowerStr = str.lowercase(Locale.getDefault())
             if (lowerStr.startsWith(base)) {
                 list.add(lowerStr)
@@ -281,13 +266,9 @@ class StoredDirectoryHelper(context: Context, path: Uri,
         fun findFileSAFHelper(context: Context?, tree: DocumentFile,
                               filename: String
         ): DocumentFile? {
-            if (context == null) {
-                return tree.findFile(filename) // warning: this is very slow
-            }
+            if (context == null) return tree.findFile(filename) // warning: this is very slow
 
-            if (!tree.canRead()) {
-                return null // missing read permission
-            }
+            if (!tree.canRead()) return null // missing read permission
 
             val name = 0
             val documentId = 1
@@ -306,9 +287,8 @@ class StoredDirectoryHelper(context: Context, path: Uri,
 
             contentResolver.query(childrenUri, projection, selection,
                 arrayOf<String>(lowerFilename), null).use { cursor ->
-                if (cursor == null) {
-                    return null
-                }
+                if (cursor == null) return null
+
                 while (cursor.moveToNext()) {
                     if (cursor.isNull(name)
                             || !cursor.getString(name).lowercase(Locale.getDefault()).startsWith(lowerFilename)) {
@@ -316,8 +296,7 @@ class StoredDirectoryHelper(context: Context, path: Uri,
                     }
 
                     return DocumentFile.fromSingleUri(context,
-                        DocumentsContract.buildDocumentUriUsingTree(tree.uri,
-                            cursor.getString(documentId)))
+                        DocumentsContract.buildDocumentUriUsingTree(tree.uri, cursor.getString(documentId)))
                 }
             }
             return null
@@ -328,14 +307,12 @@ class StoredDirectoryHelper(context: Context, path: Uri,
             return if (NewPipeSettings.useStorageAccessFramework(ctx)) {
                 Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
                     .putExtra("android.content.extra.SHOW_ADVANCED", true)
-                    .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                            or PERMISSION_FLAGS)
+                    .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or PERMISSION_FLAGS)
             } else {
                 Intent(ctx, FilePickerActivityHelper::class.java)
                     .putExtra(AbstractFilePickerActivity.EXTRA_ALLOW_MULTIPLE, false)
                     .putExtra(AbstractFilePickerActivity.EXTRA_ALLOW_CREATE_DIR, true)
-                    .putExtra(AbstractFilePickerActivity.EXTRA_MODE,
-                        AbstractFilePickerActivity.MODE_DIR)
+                    .putExtra(AbstractFilePickerActivity.EXTRA_MODE, AbstractFilePickerActivity.MODE_DIR)
             }
         }
     }

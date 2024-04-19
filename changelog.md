@@ -24,3 +24,7 @@ Caused by: android.os.TransactionTooLargeException: data parcel size 1257884 byt
 
 * introductory migration to androidx.media3: removed exoplayer2 et al, commented out functions related to MediaSessionConnector etc.
 * though not thoroughly tested, app appears working
+
+## 0.26.3
+
+* fixed crash bug when doing download

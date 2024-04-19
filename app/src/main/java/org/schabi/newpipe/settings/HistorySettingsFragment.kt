@@ -38,7 +38,7 @@ class HistorySettingsFragment : BasePreferenceFragment() {
 
         val clearCookiePref = requirePreference(R.string.clear_cookie_key)
         clearCookiePref.onPreferenceClickListener = Preference.OnPreferenceClickListener { preference: Preference? ->
-            defaultPreferences!!.edit()
+            defaultPreferences.edit()
                 .putString(getString(R.string.recaptcha_cookies_key), "").apply()
             instance!!.setCookie(ReCaptchaActivity.RECAPTCHA_COOKIES_KEY, "")
             Toast.makeText(activity, R.string.recaptcha_cookies_cleared,
@@ -47,7 +47,7 @@ class HistorySettingsFragment : BasePreferenceFragment() {
             true
         }
 
-        if (defaultPreferences!!.getString(getString(R.string.recaptcha_cookies_key), "")!!.isEmpty()) {
+        if (defaultPreferences.getString(getString(R.string.recaptcha_cookies_key), "")!!.isEmpty()) {
             clearCookiePref.isEnabled = false
         }
     }
