@@ -5,3 +5,9 @@ Introductory migration to androidx.media3 and removal of exoplayer2.  Though not
 For non-intrusive testing, the appId and name is changed to NewPipeX.
 
 See more changes and issues in [changelog](changelog.md)
+
+## Copyright
+
+New files and modifications in the project is copyrighted in 2024 by Xilin Jia.
+
+Original contents from the forked project maintains copyrights of the NewPipe team.
