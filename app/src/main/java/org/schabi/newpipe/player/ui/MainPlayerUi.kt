@@ -21,6 +21,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.media3.common.VideoSize
+import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.QueueItemMenuUtil.openPopupMenu
 import org.schabi.newpipe.R
@@ -61,7 +62,7 @@ import kotlin.math.min
     // Constructor, setup, destroy
     ////////////////////////////////////////////////////////////////////////// */
 //region Constructor, setup, destroy
-class MainPlayerUi(player: Player, playerBinding: PlayerBinding)
+@UnstableApi class MainPlayerUi(player: Player, playerBinding: PlayerBinding)
     : VideoPlayerUi(player, playerBinding), OnLayoutChangeListener {
 
     override var isFullscreen = false

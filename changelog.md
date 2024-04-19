@@ -28,3 +28,16 @@ Caused by: android.os.TransactionTooLargeException: data parcel size 1257884 byt
 ## 0.26.3
 
 * fixed crash bug when doing download
+
+## 0.26.4
+
+* app built to target to SDK 34
+* set bottomsheet to collapsed when video view is closed, rather than hidden.
+
+### Issues
+
+The reason to set it to collapsed is this: on my S21 Android 14 device, bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_EXPANDED) doesn't expand the bottomsheet, whether it was hidden or collapsed.  Originally, the bottomsheet was set to hidden, so when starting a new video from the list, the view is still invisible, making it appear like nothing is happening.  
+
+Now it's set to collapsed, so when a new video is starting, on S21 Android14, the user need to manually expand the bottomsheet.
+
+On my Android 9 device however, expand on play is automatic.

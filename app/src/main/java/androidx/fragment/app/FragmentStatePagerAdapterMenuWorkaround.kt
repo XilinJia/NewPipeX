@@ -68,6 +68,7 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
 ) : PagerAdapter() {
     @Retention(AnnotationRetention.SOURCE)
     @IntDef(Behavior.BEHAVIOR_SET_USER_VISIBLE_HINT, Behavior.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT)
+
     protected annotation class Behavior {
         companion object {
             const val BEHAVIOR_SET_USER_VISIBLE_HINT = 0
@@ -96,7 +97,7 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
      */
     @Deprecated("""use {@link #FragmentStatePagerAdapterMenuWorkaround(FragmentManager, int)} with
       {@link #BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT}""")
-    constructor(fm: FragmentManager) : this(fm, BEHAVIOR_SET_USER_VISIBLE_HINT)
+    constructor(fm: FragmentManager) : this(fm, Behavior.BEHAVIOR_SET_USER_VISIBLE_HINT)
 
     /**
      * @param position the position of the item you want
@@ -142,14 +143,14 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
             mFragments.add(null)
         }
         fragment.setMenuVisibility(false)
-        if (mBehavior == BEHAVIOR_SET_USER_VISIBLE_HINT) {
+        if (mBehavior == Behavior.BEHAVIOR_SET_USER_VISIBLE_HINT) {
             fragment.userVisibleHint = false
         }
 
         mFragments[position] = fragment
         mCurTransaction!!.add(container.id, fragment)
 
-        if (mBehavior == BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+        if (mBehavior == Behavior.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
             mCurTransaction!!.setMaxLifecycle(fragment, Lifecycle.State.STARTED)
         }
 
@@ -189,7 +190,7 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
         if (fragment !== mCurrentPrimaryItem) {
             if (mCurrentPrimaryItem != null) {
                 mCurrentPrimaryItem!!.setMenuVisibility(false)
-                if (mBehavior == BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+                if (mBehavior == Behavior.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
                     if (mCurTransaction == null) {
                         mCurTransaction = mFragmentManager.beginTransaction()
                     }
@@ -199,7 +200,7 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
                 }
             }
             fragment.setMenuVisibility(true)
-            if (mBehavior == BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+            if (mBehavior == Behavior.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
                 if (mCurTransaction == null) {
                     mCurTransaction = mFragmentManager.beginTransaction()
                 }
@@ -309,12 +310,12 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
          *
          * @see .FragmentStatePagerAdapterMenuWorkaround
          */
-        @Deprecated("""This behavior relies on the deprecated
-      {@link Fragment#setUserVisibleHint(boolean)} API. Use
-      {@link #BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT} to switch to its replacement,
-      {@link FragmentTransaction#setMaxLifecycle}.
-      """)
-        const val BEHAVIOR_SET_USER_VISIBLE_HINT: Int = 0
+//        @Deprecated("""This behavior relies on the deprecated
+//      {@link Fragment#setUserVisibleHint(boolean)} API. Use
+//      {@link #BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT} to switch to its replacement,
+//      {@link FragmentTransaction#setMaxLifecycle}.
+//      """)
+//        const val BEHAVIOR_SET_USER_VISIBLE_HINT: Int = 0
 
         /**
          * Indicates that only the current fragment will be in the [Lifecycle.State.RESUMED]
@@ -322,6 +323,6 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
          *
          * @see .FragmentStatePagerAdapterMenuWorkaround
          */
-        const val BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT: Int = 1
+//        const val BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT: Int = 1
     }
 }

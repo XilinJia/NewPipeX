@@ -13,14 +13,10 @@ import java.util.*
  * Parses the corresponding preference-file(s).
  */
 class PreferenceParser(private val context: Context,
-                       private val searchConfiguration: PreferenceSearchConfiguration
-) {
-    private val allPreferences: Map<String, *> =
-        PreferenceManager.getDefaultSharedPreferences(context).all
+                       private val searchConfiguration: PreferenceSearchConfiguration) {
+    private val allPreferences: Map<String, *> = PreferenceManager.getDefaultSharedPreferences(context).all
 
-    fun parse(
-            @XmlRes resId: Int
-    ): List<PreferenceSearchItem> {
+    fun parse(@XmlRes resId: Int): List<PreferenceSearchItem> {
         val results: MutableList<PreferenceSearchItem> = ArrayList()
         val xpp: XmlPullParser = context.resources.getXml(resId)
 
@@ -31,14 +27,9 @@ class PreferenceParser(private val context: Context,
             val breadcrumbs: MutableList<String?> = ArrayList()
             while (xpp.eventType != XmlPullParser.END_DOCUMENT) {
                 if (xpp.eventType == XmlPullParser.START_TAG) {
-                    val result = parseSearchResult(
-                        xpp,
-                        concatenateStrings(" > ", breadcrumbs),
-                        resId
-                    )
+                    val result = parseSearchResult(xpp, concatenateStrings(" > ", breadcrumbs), resId)
 
-                    if (!searchConfiguration.parserIgnoreElements.contains(xpp.name)
-                            && result.hasData()
+                    if (!searchConfiguration.parserIgnoreElements.contains(xpp.name) && result.hasData()
                             && "true" != getAttribute(xpp, NS_SEARCH, "ignore")) {
                         results.add(result)
                     }
@@ -47,9 +38,7 @@ class PreferenceParser(private val context: Context,
                         // Example: Video and Audio > Player
                         breadcrumbs.add(if (result.title == null) "" else result.title)
                     }
-                } else if (xpp.eventType == XmlPullParser.END_TAG
-                        && searchConfiguration.parserContainerElements
-                            .contains(xpp.name)) {
+                } else if (xpp.eventType == XmlPullParser.END_TAG && searchConfiguration.parserContainerElements.contains(xpp.name)) {
                     breadcrumbs.removeAt(breadcrumbs.size - 1)
                 }
 
@@ -61,46 +50,26 @@ class PreferenceParser(private val context: Context,
         return results
     }
 
-    private fun getAttribute(
-            xpp: XmlPullParser,
-            attribute: String
-    ): String {
+    private fun getAttribute(xpp: XmlPullParser, attribute: String): String? {
         val nsSearchAttr = getAttribute(xpp, NS_SEARCH, attribute)
-        if (nsSearchAttr != null) {
-            return nsSearchAttr
-        }
+        if (nsSearchAttr != null) return nsSearchAttr
+
         return getAttribute(xpp, NS_ANDROID, attribute)
     }
 
-    private fun getAttribute(
-            xpp: XmlPullParser,
-            namespace: String,
-            attribute: String
-    ): String {
+    private fun getAttribute(xpp: XmlPullParser, namespace: String, attribute: String): String? {
         return xpp.getAttributeValue(namespace, attribute)
     }
 
-    private fun parseSearchResult(
-            xpp: XmlPullParser,
-            breadcrumbs: String,
-            @XmlRes searchIndexItemResId: Int
-    ): PreferenceSearchItem {
+    private fun parseSearchResult(xpp: XmlPullParser, breadcrumbs: String, @XmlRes searchIndexItemResId: Int): PreferenceSearchItem {
         val key = readString(getAttribute(xpp, "key"))
         val entries = readStringArray(getAttribute(xpp, "entries"))
         val entryValues = readStringArray(getAttribute(xpp, "entryValues"))
 
         return PreferenceSearchItem(
             key,
-            tryFillInPreferenceValue(
-                readString(getAttribute(xpp, "title")),
-                key,
-                entries.filterNotNull().toTypedArray(),
-                entryValues),
-            tryFillInPreferenceValue(
-                readString(getAttribute(xpp, "summary")),
-                key,
-                entries.filterNotNull().toTypedArray(),
-                entryValues),
+            tryFillInPreferenceValue(readString(getAttribute(xpp, "title")), key, entries.filterNotNull().toTypedArray(), entryValues),
+            tryFillInPreferenceValue(readString(getAttribute(xpp, "summary")), key, entries.filterNotNull().toTypedArray(), entryValues),
             TextUtils.join(",", entries),
             breadcrumbs,
             searchIndexItemResId
@@ -108,9 +77,8 @@ class PreferenceParser(private val context: Context,
     }
 
     private fun readStringArray(s: String?): Array<String?> {
-        if (s == null) {
-            return arrayOfNulls(0)
-        }
+        if (s == null) return arrayOfNulls(0)
+
         if (s.startsWith("@")) {
             try {
                 return context.resources.getStringArray(s.substring(1).toInt())
@@ -122,9 +90,8 @@ class PreferenceParser(private val context: Context,
     }
 
     private fun readString(s: String?): String {
-        if (s == null) {
-            return ""
-        }
+        if (s == null) return ""
+
         if (s.startsWith("@")) {
             try {
                 return context.getString(s.substring(1).toInt())
@@ -135,21 +102,13 @@ class PreferenceParser(private val context: Context,
         return s
     }
 
-    private fun tryFillInPreferenceValue(
-            s: String?,
-            key: String?,
-            entries: Array<String>,
-            entryValues: Array<String?>
-    ): String {
-        if (s == null) {
-            return ""
-        }
-        if (key == null) {
-            return s
-        }
+    private fun tryFillInPreferenceValue(s: String?, key: String?, entries: Array<String>, entryValues: Array<String?>): String {
+        if (s == null) return ""
+
+        if (key == null) return s
 
         // Resolve value
-        var prefValue = allPreferences[key] ?: return s
+        var prefValue = (allPreferences[key] as? String) ?: return s
 
         /*
          * Resolve ListPreference values
@@ -157,8 +116,8 @@ class PreferenceParser(private val context: Context,
          * entryValues = Values/Keys that are saved
          * entries     = Actual human readable names
          */
-        if (entries.size > 0 && entryValues.size == entries.size) {
-            val entryIndex = Arrays.asList<String>(*entryValues).indexOf(prefValue)
+        if (entries.isNotEmpty() && entryValues.size == entries.size) {
+            val entryIndex = listOf<String?>(*entryValues).indexOf(prefValue)
             if (entryIndex != -1) {
                 prefValue = entries[entryIndex]
             }

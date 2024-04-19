@@ -8,6 +8,8 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.View
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -49,10 +51,9 @@ abstract class BaseListFragment<I, N>
     /*//////////////////////////////////////////////////////////////////////////
     // Views
     ////////////////////////////////////////////////////////////////////////// */
+    protected lateinit var itemsList: RecyclerView
     @JvmField
     protected var infoListAdapter: InfoListAdapter? = null
-    @JvmField
-    protected var itemsList: RecyclerView? = null
     private var focusedPosition = -1
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -113,8 +114,8 @@ abstract class BaseListFragment<I, N>
 
     private fun getFocusedPosition(): Int {
         try {
-            val focusedItem = itemsList!!.focusedChild
-            val itemHolder = itemsList!!.findContainingViewHolder(focusedItem)
+            val focusedItem = itemsList.focusedChild
+            val itemHolder = itemsList.findContainingViewHolder(focusedItem)
             return itemHolder!!.bindingAdapterPosition
         } catch (e: NullPointerException) {
             return -1
@@ -140,8 +141,8 @@ abstract class BaseListFragment<I, N>
     private fun restoreFocus(position: Int?) {
         if (position == null || position < 0) return
 
-        itemsList!!.post {
-            val focusedHolder = itemsList!!.findViewHolderForAdapterPosition(position)
+        itemsList.post {
+            val focusedHolder = itemsList.findViewHolderForAdapterPosition(position)
             focusedHolder?.itemView?.requestFocus()
         }
     }
@@ -195,7 +196,7 @@ abstract class BaseListFragment<I, N>
      */
     private fun refreshItemViewMode() {
         val itemViewMode = itemViewMode
-        itemsList!!.layoutManager = if ((itemViewMode == ItemViewMode.GRID)) gridLayoutManager else listLayoutManager
+        itemsList.layoutManager = if ((itemViewMode == ItemViewMode.GRID)) gridLayoutManager else listLayoutManager
         infoListAdapter!!.setItemViewMode(itemViewMode)
         infoListAdapter!!.notifyDataSetChanged()
     }
@@ -203,7 +204,7 @@ abstract class BaseListFragment<I, N>
     override fun initViews(rootView: View, savedInstanceState: Bundle?) {
         super.initViews(rootView, savedInstanceState)
 
-        itemsList = rootView!!.findViewById(R.id.items_list)
+        itemsList = rootView.findViewById(R.id.items_list)
         refreshItemViewMode()
 
         val listHeaderSupplier = listHeaderSupplier
@@ -211,7 +212,7 @@ abstract class BaseListFragment<I, N>
             infoListAdapter!!.setHeaderSupplier(listHeaderSupplier)
         }
 
-        itemsList?.setAdapter(infoListAdapter)
+        itemsList.setAdapter(infoListAdapter)
     }
 
     protected open fun onItemSelected(selectedItem: InfoItem) {
@@ -220,7 +221,7 @@ abstract class BaseListFragment<I, N>
         }
     }
 
-    override fun initListeners() {
+    @OptIn(UnstableApi::class) override fun initListeners() {
         super.initListeners()
         infoListAdapter!!.setOnStreamSelectedListener(object : OnClickGesture<StreamInfoItem> {
             override fun selected(selectedItem: StreamInfoItem) {
@@ -263,8 +264,8 @@ abstract class BaseListFragment<I, N>
         if (DEBUG) {
             Log.d(TAG, "useNormalItemListScrollListener called")
         }
-        itemsList!!.clearOnScrollListeners()
-        itemsList!!.addOnScrollListener(DefaultItemListOnScrolledDownListener())
+        itemsList.clearOnScrollListeners()
+        itemsList.addOnScrollListener(DefaultItemListOnScrolledDownListener())
     }
 
     /**
@@ -288,8 +289,8 @@ abstract class BaseListFragment<I, N>
         if (DEBUG) {
             Log.d(TAG, "useInitialItemListLoadScrollListener called")
         }
-        itemsList!!.clearOnScrollListeners()
-        itemsList!!.addOnScrollListener(object : DefaultItemListOnScrolledDownListener() {
+        itemsList.clearOnScrollListeners()
+        itemsList.addOnScrollListener(object : DefaultItemListOnScrolledDownListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 if (dy != 0) {
@@ -306,7 +307,7 @@ abstract class BaseListFragment<I, N>
                     useNormalItemListScrollListener()
                     return
                 }
-                if (itemsList!!.canScrollVertically(1) || itemsList!!.canScrollVertically(-1)) {
+                if (itemsList.canScrollVertically(1) || itemsList.canScrollVertically(-1)) {
                     log("View is scrollable")
                     useNormalItemListScrollListener()
                     return
@@ -330,12 +331,11 @@ abstract class BaseListFragment<I, N>
         }
     }
 
-    private fun onStreamSelected(selectedItem: StreamInfoItem) {
+    @OptIn(UnstableApi::class) private fun onStreamSelected(selectedItem: StreamInfoItem) {
         Log.d(TAG, "onStreamSelected: ${selectedItem.name}")
         onItemSelected(selectedItem)
-        Log.d(TAG, "onItemClick: ${selectedItem.serviceId}, ${selectedItem.url}, ${selectedItem.name}")
-        openVideoDetailFragment(requireContext(), fM!!, selectedItem.serviceId, selectedItem.url, selectedItem.name,
-            null, false)
+        Log.d(TAG, "onItemClick: ${selectedItem.serviceId}, ${selectedItem.url}")
+        openVideoDetailFragment(requireContext(), fM!!, selectedItem.serviceId, selectedItem.url, selectedItem.name, null, false)
     }
 
     protected fun onScrollToBottom() {
@@ -355,12 +355,9 @@ abstract class BaseListFragment<I, N>
     /*//////////////////////////////////////////////////////////////////////////
     // Menu
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onCreateOptionsMenu(menu: Menu,
-                                     inflater: MenuInflater
-    ) {
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: "
-                    + "menu = [" + menu + "], inflater = [" + inflater + "]")
+            Log.d(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
         }
         super.onCreateOptionsMenu(menu, inflater)
         val supportActionBar = activity?.supportActionBar
@@ -385,26 +382,22 @@ abstract class BaseListFragment<I, N>
     ////////////////////////////////////////////////////////////////////////// */
     override fun showLoading() {
         super.showLoading()
-        itemsList!!.animateHideRecyclerViewAllowingScrolling()
+        itemsList.animateHideRecyclerViewAllowingScrolling()
     }
 
     override fun hideLoading() {
         super.hideLoading()
-        itemsList!!.animate(true, 300)
+        itemsList.animate(true, 300)
     }
 
     override fun showEmptyState() {
         super.showEmptyState()
         showListFooter(false)
-        itemsList!!.animateHideRecyclerViewAllowingScrolling()
+        itemsList.animateHideRecyclerViewAllowingScrolling()
     }
 
     override fun showListFooter(show: Boolean) {
-        itemsList!!.post {
-            if (infoListAdapter != null && itemsList != null) {
-                infoListAdapter!!.showFooter(show)
-            }
-        }
+        itemsList.post { infoListAdapter?.showFooter(show) }
     }
 
     override fun handleNextItems(result: N) {
@@ -414,7 +407,7 @@ abstract class BaseListFragment<I, N>
     override fun handleError() {
         super.handleError()
         showListFooter(false)
-        itemsList!!.animateHideRecyclerViewAllowingScrolling()
+        itemsList.animateHideRecyclerViewAllowingScrolling()
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String?) {

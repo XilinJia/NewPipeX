@@ -105,7 +105,7 @@ abstract class Tab {
 //        }
         override val tabId: Int = ID
 
-        override fun getTabName(context: Context): String? {
+        override fun getTabName(context: Context): String {
             // TODO: find a better name for the blank tab (maybe "blank_tab") or replace it with
             //       context.getString(R.string.app_name);
             return "NewPipe" // context.getString(R.string.blank_page_summary);
@@ -131,7 +131,7 @@ abstract class Tab {
 //        }
         override val tabId: Int = ID
 
-        override fun getTabName(context: Context): String? {
+        override fun getTabName(context: Context): String {
             return context.getString(R.string.tab_subscriptions)
         }
 
@@ -155,7 +155,7 @@ abstract class Tab {
 //        }
         override val tabId: Int = ID
 
-        override fun getTabName(context: Context): String? {
+        override fun getTabName(context: Context): String {
             return context.getString(R.string.fragment_feed_title)
         }
 
@@ -178,7 +178,7 @@ abstract class Tab {
 //            return ID
 //        }
         override val tabId: Int = ID
-        override fun getTabName(context: Context): String? {
+        override fun getTabName(context: Context): String {
             return context.getString(R.string.tab_bookmarks)
         }
 
@@ -201,7 +201,7 @@ abstract class Tab {
 //            return ID
 //        }
         override val tabId: Int = ID
-        override fun getTabName(context: Context): String? {
+        override fun getTabName(context: Context): String {
             return context.getString(R.string.title_activity_history)
         }
 
@@ -239,7 +239,7 @@ abstract class Tab {
 //        }
         override val tabId: Int = ID
 
-        override fun getTabName(context: Context): String? {
+        override fun getTabName(context: Context): String {
             return getTranslatedKioskName(kioskId!!, context)
         }
 
@@ -258,8 +258,7 @@ abstract class Tab {
         }
 
         override fun writeDataToJson(writerSink: JsonStringWriter) {
-            writerSink.value(JSON_KIOSK_SERVICE_ID_KEY, kioskServiceId)
-                .value(JSON_KIOSK_ID_KEY, kioskId)
+            writerSink.value(JSON_KIOSK_SERVICE_ID_KEY, kioskServiceId).value(JSON_KIOSK_ID_KEY, kioskId)
         }
 
         override fun readDataFromJson(jsonObject: JsonObject) {
@@ -268,9 +267,8 @@ abstract class Tab {
         }
 
         override fun equals(obj: Any?): Boolean {
-            if (obj !is KioskTab) {
-                return false
-            }
+            if (obj !is KioskTab) return false
+
             val other = obj
             return super.equals(obj) && kioskServiceId == other.kioskServiceId && kioskId == other.kioskId
         }
@@ -296,9 +294,7 @@ abstract class Tab {
 
         constructor() : this(-1, NO_URL, NO_NAME)
 
-        constructor(channelServiceId: Int, channelUrl: String?,
-                    channelName: String?
-        ) {
+        constructor(channelServiceId: Int, channelUrl: String?, channelName: String?) {
             this.channelServiceId = channelServiceId
             this.channelUrl = channelUrl
             this.channelName = channelName
@@ -337,9 +333,8 @@ abstract class Tab {
         }
 
         override fun equals(obj: Any?): Boolean {
-            if (obj !is ChannelTab) {
-                return false
-            }
+            if (obj !is ChannelTab) return false
+
             val other = obj
             return super.equals(obj) && channelServiceId == other.channelServiceId && channelUrl == other.channelName && channelName == other.channelName
         }
@@ -362,7 +357,7 @@ abstract class Tab {
 //        }
         override val tabId: Int = ID
 
-        override fun getTabName(context: Context): String? {
+        override fun getTabName(context: Context): String {
             return getTranslatedKioskName(getDefaultKioskId(context), context)
         }
 
@@ -463,31 +458,18 @@ abstract class Tab {
             playlistUrl = jsonObject.getString(JSON_PLAYLIST_URL_KEY, NO_URL)
             playlistName = jsonObject.getString(JSON_PLAYLIST_NAME_KEY, NO_NAME)
             playlistId = jsonObject.getInt(JSON_PLAYLIST_ID_KEY, -1).toLong()
-            playlistType = LocalItemType.valueOf(
-                jsonObject.getString(JSON_PLAYLIST_TYPE_KEY,
-                    LocalItemType.PLAYLIST_LOCAL_ITEM.toString())
+            playlistType = LocalItemType.valueOf(jsonObject.getString(JSON_PLAYLIST_TYPE_KEY, LocalItemType.PLAYLIST_LOCAL_ITEM.toString())
             )
         }
 
         override fun equals(obj: Any?): Boolean {
-            if (obj !is PlaylistTab) {
-                return false
-            }
-
+            if (obj !is PlaylistTab) return false
             val other = obj
-
             return super.equals(obj) && playlistServiceId == other.playlistServiceId && playlistId == other.playlistId && playlistUrl == other.playlistUrl && playlistName == other.playlistName && playlistType == other.playlistType
         }
 
         override fun hashCode(): Int {
-            return Objects.hash(
-                tabId,
-                playlistServiceId,
-                playlistId,
-                playlistUrl,
-                playlistName,
-                playlistType
-            )
+            return Objects.hash(tabId, playlistServiceId, playlistId, playlistUrl, playlistName, playlistType)
         }
 
         companion object {
@@ -514,10 +496,7 @@ abstract class Tab {
         fun from(jsonObject: JsonObject): Tab? {
             val tabId = jsonObject.getInt(JSON_TAB_ID_KEY, -1)
 
-            if (tabId == -1) {
-                return null
-            }
-
+            if (tabId == -1) return null
             return from(tabId, jsonObject)
         }
 
@@ -527,9 +506,7 @@ abstract class Tab {
 
         fun typeFrom(tabId: Int): Type? {
             for (available in Type.entries) {
-                if (available.tabId == tabId) {
-                    return available
-                }
+                if (available.tabId == tabId) return available
             }
             return null
         }

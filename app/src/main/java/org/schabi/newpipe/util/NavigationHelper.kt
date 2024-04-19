@@ -364,15 +364,10 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     }
 
     @JvmStatic
-    fun openVideoDetailFragment(context: Context,
-                                fragmentManager: FragmentManager,
-                                serviceId: Int,
-                                url: String?,
-                                title: String,
-                                playQueue: PlayQueue?,
-                                switchingPlayers: Boolean) {
+    fun openVideoDetailFragment(context: Context, fragmentManager: FragmentManager, serviceId: Int, url: String?, title: String, playQueue: PlayQueue?, switchingPlayers: Boolean) {
         val autoPlay: Boolean
         val playerType = PlayerHolder.instance?.type
+        Log.d(TAG, "openVideoDetailFragment: $playerType")
         autoPlay = when {
             playerType == null -> {
                 // no player open
@@ -393,24 +388,24 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
             }
         }
 
-        val onVideoDetailFragmentReady: RunnableWithVideoDetailFragment =
-            object: RunnableWithVideoDetailFragment {
-                override fun run(detailFragment: VideoDetailFragment?) {
-                    if (detailFragment == null) return
-                    expandMainPlayer(detailFragment.requireActivity())
-                    detailFragment.setAutoPlay(autoPlay)
-                    if (switchingPlayers) {
-                        // Situation when user switches from players to main player. All needed data is
-                        // here, we can start watching (assuming newQueue equals playQueue).
-                        // Starting directly in fullscreen if the previous player type was popup.
-                        detailFragment.openVideoPlayer(playerType == PlayerType.POPUP
-                                || PlayerHelper.isStartMainPlayerFullscreenEnabled(context))
-                    } else {
-                        detailFragment.selectAndLoadVideo(serviceId, url, title, playQueue)
-                    }
-                    detailFragment.scrollToTop()
+        val onVideoDetailFragmentReady: RunnableWithVideoDetailFragment = object: RunnableWithVideoDetailFragment {
+            override fun run(detailFragment: VideoDetailFragment?) {
+                if (detailFragment == null) return
+
+                expandMainPlayer(detailFragment.requireActivity())
+                detailFragment.setAutoPlay(autoPlay)
+                if (switchingPlayers) {
+                    // Situation when user switches from players to main player. All needed data is
+                    // here, we can start watching (assuming newQueue equals playQueue).
+                    // Starting directly in fullscreen if the previous player type was popup.
+                    detailFragment.openVideoPlayer(playerType == PlayerType.POPUP
+                            || PlayerHelper.isStartMainPlayerFullscreenEnabled(context))
+                } else {
+                    detailFragment.selectAndLoadVideo(serviceId, url, title, playQueue)
                 }
+                detailFragment.scrollToTop()
             }
+        }
 
         val fragment = fragmentManager.findFragmentById(R.id.fragment_player_holder)
         if (fragment is VideoDetailFragment && fragment.isVisible()) {

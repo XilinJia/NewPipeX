@@ -9,9 +9,11 @@ import android.util.Log
 import android.view.*
 import android.widget.RelativeLayout
 import androidx.annotation.ColorInt
+import androidx.annotation.OptIn
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentStatePagerAdapterMenuWorkaround
+import androidx.media3.common.util.UnstableApi
 import androidx.preference.PreferenceManager
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayout.OnTabSelectedListener
@@ -137,7 +139,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    @OptIn(UnstableApi::class) override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == R.id.action_search) {
             try {
                 openSearchFragment(fM!!, getSelectedServiceId(requireActivity()), "")
@@ -235,9 +237,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
         updateTitleForTab(tab.position)
     }
 
-    class SelectedTabsPagerAdapter(private val context: Context,
-                                   fragmentManager: FragmentManager,
-                                   tabsList: List<Tab>)
+    class SelectedTabsPagerAdapter(private val context: Context, fragmentManager: FragmentManager, tabsList: List<Tab>)
         : FragmentStatePagerAdapterMenuWorkaround(fragmentManager, Behavior.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
 
         private val internalTabsList: List<Tab> = ArrayList(tabsList)
