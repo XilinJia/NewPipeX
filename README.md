@@ -8,6 +8,6 @@ See more changes and issues in [changelog](changelog.md)
 
 ## Copyright
 
-New files and modifications in the project is copyrighted in 2024 by Xilin Jia.
+New files and contents in the project are copyrighted in 2024 by Xilin Jia.
 
-Original contents from the forked project maintains copyrights of the NewPipe team.
+Original contents from the forked project maintain copyrights of the NewPipe team.
