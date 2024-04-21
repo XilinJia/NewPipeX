@@ -1,7 +1,9 @@
 package org.schabi.newpipe.error
 
 import android.os.Parcelable
+import androidx.annotation.OptIn
 import androidx.annotation.StringRes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlaybackException
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
@@ -15,63 +17,37 @@ import org.schabi.newpipe.ktx.isNetworkRelated
 import org.schabi.newpipe.util.ServiceHelper
 
 @Parcelize
-class ErrorInfo(
-    val stackTraces: Array<String>,
-    val userAction: UserAction,
-    val serviceName: String,
-    val request: String,
-    val messageStringId: Int,
-) : Parcelable {
+class ErrorInfo(val stackTraces: Array<String>, val userAction: UserAction, val serviceName: String, val request: String, val messageStringId: Int) : Parcelable {
     // no need to store throwable, all data for report is in other variables
     // also, the throwable might not be serializable, see TeamNewPipe/NewPipe#7302
     @IgnoredOnParcel
     var throwable: Throwable? = null
 
-    private constructor(
-        throwable: Throwable,
-        userAction: UserAction,
-        serviceName: String,
-        request: String,
-    ) : this(
-        throwableToStringList(throwable),
-        userAction,
-        serviceName,
-        request,
-        getMessageStringId(throwable, userAction),
-    ) {
+    private constructor(throwable: Throwable, userAction: UserAction, serviceName: String, request: String)
+            : this(throwableToStringList(throwable), userAction, serviceName, request, getMessageStringId(throwable, userAction)) {
         this.throwable = throwable
     }
 
-    private constructor(
-        throwable: List<Throwable>,
-        userAction: UserAction,
-        serviceName: String,
-        request: String,
-    ) : this(
-        throwableListToStringList(throwable),
-        userAction,
-        serviceName,
-        request,
-        getMessageStringId(throwable.firstOrNull(), userAction),
-    ) {
+    private constructor(throwable: List<Throwable>, userAction: UserAction, serviceName: String, request: String)
+            : this(throwableListToStringList(throwable), userAction, serviceName, request, getMessageStringId(throwable.firstOrNull(), userAction)) {
         this.throwable = throwable.firstOrNull()
     }
 
     // constructors with single throwable
-    constructor(throwable: Throwable, userAction: UserAction, request: String) :
-        this(throwable, userAction, SERVICE_NONE, request)
-    constructor(throwable: Throwable, userAction: UserAction, request: String, serviceId: Int) :
-        this(throwable, userAction, ServiceHelper.getNameOfServiceById(serviceId), request)
-    constructor(throwable: Throwable, userAction: UserAction, request: String, info: Info?) :
-        this(throwable, userAction, getInfoServiceName(info), request)
+    constructor(throwable: Throwable, userAction: UserAction, request: String)
+            : this(throwable, userAction, SERVICE_NONE, request)
+    constructor(throwable: Throwable, userAction: UserAction, request: String, serviceId: Int)
+            : this(throwable, userAction, ServiceHelper.getNameOfServiceById(serviceId), request)
+    constructor(throwable: Throwable, userAction: UserAction, request: String, info: Info?)
+            : this(throwable, userAction, getInfoServiceName(info), request)
 
     // constructors with list of throwables
-    constructor(throwable: List<Throwable>, userAction: UserAction, request: String) :
-        this(throwable, userAction, SERVICE_NONE, request)
-    constructor(throwable: List<Throwable>, userAction: UserAction, request: String, serviceId: Int) :
-        this(throwable, userAction, ServiceHelper.getNameOfServiceById(serviceId), request)
-    constructor(throwable: List<Throwable>, userAction: UserAction, request: String, info: Info?) :
-        this(throwable, userAction, getInfoServiceName(info), request)
+    constructor(throwable: List<Throwable>, userAction: UserAction, request: String)
+            : this(throwable, userAction, SERVICE_NONE, request)
+    constructor(throwable: List<Throwable>, userAction: UserAction, request: String, serviceId: Int)
+            : this(throwable, userAction, ServiceHelper.getNameOfServiceById(serviceId), request)
+    constructor(throwable: List<Throwable>, userAction: UserAction, request: String, info: Info?)
+            : this(throwable, userAction, getInfoServiceName(info), request)
 
     companion object {
         const val SERVICE_NONE = "none"
@@ -82,11 +58,8 @@ class ErrorInfo(
 
         private fun getInfoServiceName(info: Info?) = if (info == null) SERVICE_NONE else ServiceHelper.getNameOfServiceById(info.serviceId)
 
-        @StringRes
-        private fun getMessageStringId(
-            throwable: Throwable?,
-            action: UserAction,
-        ): Int {
+        @OptIn(UnstableApi::class) @StringRes
+        private fun getMessageStringId(throwable: Throwable?, action: UserAction): Int {
             return when {
                 throwable is AccountTerminatedException -> R.string.account_terminated
                 throwable is ContentNotAvailableException -> R.string.content_not_available

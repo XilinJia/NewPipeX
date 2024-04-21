@@ -580,7 +580,7 @@ class WebMWriter(vararg source: SharpStream) : Closeable {
         if (wipe) {
             size -= 4
             while (size > 0) {
-                val write = min(size.toDouble(), outBuffer!!.size.toDouble()).toInt()
+                val write = min(size, outBuffer!!.size)
                 dump(outBuffer, write, out)
                 size -= write
             }

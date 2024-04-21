@@ -31,7 +31,7 @@ internal class WebMMuxer : Postprocessing(true, true, ALGORITHM_WEBM_MUXER) {
         }
 
         muxer.selectTracks(*indexes)
-        muxer.build(out!!)
+        if (out != null ) muxer.build(out)
 
         return OK_RESULT.toInt()
     }

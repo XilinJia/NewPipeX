@@ -17,7 +17,7 @@ object PeertubeHelper {
             .getDefaultSharedPreferences(context)
         val savedInstanceListKey = context.getString(R.string.peertube_instance_list_key)
         val savedJson = sharedPreferences.getString(savedInstanceListKey, null)
-            ?: return java.util.List.of(currentInstance)
+            ?: return listOf(currentInstance)
 
         try {
             val array = JsonParser.`object`().from(savedJson).getArray("instances")
@@ -32,7 +32,7 @@ object PeertubeHelper {
             }
             return result
         } catch (e: JsonParserException) {
-            return java.util.List.of(currentInstance)
+            return listOf(currentInstance)
         }
     }
 

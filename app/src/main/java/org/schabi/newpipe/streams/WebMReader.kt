@@ -26,15 +26,13 @@ class WebMReader(source: SharpStream?) {
     @Throws(IOException::class)
     fun parse() {
         var elem: Element? = readElement(ID_EMBL)
-        if (!readEbml(elem, 1, 2)) {
-            throw UnsupportedOperationException("Unsupported EBML data (WebM)")
-        }
+        if (!readEbml(elem, 1, 2)) throw UnsupportedOperationException("Unsupported EBML data (WebM)")
+
         ensure(elem)
 
         elem = untilElement(null, ID_SEGMENT)
-        if (elem == null) {
-            throw IOException("Fragment element not found")
-        }
+        if (elem == null) throw IOException("Fragment element not found")
+
         segment = readSegment(elem, 0, true)
         availableTracks = segment!!.tracks
         selectedTrack = -1
@@ -50,9 +48,7 @@ class WebMReader(source: SharpStream?) {
     @get:Throws(IOException::class)
     val nextSegment: Segment?
         get() {
-            if (done) {
-                return null
-            }
+            if (done) return null
 
             if (firstSegment && segment != null) {
                 firstSegment = false
@@ -77,9 +73,8 @@ class WebMReader(source: SharpStream?) {
         var value: Long = 0
         while (length-- > 0) {
             val read = stream.read()
-            if (read == -1) {
-                throw EOFException()
-            }
+            if (read == -1) throw EOFException()
+
             value = (value shl 8) or read.toLong()
         }
         return value
@@ -95,9 +90,8 @@ class WebMReader(source: SharpStream?) {
         val length = parent.contentSize
         val buffer = ByteArray(length.toInt())
         val read = stream.read(buffer)
-        if (read < length) {
-            throw EOFException()
-        }
+        if (read < length) throw EOFException()
+
         return buffer
     }
 
@@ -148,8 +142,7 @@ class WebMReader(source: SharpStream?) {
     private fun readElement(expected: Int): Element {
         val elem = readElement()
         if (expected != 0 && elem.type != expected) {
-            throw NoSuchElementException("expected " + elementID(expected.toLong())
-                    + " found " + elementID(elem.type.toLong()))
+            throw NoSuchElementException("expected ${elementID(expected.toLong())} found ${elementID(elem.type.toLong())}")
         }
 
         return elem
@@ -160,13 +153,10 @@ class WebMReader(source: SharpStream?) {
         var elem: Element
         while (if (ref == null) stream.available() else (stream.position() < (ref.offset + ref.size))) {
             elem = readElement()
-            if (expected.size < 1) {
-                return elem
-            }
+            if (expected.size < 1) return elem
+
             for (type in expected) {
-                if (elem.type == type) {
-                    return elem
-                }
+                if (elem.type == type) return elem
             }
 
             ensure(elem)
@@ -183,11 +173,9 @@ class WebMReader(source: SharpStream?) {
     private fun ensure(ref: Element?) {
         val skip = (ref!!.offset + ref.size) - stream.position()
 
-        if (skip == 0L) {
-            return
-        } else if (skip < 0) {
-            throw EOFException(String.format(
-                "parser go beyond limits of the Element. type=%s offset=%s size=%s position=%s",
+        if (skip == 0L) return
+        if (skip < 0) {
+            throw EOFException(String.format("parser go beyond limits of the Element. type=%s offset=%s size=%s position=%s",
                 elementID(ref.type.toLong()), ref.offset, ref.size, stream.position()
             ))
         }
@@ -200,9 +188,7 @@ class WebMReader(source: SharpStream?) {
                          minDocTypeVersion: Int
     ): Boolean {
         var elem: Element? = untilElement(ref, ID_EMBL_READ_VERSION) ?: return false
-        if (readNumber(elem!!) > minReadVersion) {
-            return false
-        }
+        if (readNumber(elem!!) > minReadVersion) return false
 
         elem = untilElement(ref, ID_EMBL_DOC_TYPE) ?: return false
         if (readString(elem) != "webm") return false
@@ -214,13 +200,14 @@ class WebMReader(source: SharpStream?) {
 
     @Throws(IOException::class)
     private fun readInfo(ref: Element): Info {
-        var elem: Element
+        var elem: Element?
         val info = Info()
 
-        while ((untilElement(ref, ID_TIMECODE_SCALE, ID_DURATION).also { elem = it!! }) != null) {
-            when (elem.type) {
-                ID_TIMECODE_SCALE -> info.timecodeScale = readNumber(elem)
-                ID_DURATION -> info.duration = readNumber(elem)
+        while ((untilElement(ref, ID_TIMECODE_SCALE, ID_DURATION).also { elem = it }) != null) {
+            if (elem == null) continue
+            when (elem!!.type) {
+                ID_TIMECODE_SCALE -> info.timecodeScale = readNumber(elem!!)
+                ID_DURATION -> info.duration = readNumber(elem!!)
             }
             ensure(elem)
         }
@@ -233,19 +220,18 @@ class WebMReader(source: SharpStream?) {
     }
 
     @Throws(IOException::class)
-    private fun readSegment(ref: Element, trackLacingExpected: Int,
-                            metadataExpected: Boolean
-    ): Segment {
+    private fun readSegment(ref: Element, trackLacingExpected: Int, metadataExpected: Boolean): Segment {
         val obj: Segment = Segment(ref)
-        var elem: Element
-        while ((untilElement(ref, ID_INFO, ID_TRACKS, ID_CLUSTER).also { elem = it!! }) != null) {
-            if (elem.type == ID_CLUSTER) {
+        var elem: Element?
+        while ((untilElement(ref, ID_INFO, ID_TRACKS, ID_CLUSTER).also { elem = it }) != null) {
+            if (elem == null) continue
+            if (elem!!.type == ID_CLUSTER) {
                 obj.currentCluster = elem
                 break
             }
-            when (elem.type) {
-                ID_INFO -> obj.info = readInfo(elem)
-                ID_TRACKS -> obj.tracks = readTracks(elem, trackLacingExpected)
+            when (elem!!.type) {
+                ID_INFO -> obj.info = readInfo(elem!!)
+                ID_TRACKS -> obj.tracks = readTracks(elem!!, trackLacingExpected)
             }
             ensure(elem)
         }
@@ -267,8 +253,10 @@ class WebMReader(source: SharpStream?) {
         while ((untilElement(ref, ID_TRACK_ENTRY).also { elemTrackEntry = it }) != null) {
             val entry = WebMTrack()
             var drop = false
-            var elem: Element
-            while ((untilElement(elemTrackEntry).also { elem = it!! }) != null) {
+            var elem: Element?
+            while ((untilElement(elemTrackEntry).also { elem = it }) != null) {
+                if (elem == null) continue
+                val elem = elem!!
                 when (elem.type) {
                     ID_TRACK_NUMBER -> entry.trackNumber = readNumber(elem)
                     ID_TRACK_TYPE -> entry.trackType = readNumber(elem).toInt()
@@ -323,9 +311,7 @@ class WebMReader(source: SharpStream?) {
     private fun readCluster(ref: Element?): Cluster {
         val obj = Cluster(ref)
 
-        val elem = untilElement(ref, ID_TIMECODE)
-            ?: throw NoSuchElementException("Cluster at " + ref!!.offset
-                    + " without Timecode element")
+        val elem = untilElement(ref, ID_TIMECODE) ?: throw NoSuchElementException("Cluster at ${ref!!.offset} without Timecode element")
         obj.timecode = readNumber(elem)
 
         return obj
@@ -372,9 +358,8 @@ class WebMReader(source: SharpStream?) {
         @get:Throws(IOException::class)
         val nextCluster: Cluster?
             get() {
-                if (done) {
-                    return null
-                }
+                if (done) return null
+
                 if (firstClusterInSegment && segment!!.currentCluster != null) {
                     firstClusterInSegment = false
                     return readCluster(segment!!.currentCluster)
@@ -419,9 +404,7 @@ class WebMReader(source: SharpStream?) {
         @get:Throws(IOException::class)
         val nextSimpleBlock: SimpleBlock?
             get() {
-                if (insideClusterBounds()) {
-                    return null
-                }
+                if (insideClusterBounds()) return null
 
                 if (currentBlockGroup != null) {
                     ensure(currentBlockGroup)
@@ -450,8 +433,7 @@ class WebMReader(source: SharpStream?) {
                         currentSimpleBlock!!.data = stream.getView(currentSimpleBlock!!.dataSize)
 
                         // calculate the timestamp in nanoseconds
-                        currentSimpleBlock!!.absoluteTimeCodeNs = (currentSimpleBlock!!.relativeTimeCode
-                                + this.timecode)
+                        currentSimpleBlock!!.absoluteTimeCodeNs = (currentSimpleBlock!!.relativeTimeCode + this.timecode)
                         currentSimpleBlock!!.absoluteTimeCodeNs *= segment!!.info!!.timecodeScale
 
                         return currentSimpleBlock

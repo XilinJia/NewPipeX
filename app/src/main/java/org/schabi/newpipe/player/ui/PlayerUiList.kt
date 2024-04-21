@@ -1,12 +1,13 @@
 package org.schabi.newpipe.player.ui
 
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import java.util.*
-import java.util.List
 import java.util.function.Consumer
 import kotlin.collections.ArrayList
 import kotlin.collections.MutableList
 
-class PlayerUiList(vararg initialPlayerUis: PlayerUi) {
+@OptIn(UnstableApi::class) class PlayerUiList(vararg initialPlayerUis: PlayerUi) {
     val playerUis: MutableList<PlayerUi> = ArrayList()
 
     /**
@@ -19,7 +20,7 @@ class PlayerUiList(vararg initialPlayerUis: PlayerUi) {
      * @param initialPlayerUis the player uis this list should start with; the order will be kept
      */
     init {
-        playerUis.addAll(List.of(*initialPlayerUis))
+        playerUis.addAll(listOf(*initialPlayerUis))
     }
 
     /**

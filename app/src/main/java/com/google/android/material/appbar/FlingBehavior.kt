@@ -16,7 +16,7 @@ class FlingBehavior(context: Context?, attrs: AttributeSet?) : AppBarLayout.Beha
 
     private var allowScroll = true
     private val globalRect = Rect()
-    private val skipInterceptionOfElements: List<Int> = java.util.List.of(
+    private val skipInterceptionOfElements: List<Int> = listOf(
         R.id.itemsListPanel, R.id.playbackSeekBar,
         R.id.playPauseButton, R.id.playPreviousButton, R.id.playNextButton)
 

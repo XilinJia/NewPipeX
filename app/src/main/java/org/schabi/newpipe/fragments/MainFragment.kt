@@ -55,8 +55,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
         tabsManager = getManager(requireActivity())
         tabsManager!!.setSavedTabsListener {
             if (DEBUG) {
-                Log.d(TAG, "TabsManager.SavedTabsChangeListener: "
-                        + "onTabsChanged called, isResumed = " + isResumed)
+                Log.d(TAG, "TabsManager.SavedTabsChangeListener: onTabsChanged called, isResumed = $isResumed")
             }
             if (isResumed) {
                 setupTabs()
@@ -72,9 +71,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
         if (prefs!= null) mainTabsPositionBottom = prefs!!.getBoolean(mainTabsPositionKey, false)
     }
 
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         Log.d(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_main, container, false)
     }
@@ -94,8 +91,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
     override fun onResume() {
         super.onResume()
 
-        val newYoutubeRestrictedModeEnabled =
-            prefs!!.getBoolean(youtubeRestrictedModeEnabledKey, false)
+        val newYoutubeRestrictedModeEnabled = prefs!!.getBoolean(youtubeRestrictedModeEnabledKey, false)
         if (youtubeRestrictedModeEnabled != newYoutubeRestrictedModeEnabled || hasTabsChanged) {
             youtubeRestrictedModeEnabled = newYoutubeRestrictedModeEnabled
             setupTabs()
@@ -125,13 +121,10 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
     /*//////////////////////////////////////////////////////////////////////////
     // Menu
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onCreateOptionsMenu(menu: Menu,
-                                     inflater: MenuInflater
-    ) {
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
         if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: "
-                    + "menu = [" + menu + "], inflater = [" + inflater + "]")
+            Log.d(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
         }
         inflater.inflate(R.menu.menu_main_fragment, menu)
 
@@ -212,8 +205,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
 
         // change the background and icon color of the tab layout:
         // service-colored at the top, app-background-colored at the bottom
-        tabLayout.setBackgroundColor(resolveColorFromAttr(requireContext(),
-            if (bottom) R.attr.colorSecondary else R.attr.colorPrimary))
+        tabLayout.setBackgroundColor(resolveColorFromAttr(requireContext(), if (bottom) R.attr.colorSecondary else R.attr.colorPrimary))
 
         @ColorInt val iconColor = if (bottom) resolveColorFromAttr(requireContext(), R.attr.colorAccent) else Color.WHITE
         tabLayout.tabRippleColor = ColorStateList.valueOf(iconColor).withAlpha(32)

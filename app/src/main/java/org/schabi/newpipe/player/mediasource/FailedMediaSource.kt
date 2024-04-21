@@ -11,14 +11,13 @@ import androidx.media3.exoplayer.upstream.DefaultAllocator
 import org.schabi.newpipe.player.mediaitem.ExceptionTag
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 import java.io.IOException
-import java.util.List
 import java.util.concurrent.TimeUnit
 
 @UnstableApi class FailedMediaSource(val stream: PlayQueueItem, val error: Exception, private val retryTimestamp: Long)
     : BaseMediaSource(), ManagedMediaSource {
 
     private val TAG = "FailedMediaSource@" + Integer.toHexString(hashCode())
-    private val mediaItem = ExceptionTag.of(stream, List.of(error)).withExtras(this).asMediaItem()
+    private val mediaItem = ExceptionTag.of(stream, listOf(error)).withExtras(this).asMediaItem()
 
     private fun canRetry(): Boolean {
         return System.currentTimeMillis() >= retryTimestamp

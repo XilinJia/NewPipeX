@@ -61,8 +61,7 @@ class DownloadInitializer internal constructor(private val mMission: DownloadMis
                             mMission.offsets[0] = RESERVE_SPACE_DEFAULT.toLong()
                         } else {
                             // use the smallest resource size to download, otherwise, use the maximum
-                            mMission.offsets[0] =
-                                if (lowestSize < RESERVE_SPACE_MAXIMUM) lowestSize else RESERVE_SPACE_MAXIMUM.toLong()
+                            mMission.offsets[0] = if (lowestSize < RESERVE_SPACE_MAXIMUM) lowestSize else RESERVE_SPACE_MAXIMUM.toLong()
                         }
                     }
                 } else {
@@ -140,12 +139,16 @@ class DownloadInitializer internal constructor(private val mMission: DownloadMis
                     val lastModified = mConn!!.getHeaderField("Last-Modified")
                     val recovery = mMission.recoveryInfo!![mMission.current]
 
-                    if (!TextUtils.isEmpty(entityTag)) {
-                        recovery.validateCondition = entityTag
-                    } else if (!TextUtils.isEmpty(lastModified)) {
-                        recovery.validateCondition = lastModified // Note: this is less precise
-                    } else {
-                        recovery.validateCondition = null
+                    when {
+                        !TextUtils.isEmpty(entityTag) -> {
+                            recovery.validateCondition = entityTag
+                        }
+                        !TextUtils.isEmpty(lastModified) -> {
+                            recovery.validateCondition = lastModified // Note: this is less precise
+                        }
+                        else -> {
+                            recovery.validateCondition = null
+                        }
                     }
                 }
 

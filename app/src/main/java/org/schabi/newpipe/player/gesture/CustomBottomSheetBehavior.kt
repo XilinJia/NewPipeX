@@ -15,7 +15,7 @@ class CustomBottomSheetBehavior(context: Context,
 ) : BottomSheetBehavior<FrameLayout?>(context, attrs) {
     var globalRect: Rect = Rect()
     private var skippingInterception = false
-    private val skipInterceptionOfElements: List<Int> = java.util.List.of(
+    private val skipInterceptionOfElements: List<Int> = listOf(
         R.id.detail_content_root_layout, R.id.relatedItemsLayout,
         R.id.itemsListPanel, R.id.view_pager, R.id.tab_layout, R.id.bottomControls,
         R.id.playPauseButton, R.id.playPreviousButton, R.id.playNextButton)

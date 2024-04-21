@@ -26,7 +26,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
     var isParsed: Boolean = false
         private set
 
-    private var tracks: Array<Mp4DashReader.Mp4Track?>? = null
+    private var tracks: Array<Mp4Track?>? = null
     private var sourceTracks: Array<SharpStream>?
 
     private var readers: Array<Mp4DashReader?>?
@@ -54,7 +54,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
     }
 
     @Throws(IllegalStateException::class)
-    fun getTracksFromSource(sourceIndex: Int): Array<Mp4DashReader.Mp4Track?>? {
+    fun getTracksFromSource(sourceIndex: Int): Array<Mp4Track?>? {
         check(isParsed) { "All sources must be parsed first" }
 
         return readers!![sourceIndex]!!.availableTracks
@@ -119,12 +119,9 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
 
     @Throws(IOException::class)
     fun build(output: SharpStream) {
-        if (isDone) {
-            throw RuntimeException("already done")
-        }
-        if (!output.canWrite()) {
-            throw IOException("the provided output is not writable")
-        }
+        if (isDone) throw RuntimeException("already done")
+
+        if (!output.canWrite()) throw IOException("the provided output is not writable")
 
         //
         // WARNING: the muxer requires at least 8 samples of every track
@@ -142,21 +139,19 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
         for (i in tablesInfo.indices) {
             tablesInfo[i] = TablesInfo()
         }
-        val singleSampleBuffer = if (tracks!!.size == 1 && tracks!![0]!!.kind == Mp4DashReader.TrackKind.Audio) {
-            // near 1 second of audio data per chunk, avoid split the audio stream in large chunks
-            tracks!![0]!!.trak!!.mdia!!.mdhdTimeScale / 1000
-        } else {
-            -1
-        }
-
+        // near 1 second of audio data per chunk, avoid split the audio stream in large chunks
+        val singleSampleBuffer = if (tracks!!.size == 1 && tracks!![0]!!.kind == TrackKind.Audio)
+            tracks!![0]!!.trak!!.mdia!!.mdhdTimeScale / 1000 else -1
 
         for (i in readers!!.indices) {
             var samplesSize = 0
             var sampleSizeChanges = 0
             var compositionOffsetLast = -1
 
-            var chunk: Mp4DashChunk
-            while ((readers!![i]!!.getNextChunk(true).also { chunk = it!! }) != null) {
+            var chunk: Mp4DashChunk?
+            while ((readers!![i]?.getNextChunk(true).also { chunk = it }) != null) {
+                if (chunk == null) continue
+                val chunk = chunk!!
                 if (defaultMediaTime[i] < 1 && chunk.moof!!.traf!!.tfhd!!.defaultSampleDuration > 0) {
                     defaultMediaTime[i] = chunk.moof!!.traf!!.tfhd!!.defaultSampleDuration
                 }
@@ -164,11 +159,11 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
                 read += chunk.moof!!.traf!!.trun!!.chunkSize.toLong()
                 sampleExtra[i] += chunk.moof!!.traf!!.trun!!.chunkDuration // calculate track duration
 
-                var info: TrunEntry
-                while ((chunk.nextSampleInfo.also { info = it!! }) != null) {
-                    if (info.isKeyframe) {
-                        tablesInfo[i]!!.stss++
-                    }
+                var info: TrunEntry?
+                while ((chunk.nextSampleInfo.also { info = it }) != null) {
+                    if (info == null) continue
+                    val info = info!!
+                    if (info.isKeyframe) tablesInfo[i]!!.stss++
 
                     if (info.sampleDuration > defaultSampleDuration[i]) {
                         defaultSampleDuration[i] = info.sampleDuration
@@ -242,7 +237,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
             var length = auxSize
             val buffer = ByteArray(64 * 1024) // 64 KiB
             while (length > 0) {
-                val count = min(length.toDouble(), buffer.size.toDouble()).toInt()
+                val count = min(length, buffer.size)
                 outWrite(buffer, count)
                 length -= count
             }
@@ -260,8 +255,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
         // reset for ctts table: sampleCount sampleExtra
         for (i in readers!!.indices) {
             writeEntryArray(tablesInfo[i]!!.stts, 2, sampleCount[i], defaultSampleDuration[i])
-            writeEntryArray(tablesInfo[i]!!.stsc, tablesInfo[i]!!.stscBEntries!!.size,
-                *tablesInfo[i]!!.stscBEntries!!)
+            writeEntryArray(tablesInfo[i]!!.stsc, tablesInfo[i]!!.stscBEntries!!.size, *tablesInfo[i]!!.stscBEntries!!)
             tablesInfo[i]!!.stscBEntries = null
             if (tablesInfo[i]!!.ctts > 0) {
                 sampleCount[i] = 1 // the index is not base zero
@@ -279,8 +273,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
         outWrite(makeMdat(totalSampleSize, is64))
 
         val sampleIndex = IntArray(readers!!.size)
-        val sizes =
-            IntArray(if (singleSampleBuffer > 0) singleSampleBuffer else SAMPLES_PER_CHUNK.toInt())
+        val sizes = IntArray(if (singleSampleBuffer > 0) singleSampleBuffer else SAMPLES_PER_CHUNK.toInt())
         val sync = IntArray(if (singleSampleBuffer > 0) singleSampleBuffer else SAMPLES_PER_CHUNK.toInt())
 
         var written = readers!!.size
@@ -288,9 +281,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
             written = 0
 
             for (i in readers!!.indices) {
-                if (sampleIndex[i] < 0) {
-                    continue  // track is done
-                }
+                if (sampleIndex[i] < 0) continue  // track is done
 
                 val chunkOffset = writeOffset
                 var syncCount = 0
@@ -306,8 +297,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
 
                     if (sample == null) {
                         if (tablesInfo[i]!!.ctts > 0 && sampleExtra[i] >= 0) {
-                            writeEntryArray(tablesInfo[i]!!.ctts, 1, sampleCount[i],
-                                sampleExtra[i]) // flush last entries
+                            writeEntryArray(tablesInfo[i]!!.ctts, 1, sampleCount[i], sampleExtra[i]) // flush last entries
                             outRestore()
                         }
                         sampleIndex[i] = -1
@@ -321,8 +311,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
                             sampleCount[i]++
                         } else {
                             if (sampleExtra[i] >= 0) {
-                                tablesInfo[i]!!.ctts = writeEntryArray(tablesInfo[i]!!.ctts, 2,
-                                    sampleCount[i], sampleExtra[i])
+                                tablesInfo[i]!!.ctts = writeEntryArray(tablesInfo[i]!!.ctts, 2, sampleCount[i], sampleExtra[i])
                                 outRestore()
                             }
                             sampleCount[i] = 1
@@ -357,8 +346,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
                         if (is64) {
                             tablesInfo[i]!!.stco = writeEntry64(tablesInfo[i]!!.stco, chunkOffset)
                         } else {
-                            tablesInfo[i]!!.stco = writeEntryArray(tablesInfo[i]!!.stco, 1,
-                                chunkOffset.toInt())
+                            tablesInfo[i]!!.stco = writeEntryArray(tablesInfo[i]!!.stco, 1, chunkOffset.toInt())
                         }
                     }
 
@@ -379,9 +367,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
     private fun getNextSample(track: Int): Mp4DashSample? {
         if (readersChunks!![track] == null) {
             readersChunks!![track] = readers!![track]!!.getNextChunk(false)
-            if (readersChunks!![track] == null) {
-                return null // EOF reached
-            }
+            if (readersChunks!![track] == null) return null // EOF reached
         }
 
         val sample = readersChunks!![track]!!.nextSample
@@ -440,9 +426,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
         }
     }
 
-    private fun initChunkTables(tables: TablesInfo?, firstCount: Int,
-                                successiveCount: Int
-    ) {
+    private fun initChunkTables(tables: TablesInfo?, firstCount: Int, successiveCount: Int) {
         // tables.stsz holds amount of samples of the track (total)
         val totalSamples = (tables!!.stsz - firstCount)
         val chunkAmount = totalSamples / successiveCount.toFloat()
@@ -509,9 +493,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
     private fun lengthFor(offset: Int): Int {
         val size = auxOffset() - offset
 
-        if (moovSimulation) {
-            return size
-        }
+        if (moovSimulation) return size
 
         auxSeek(offset)
         auxWrite(size)
@@ -527,9 +509,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
         var total = size + base
         var offset = auxOffset()
 
-        if (extra >= 0) {
-            total += 4
-        }
+        if (extra >= 0) total += 4
 
         auxWrite(ByteBuffer.allocate(12)
             .putInt(total)
@@ -559,34 +539,46 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
 
     @Throws(IOException::class)
     private fun auxWrite(buffer: ByteArray) {
-        if (moovSimulation) {
-            writeOffset += buffer.size.toLong()
-        } else if (auxBuffer == null) {
-            outWrite(buffer, buffer.size)
-        } else {
-            auxBuffer!!.put(buffer)
+        when {
+            moovSimulation -> {
+                writeOffset += buffer.size.toLong()
+            }
+            auxBuffer == null -> {
+                outWrite(buffer, buffer.size)
+            }
+            else -> {
+                auxBuffer!!.put(buffer)
+            }
         }
     }
 
     @Throws(IOException::class)
     private fun auxSeek(offset: Int) {
-        if (moovSimulation) {
-            writeOffset = offset.toLong()
-        } else if (auxBuffer == null) {
-            outSeek(offset.toLong())
-        } else {
-            auxBuffer!!.position(offset)
+        when {
+            moovSimulation -> {
+                writeOffset = offset.toLong()
+            }
+            auxBuffer == null -> {
+                outSeek(offset.toLong())
+            }
+            else -> {
+                auxBuffer!!.position(offset)
+            }
         }
     }
 
     @Throws(IOException::class)
     private fun auxSkip(amount: Int) {
-        if (moovSimulation) {
-            writeOffset += amount.toLong()
-        } else if (auxBuffer == null) {
-            outSkip(amount.toLong())
-        } else {
-            auxBuffer!!.position(auxBuffer!!.position() + amount)
+        when {
+            moovSimulation -> {
+                writeOffset += amount.toLong()
+            }
+            auxBuffer == null -> {
+                outSkip(amount.toLong())
+            }
+            else -> {
+                auxBuffer!!.position(auxBuffer!!.position() + amount)
+            }
         }
     }
 
@@ -625,19 +617,13 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
 
     private fun makeMdat(refSize: Long, is64: Boolean): ByteArray {
         var size = refSize
-        size += if (is64) {
-            16
-        } else {
-            8
-        }
+        size += if (is64) 16 else 8
 
         val buffer = ByteBuffer.allocate(if (is64) 16 else 8)
             .putInt(if (is64) 0x01 else size.toInt())
             .putInt(0x6D646174) // mdat
 
-        if (is64) {
-            buffer.putLong(size)
-        }
+        if (is64) buffer.putLong(size)
 
         return buffer.array()
     }
@@ -670,21 +656,16 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
     }
 
     @Throws(RuntimeException::class, IOException::class)
-    private fun makeMoov(defaultMediaTime: IntArray, tablesInfo: Array<TablesInfo?>,
-                         is64: Boolean
-    ): Int {
+    private fun makeMoov(defaultMediaTime: IntArray, tablesInfo: Array<TablesInfo?>, is64: Boolean): Int {
         val start = auxOffset()
 
-        auxWrite(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x6D, 0x6F, 0x6F, 0x76
-        ))
+        auxWrite(byteArrayOf(0x00, 0x00, 0x00, 0x00, 0x6D, 0x6F, 0x6F, 0x76))
 
         var longestTrack: Long = 0
         val durations = LongArray(tracks!!.size)
 
         for (i in durations.indices) {
-            durations[i] = ceil(
-                (tracks!![i]!!.trak!!.tkhd!!.duration.toDouble() / tracks!![i]!!.trak!!.mdia!!.mdhdTimeScale)
-                        * DEFAULT_TIMESCALE).toLong()
+            durations[i] = ceil((tracks!![i]!!.trak!!.tkhd!!.duration.toDouble() / tracks!![i]!!.trak!!.mdia!!.mdhdTimeScale) * DEFAULT_TIMESCALE).toLong()
 
             if (durations[i] > longestTrack) {
                 longestTrack = durations[i]
@@ -704,9 +685,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
     }
 
     @Throws(IOException::class)
-    private fun makeTrak(index: Int, duration: Long, defaultMediaTime: Int,
-                         tables: TablesInfo?, is64: Boolean
-    ) {
+    private fun makeTrak(index: Int, duration: Long, defaultMediaTime: Int, tables: TablesInfo?, is64: Boolean) {
         val start = auxOffset()
 
         auxWrite(byteArrayOf( // trak header
@@ -758,7 +737,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
             .array()
         )
 
-        makeMdia(tracks!![index]!!.trak!!.mdia, tables, is64, tracks!![index]!!.kind == Mp4DashReader.TrackKind.Audio)
+        makeMdia(tracks!![index]!!.trak!!.mdia, tables, is64, tracks!![index]!!.kind == TrackKind.Audio)
 
         lengthFor(start)
     }
@@ -806,8 +785,7 @@ class Mp4FromDashWriter(vararg sources: SharpStream) {
             }
             tablesInfo.stsc = make(0x73747363, -1, 3, tablesInfo.stsc)
             tablesInfo.stsz = make(0x7374737A, tablesInfo.stszDefault, 1, tablesInfo.stsz)
-            tablesInfo.stco = make(if (is64) 0x636F3634 else 0x7374636F, -1, if (is64) 2 else 1,
-                tablesInfo.stco)
+            tablesInfo.stco = make(if (is64) 0x636F3634 else 0x7374636F, -1, if (is64) 2 else 1, tablesInfo.stco)
         }
 
         if (isAudio) {

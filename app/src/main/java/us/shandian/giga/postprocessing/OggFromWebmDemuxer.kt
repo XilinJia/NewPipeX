@@ -20,11 +20,12 @@ internal class OggFromWebmDemuxer : Postprocessing(true, true, ALGORITHM_OGG_FRO
 
     @Throws(IOException::class)
     override fun process(out: SharpStream?, vararg sources: SharpStream?): Int {
-        val demuxer = OggFromWebMWriter((sources.filterNotNull().toTypedArray())[0], out!!)
-        demuxer.parseSource()
-        demuxer.selectTrack(0)
-        demuxer.build()
-
+        if (out != null) {
+            val demuxer = OggFromWebMWriter((sources.filterNotNull().toTypedArray())[0], out)
+            demuxer.parseSource()
+            demuxer.selectTrack(0)
+            demuxer.build()
+        }
         return OK_RESULT.toInt()
     }
 }

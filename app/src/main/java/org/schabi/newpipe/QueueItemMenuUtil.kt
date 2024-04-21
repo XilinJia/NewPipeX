@@ -17,7 +17,6 @@ import org.schabi.newpipe.util.NavigationHelper.openVideoDetail
 import org.schabi.newpipe.util.SparseItemUtil.fetchStreamInfoAndSaveToDatabase
 import org.schabi.newpipe.util.SparseItemUtil.fetchUploaderUrlIfSparse
 import org.schabi.newpipe.util.external_communication.ShareUtils.shareText
-import java.util.List
 import java.util.function.Consumer
 
 object QueueItemMenuUtil {
@@ -56,7 +55,7 @@ object QueueItemMenuUtil {
                 R.id.menu_item_append_playlist -> {
                     PlaylistDialog.createCorrespondingDialog(
                         context,
-                        List.of(StreamEntity(item))
+                        listOf(StreamEntity(item))
                     ) { dialog: PlaylistDialog ->
                         dialog.show(
                             fragmentManager!!,

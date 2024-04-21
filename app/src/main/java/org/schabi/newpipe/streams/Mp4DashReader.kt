@@ -31,18 +31,13 @@ class Mp4DashReader(source: SharpStream?) {
 
     @Throws(IOException::class, NoSuchElementException::class)
     fun parse() {
-        if (selectedTrack > -1) {
-            return
-        }
+        if (selectedTrack > -1) return
 
         box = readBox(ATOM_FTYP)
         brands = parseFtyp(box)
         when (brands!![0]) {
             BRAND_DASH, BRAND_ISO5 -> {}
-            else -> throw NoSuchElementException(
-                "Not a MPEG-4 DASH container, major brand is not 'dash' or 'iso5' is "
-                        + boxName(brands!![0])
-            )
+            else -> throw NoSuchElementException("Not a MPEG-4 DASH container, major brand is not 'dash' or 'iso5' is ${boxName(brands!![0])}")
         }
         var moov: Moov? = null
 
@@ -98,12 +93,9 @@ class Mp4DashReader(source: SharpStream?) {
 
     @Throws(IOException::class)
     fun rewind() {
-        if (!stream.canRewind()) {
-            throw IOException("The provided stream doesn't allow seek")
-        }
-        if (box == null) {
-            return
-        }
+        if (!stream.canRewind()) throw IOException("The provided stream doesn't allow seek")
+
+        if (box == null) return
 
         box = backupBox
         chunkZero = false
@@ -119,9 +111,8 @@ class Mp4DashReader(source: SharpStream?) {
         while (stream.available()) {
             if (chunkZero) {
                 ensure(box)
-                if (!stream.available()) {
-                    break
-                }
+                if (!stream.available()) break
+
                 box = readBox()
             } else {
                 chunkZero = true
@@ -129,42 +120,32 @@ class Mp4DashReader(source: SharpStream?) {
 
             when (box!!.type) {
                 ATOM_MOOF -> {
-                    if (moof != null) {
-                        throw IOException("moof found without mdat")
-                    }
+                    if (moof != null) throw IOException("moof found without mdat")
 
                     moof = parseMoof(box, track!!.trak!!.tkhd!!.trackId)
 
                     if (moof!!.traf != null) {
                         if (hasFlag(moof!!.traf!!.trun!!.bFlags, 0x0001)) {
                             moof!!.traf!!.trun!!.dataOffset -= (box!!.size + 8).toInt()
-                            if (moof!!.traf!!.trun!!.dataOffset < 0) {
-                                throw IOException("trun box has wrong data offset, "
-                                        + "points outside of concurrent mdat box")
-                            }
+                            if (moof!!.traf!!.trun!!.dataOffset < 0) throw IOException("trun box has wrong data offset, points outside of concurrent mdat box")
                         }
 
                         if (moof!!.traf!!.trun!!.chunkSize < 1) {
                             if (hasFlag(moof!!.traf!!.tfhd!!.bFlags, 0x10)) {
-                                moof!!.traf!!.trun!!.chunkSize = (moof!!.traf!!.tfhd!!.defaultSampleSize
-                                        * moof!!.traf!!.trun!!.entryCount)
+                                moof!!.traf!!.trun!!.chunkSize = (moof!!.traf!!.tfhd!!.defaultSampleSize * moof!!.traf!!.trun!!.entryCount)
                             } else {
                                 moof!!.traf!!.trun!!.chunkSize = (box!!.size - 8).toInt()
                             }
                         }
-                        if (!hasFlag(moof!!.traf!!.trun!!.bFlags, 0x900)
-                                && moof!!.traf!!.trun!!.chunkDuration == 0) {
+                        if (!hasFlag(moof!!.traf!!.trun!!.bFlags, 0x900) && moof!!.traf!!.trun!!.chunkDuration == 0) {
                             if (hasFlag(moof!!.traf!!.tfhd!!.bFlags, 0x20)) {
-                                moof!!.traf!!.trun!!.chunkDuration = (moof!!.traf!!.tfhd!!.defaultSampleDuration
-                                        * moof!!.traf!!.trun!!.entryCount)
+                                moof!!.traf!!.trun!!.chunkDuration = (moof!!.traf!!.tfhd!!.defaultSampleDuration * moof!!.traf!!.trun!!.entryCount)
                             }
                         }
                     }
                 }
                 ATOM_MDAT -> {
-                    if (moof == null) {
-                        throw IOException("mdat found without moof")
-                    }
+                    if (moof == null) throw IOException("mdat found without moof")
 
                     if (moof!!.traf == null) {
                         moof = null
@@ -204,9 +185,7 @@ class Mp4DashReader(source: SharpStream?) {
         b.size = stream.readUnsignedInt()
         b.type = stream.readInt()
 
-        if (b.size == 1L) {
-            b.size = stream.readLong()
-        }
+        if (b.size == 1L) b.size = stream.readLong()
 
         return b
     }
@@ -214,10 +193,8 @@ class Mp4DashReader(source: SharpStream?) {
     @Throws(IOException::class)
     private fun readBox(expected: Int): Box {
         val b = readBox()
-        if (b.type != expected) {
-            throw NoSuchElementException("expected " + boxName(expected)
-                    + " found " + boxName(b))
-        }
+        if (b.type != expected) throw NoSuchElementException("expected ${boxName(expected)} found ${boxName(b)}")
+
         return b
     }
 
@@ -232,39 +209,32 @@ class Mp4DashReader(source: SharpStream?) {
 
         val read = size - 8
 
-        if (stream.read(buffer.array(), 8, read) != read) {
-            throw EOFException(String.format("EOF reached in box: type=%s offset=%s size=%s",
-                boxName(ref.type), ref.offset, ref.size))
-        }
+        if (stream.read(buffer.array(), 8, read) != read)
+            throw EOFException(String.format("EOF reached in box: type=%s offset=%s size=%s", boxName(ref.type), ref.offset, ref.size))
 
         return buffer.array()
     }
 
     @Throws(IOException::class)
     private fun ensure(ref: Box?) {
-        val skip = ref!!.offset + ref.size - stream.position()
+        if (ref == null || ref.size == 0L) return
+        val skip = ref.offset + ref.size - stream.position()
 
-        if (skip == 0L) {
-            return
-        } else if (skip < 0) {
-            throw EOFException(String.format(
-                "parser go beyond limits of the box. type=%s offset=%s size=%s position=%s",
-                boxName(ref), ref.offset, ref.size, stream.position()
-            ))
-        }
+        if (skip == 0L) return
+        if (skip < 0)
+            throw EOFException(String.format("parser go beyond limits of the box. type=%s offset=%s size=%s position=%s", boxName(ref), ref.offset, ref.size, stream.position()))
 
         stream.skipBytes(skip.toInt().toLong())
     }
 
     @Throws(IOException::class)
     private fun untilBox(ref: Box?, vararg expected: Int): Box? {
+        if (ref == null) return null
         var b: Box
-        while (stream.position() < (ref!!.offset + ref.size)) {
+        while (stream.position() < (ref.offset + ref.size)) {
             b = readBox()
             for (type in expected) {
-                if (b.type == type) {
-                    return b
-                }
+                if (b.type == type) return b
             }
             ensure(b)
         }
@@ -273,10 +243,9 @@ class Mp4DashReader(source: SharpStream?) {
     }
 
     @Throws(IOException::class)
-    private fun untilAnyBox(ref: Box): Box? {
-        if (stream.position() >= (ref.offset + ref.size)) {
-            return null
-        }
+    private fun untilAnyBox(ref: Box?): Box? {
+        if (ref == null) return null
+        if (stream.position() >= (ref.offset + ref.size)) return null
 
         return readBox()
     }
@@ -293,9 +262,7 @@ class Mp4DashReader(source: SharpStream?) {
             obj.traf = parseTraf(b, trackId)
             ensure(b)
 
-            if (obj.traf != null) {
-                return obj
-            }
+            if (obj.traf != null) return obj
         }
 
         return obj
@@ -318,9 +285,7 @@ class Mp4DashReader(source: SharpStream?) {
         traf.tfhd = parseTfhd(trackId)
         ensure(b)
 
-        if (traf.tfhd == null) {
-            return null
-        }
+        if (traf.tfhd == null) return null
 
         b = untilBox(ref, ATOM_TRUN, ATOM_TFDT)
 
@@ -343,9 +308,7 @@ class Mp4DashReader(source: SharpStream?) {
         obj.bFlags = stream.readInt()
         obj.trackId = stream.readInt()
 
-        if (trackId != -1 && obj.trackId != trackId) {
-            return null
-        }
+        if (trackId != -1 && obj.trackId != trackId) return null
 
         if (hasFlag(obj.bFlags, 0x01)) {
             stream.skipBytes(8)
@@ -500,17 +463,18 @@ class Mp4DashReader(source: SharpStream?) {
     }
 
     @Throws(IOException::class)
-    private fun parseTrak(ref: Box): Trak {
+    private fun parseTrak(ref: Box?): Trak {
         val trak = Trak()
 
-        var b = readBox(ATOM_TKHD)
+        var b: Box? = readBox(ATOM_TKHD)
         trak.tkhd = parseTkhd()
         ensure(b)
 
-        while ((untilBox(ref, ATOM_MDIA, ATOM_EDTS).also { b = it!! }) != null) {
-            when (b.type) {
-                ATOM_MDIA -> trak.mdia = parseMdia(b)
-                ATOM_EDTS -> trak.edstElst = parseEdts(b)
+        while ((untilBox(ref, ATOM_MDIA, ATOM_EDTS).also { b = it }) != null) {
+            if (b == null) continue
+            when (b!!.type) {
+                ATOM_MDIA -> trak.mdia = parseMdia(b!!)
+                ATOM_EDTS -> trak.edstElst = parseEdts(b!!)
             }
             ensure(b)
         }
@@ -519,14 +483,15 @@ class Mp4DashReader(source: SharpStream?) {
     }
 
     @Throws(IOException::class)
-    private fun parseMdia(ref: Box): Mdia {
+    private fun parseMdia(ref: Box?): Mdia {
         val obj = Mdia()
 
-        var b: Box
-        while ((untilBox(ref, ATOM_MDHD, ATOM_HDLR, ATOM_MINF).also { b = it!! }) != null) {
-            when (b.type) {
+        var b: Box?
+        while ((untilBox(ref, ATOM_MDHD, ATOM_HDLR, ATOM_MINF).also { b = it }) != null) {
+            if (b == null) continue
+            when (b!!.type) {
                 ATOM_MDHD -> {
-                    obj.mdhd = readFullBox(b)
+                    obj.mdhd = readFullBox(b!!)
 
                     // read time scale
                     val buffer = ByteBuffer.wrap(obj.mdhd)
@@ -534,8 +499,8 @@ class Mp4DashReader(source: SharpStream?) {
                     buffer.position(12 + ((if (version.toInt() == 0) 4 else 8) * 2))
                     obj.mdhdTimeScale = buffer.getInt()
                 }
-                ATOM_HDLR -> obj.hdlr = parseHdlr(b)
-                ATOM_MINF -> obj.minf = parseMinf(b)
+                ATOM_HDLR -> obj.hdlr = parseHdlr(b!!)
+                ATOM_MINF -> obj.minf = parseMinf(b!!)
             }
             ensure(b)
         }
@@ -564,16 +529,17 @@ class Mp4DashReader(source: SharpStream?) {
 
     @Throws(IOException::class)
     private fun parseMoov(ref: Box?): Moov {
-        var b = readBox(ATOM_MVHD)
+        var b: Box? = readBox(ATOM_MVHD)
         val moov = Moov()
         moov.mvhd = parseMvhd()
         ensure(b)
 
         val tmp = ArrayList<Trak>(moov.mvhd!!.nextTrackId.toInt())
-        while ((untilBox(ref, ATOM_TRAK, ATOM_MVEX).also { b = it!! }) != null) {
-            when (b.type) {
-                ATOM_TRAK -> tmp.add(parseTrak(b))
-                ATOM_MVEX -> moov.mvexTrex = parseMvex(b, moov.mvhd!!.nextTrackId.toInt())
+        while ((untilBox(ref, ATOM_TRAK, ATOM_MVEX).also { b = it }) != null) {
+            if (b == null) continue
+            when (b!!.type) {
+                ATOM_TRAK -> tmp.add(parseTrak(b!!))
+                ATOM_MVEX -> moov.mvexTrex = parseMvex(b!!, moov.mvhd!!.nextTrackId.toInt())
             }
             ensure(b)
         }
@@ -646,12 +612,13 @@ class Mp4DashReader(source: SharpStream?) {
     private fun parseMinf(ref: Box): Minf {
         val obj = Minf()
 
-        var b: Box
-        while ((untilAnyBox(ref).also { b = it!! }) != null) {
-            when (b.type) {
-                ATOM_DINF -> obj.dinf = readFullBox(b)
-                ATOM_STBL -> obj.stblStsd = parseStbl(b)
-                ATOM_VMHD, ATOM_SMHD -> obj.mhd = readFullBox(b)
+        var b: Box?
+        while ((untilAnyBox(ref).also { b = it }) != null) {
+            if (b == null) continue
+            when (b!!.type) {
+                ATOM_DINF -> obj.dinf = readFullBox(b!!)
+                ATOM_STBL -> obj.stblStsd = parseStbl(b!!)
+                ATOM_VMHD, ATOM_SMHD -> obj.mhd = readFullBox(b!!)
             }
             ensure(b)
         }
@@ -667,8 +634,7 @@ class Mp4DashReader(source: SharpStream?) {
      */
     @Throws(IOException::class)
     private fun parseStbl(ref: Box): ByteArray {
-        val b = untilBox(ref, ATOM_STSD)
-            ?: return ByteArray(0) // this never should happens (missing codec startup data)
+        val b = untilBox(ref, ATOM_STSD) ?: return ByteArray(0) // this never should happens (missing codec startup data)
 
         return readFullBox(b)
     }
@@ -875,9 +841,8 @@ class Mp4DashReader(source: SharpStream?) {
 
         val nextSampleInfo: TrunEntry?
             get() {
-                if (i >= moof!!.traf!!.trun!!.entryCount) {
-                    return null
-                }
+                if (i >= moof!!.traf!!.trun!!.entryCount) return null
+
                 return moof!!.traf!!.trun!!.getAbsoluteEntry(i++, moof!!.traf!!.tfhd)
             }
 
@@ -885,9 +850,7 @@ class Mp4DashReader(source: SharpStream?) {
         val nextSample: Mp4DashSample?
             get() {
                 checkNotNull(data) { "This chunk has info only" }
-                if (i >= moof!!.traf!!.trun!!.entryCount) {
-                    return null
-                }
+                if (i >= moof!!.traf!!.trun!!.entryCount) return null
 
                 val sample = Mp4DashSample()
                 sample.info = moof!!.traf!!.trun!!.getAbsoluteEntry(i++, moof!!.traf!!.tfhd)

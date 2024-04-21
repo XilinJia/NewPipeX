@@ -1,5 +1,9 @@
 package org.schabi.newpipe
 
+//import androidx.lifecycle.Lifecycle.State.isAtLeast
+//import androidx.lifecycle.Lifecycle.addObserver
+//import androidx.lifecycle.Lifecycle.currentState
+//import androidx.lifecycle.Lifecycle.removeObserver
 import android.annotation.SuppressLint
 import android.app.IntentService
 import android.content.Context
@@ -14,6 +18,7 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.annotation.DrawableRes
+import androidx.annotation.OptIn
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -26,11 +31,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
-//import androidx.lifecycle.Lifecycle.State.isAtLeast
-//import androidx.lifecycle.Lifecycle.addObserver
-//import androidx.lifecycle.Lifecycle.currentState
-//import androidx.lifecycle.Lifecycle.removeObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.media3.common.util.UnstableApi
 import androidx.preference.PreferenceManager
 import icepick.Icepick
 import icepick.State
@@ -103,7 +105,7 @@ import java.util.function.Predicate
 /**
  * Get the url from the intent and open it in the chosen preferred player.
  */
-class RouterActivity : AppCompatActivity() {
+@UnstableApi class RouterActivity : AppCompatActivity() {
     protected val disposables: CompositeDisposable = CompositeDisposable()
 
     @JvmField
@@ -127,8 +129,7 @@ class RouterActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setDayNightMode(this)
-        setTheme(if (isLightThemeSelected(this)
-        ) R.style.RouterActivityThemeLight else R.style.RouterActivityThemeDark)
+        setTheme(if (isLightThemeSelected(this)) R.style.RouterActivityThemeLight else R.style.RouterActivityThemeDark)
         assureCorrectAppLanguage(this)
 
         // Pass-through touch events to background activities
@@ -136,8 +137,7 @@ class RouterActivity : AppCompatActivity() {
         // network request is underway before showing PlaylistDialog or DownloadDialog
         // (ref: https://stackoverflow.com/a/10606141)
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+                or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
 
         // Android never fails to impress us with a list of new restrictions per API.
         // Starting with S (Android 12) one of the prerequisite conditions has to be met
@@ -160,9 +160,7 @@ class RouterActivity : AppCompatActivity() {
         val fm = supportFragmentManager
         if (dismissListener == null) {
             dismissListener = object : FragmentManager.FragmentLifecycleCallbacks() {
-                override fun onFragmentDestroyed(fm: FragmentManager,
-                                                 f: Fragment
-                ) {
+                override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
                     super.onFragmentDestroyed(fm, f)
                     if (f is DialogFragment && fm.fragments.isEmpty()) {
                         // No more DialogFragments, we're done
@@ -186,9 +184,7 @@ class RouterActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         // we need to dismiss the dialog before leaving the activity or we get leaks
-        if (alertDialogChoice != null) {
-            alertDialogChoice!!.dismiss()
-        }
+        alertDialogChoice?.dismiss()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -211,18 +207,14 @@ class RouterActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
-        if (dismissListener != null) {
-            supportFragmentManager.unregisterFragmentLifecycleCallbacks(dismissListener!!)
-        }
+        if (dismissListener != null) supportFragmentManager.unregisterFragmentLifecycleCallbacks(dismissListener!!)
 
         disposables.clear()
     }
 
     override fun finish() {
         // allow the activity to recreate in case orientation changes
-        if (!isChangingConfigurations) {
-            super.finish()
-        }
+        if (!isChangingConfigurations) super.finish()
     }
 
     private fun handleUrl(url: String?) {
@@ -256,9 +248,7 @@ class RouterActivity : AppCompatActivity() {
                     showUnsupportedUrlDialog(url)
                 }
             }, { throwable: Throwable? ->
-                handleError(this, ErrorInfo(
-                    throwable!!,
-                    UserAction.SHARE_TO_NEWPIPE, "Getting service from url: $url"))
+                handleError(this, ErrorInfo(throwable!!, UserAction.SHARE_TO_NEWPIPE, "Getting service from url: $url"))
             }))
     }
 
@@ -268,58 +258,42 @@ class RouterActivity : AppCompatActivity() {
             .setTitle(R.string.unsupported_url)
             .setMessage(R.string.unsupported_url_dialog_message)
             .setIcon(R.drawable.ic_share)
-            .setPositiveButton(R.string.open_in_browser
-            ) { dialog: DialogInterface?, which: Int -> openUrlInBrowser(this, url) }
-            .setNegativeButton(R.string.share
-            ) { dialog: DialogInterface?, which: Int -> shareText(this, "", url) } // no subject
+            .setPositiveButton(R.string.open_in_browser) { dialog: DialogInterface?, which: Int -> openUrlInBrowser(this, url) }
+            .setNegativeButton(R.string.share) { dialog: DialogInterface?, which: Int -> shareText(this, "", url) } // no subject
             .setNeutralButton(R.string.cancel, null)
             .setOnDismissListener { dialog: DialogInterface? -> finish() }
             .show()
     }
 
     protected fun onSuccess() {
-        val preferences = PreferenceManager
-            .getDefaultSharedPreferences(this)
+        val preferences = PreferenceManager.getDefaultSharedPreferences(this)
 
         val choiceChecker = ChoiceAvailabilityChecker(
             getChoicesForService(currentService, currentLinkType),
-            preferences.getString(getString(R.string.preferred_open_action_key),
-                getString(R.string.preferred_open_action_default))!!)
+            preferences.getString(getString(R.string.preferred_open_action_key), getString(R.string.preferred_open_action_default))!!)
 
         // Check for non-player related choices
-        if (choiceChecker.isAvailableAndSelected(
-                    R.string.show_info_key,
-                    R.string.download_key,
-                    R.string.add_to_playlist_key)) {
+        if (choiceChecker.isAvailableAndSelected(R.string.show_info_key, R.string.download_key, R.string.add_to_playlist_key)) {
             handleChoice(choiceChecker.selectedChoiceKey)
             return
         }
         // Check if the choice is player related
-        if (choiceChecker.isAvailableAndSelected(
-                    R.string.video_player_key,
-                    R.string.background_player_key,
-                    R.string.popup_player_key)) {
+        if (choiceChecker.isAvailableAndSelected(R.string.video_player_key, R.string.background_player_key, R.string.popup_player_key)) {
             val selectedChoice = choiceChecker.selectedChoiceKey
 
-            val isExtVideoEnabled = preferences.getBoolean(
-                getString(R.string.use_external_video_player_key), false)
-            val isExtAudioEnabled = preferences.getBoolean(
-                getString(R.string.use_external_audio_player_key), false)
-            val isVideoPlayerSelected =
-                selectedChoice == getString(R.string.video_player_key) || selectedChoice == getString(R.string.popup_player_key)
+            val isExtVideoEnabled = preferences.getBoolean(getString(R.string.use_external_video_player_key), false)
+            val isExtAudioEnabled = preferences.getBoolean(getString(R.string.use_external_audio_player_key), false)
+            val isVideoPlayerSelected = selectedChoice == getString(R.string.video_player_key) || selectedChoice == getString(R.string.popup_player_key)
             val isAudioPlayerSelected = selectedChoice == getString(R.string.background_player_key)
 
             if (currentLinkType != LinkType.STREAM
-                    && ((isExtAudioEnabled && isAudioPlayerSelected)
-                            || (isExtVideoEnabled && isVideoPlayerSelected))) {
-                Toast.makeText(this, R.string.external_player_unsupported_link_type,
-                    Toast.LENGTH_LONG).show()
+                    && ((isExtAudioEnabled && isAudioPlayerSelected) || (isExtVideoEnabled && isVideoPlayerSelected))) {
+                Toast.makeText(this, R.string.external_player_unsupported_link_type, Toast.LENGTH_LONG).show()
                 handleChoice(getString(R.string.show_info_key))
                 return
             }
 
-            val capabilities =
-                currentService!!.serviceInfo.mediaCapabilities
+            val capabilities = currentService!!.serviceInfo.mediaCapabilities
 
             // Check if the service supports the choice
             if ((isVideoPlayerSelected && capabilities.contains(MediaCapability.VIDEO))
@@ -343,9 +317,7 @@ class RouterActivity : AppCompatActivity() {
     /**
      * This is a helper class for checking if the choices are available and/or selected.
      */
-    internal inner class ChoiceAvailabilityChecker(val availableChoices: List<AdapterChoiceItem>,
-                                                   val selectedChoiceKey: String
-    ) {
+    internal inner class ChoiceAvailabilityChecker(val availableChoices: List<AdapterChoiceItem>, val selectedChoiceKey: String) {
         fun isAvailableAndSelected(@StringRes vararg wantedKeys: Int): Boolean {
             return Arrays.stream(wantedKeys).anyMatch { wantedKey: Int -> this.isAvailableAndSelected(wantedKey) }
         }
@@ -353,9 +325,8 @@ class RouterActivity : AppCompatActivity() {
         fun isAvailableAndSelected(@StringRes wantedKey: Int): Boolean {
             val wanted = getString(wantedKey)
             // Check if the wanted option is selected
-            if (selectedChoiceKey != wanted) {
-                return false
-            }
+            if (selectedChoiceKey != wanted) return false
+
             // Check if it's available
             return availableChoices.stream().anyMatch { item: AdapterChoiceItem -> wanted == item.key }
         }
@@ -367,13 +338,11 @@ class RouterActivity : AppCompatActivity() {
         val themeWrapperContext = themeWrapperContext
         val layoutInflater = LayoutInflater.from(themeWrapperContext)
 
-        val binding =
-            SingleChoiceDialogViewBinding.inflate(layoutInflater)
+        val binding = SingleChoiceDialogViewBinding.inflate(layoutInflater)
         val radioGroup = binding.list
 
         val dialogButtonsClickListener = DialogInterface.OnClickListener { dialog: DialogInterface?, which: Int ->
-            val indexOfChild = radioGroup.indexOfChild(
-                radioGroup.findViewById(radioGroup.checkedRadioButtonId))
+            val indexOfChild = radioGroup.indexOfChild(radioGroup.findViewById(radioGroup.checkedRadioButtonId))
             val choice = choices[indexOfChild]
 
             handleChoice(choice.key)
@@ -393,26 +362,20 @@ class RouterActivity : AppCompatActivity() {
             .setNegativeButton(R.string.just_once, dialogButtonsClickListener)
             .setPositiveButton(R.string.always, dialogButtonsClickListener)
             .setOnDismissListener { dialog: DialogInterface? ->
-                if (!selectionIsDownload && !selectionIsAddToPlaylist) {
-                    finish()
-                }
+                if (!selectionIsDownload && !selectionIsAddToPlaylist) finish()
             }
             .create()
 
         alertDialogChoice!!.setOnShowListener { dialog: DialogInterface? ->
-            setDialogButtonsState(
-                alertDialogChoice!!, radioGroup.checkedRadioButtonId != -1)
+            setDialogButtonsState(alertDialogChoice!!, radioGroup.checkedRadioButtonId != -1)
         }
 
         radioGroup.setOnCheckedChangeListener { group: RadioGroup?, checkedId: Int ->
-            setDialogButtonsState(
-                alertDialogChoice!!, true)
+            setDialogButtonsState(alertDialogChoice!!, true)
         }
         val radioButtonsClickListener = View.OnClickListener { v: View? ->
             val indexOfChild = radioGroup.indexOfChild(v)
-            if (indexOfChild == -1) {
-                return@OnClickListener
-            }
+            if (indexOfChild == -1) return@OnClickListener
 
             selectedPreviously = selectedRadioPosition
             selectedRadioPosition = indexOfChild
@@ -423,23 +386,19 @@ class RouterActivity : AppCompatActivity() {
 
         var id = 12345
         for (item in choices) {
-            val radioButton = ListRadioIconItemBinding.inflate(layoutInflater)
-                .root
+            val radioButton = ListRadioIconItemBinding.inflate(layoutInflater).root
             radioButton.text = item.description
             radioButton.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                AppCompatResources.getDrawable(themeWrapperContext, item.icon),
-                null, null, null)
+                AppCompatResources.getDrawable(themeWrapperContext, item.icon), null, null, null)
             radioButton.isChecked = false
             radioButton.id = id++
-            radioButton.layoutParams = RadioGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            radioButton.layoutParams = RadioGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             radioButton.setOnClickListener(radioButtonsClickListener)
             radioGroup.addView(radioButton)
         }
 
         if (selectedRadioPosition == -1) {
-            val lastSelectedPlayer = preferences.getString(
-                getString(R.string.preferred_open_action_last_selected_key), null)
+            val lastSelectedPlayer = preferences.getString(getString(R.string.preferred_open_action_last_selected_key), null)
             if (!TextUtils.isEmpty(lastSelectedPlayer)) {
                 for (i in choices.indices) {
                     val c = choices[i]
@@ -464,27 +423,16 @@ class RouterActivity : AppCompatActivity() {
         }
     }
 
-    private fun getChoicesForService(service: StreamingService?,
-                                     linkType: LinkType?
-    ): List<AdapterChoiceItem> {
-        val showInfo = AdapterChoiceItem(
-            getString(R.string.show_info_key), getString(R.string.show_info),
-            R.drawable.ic_info_outline)
-        val videoPlayer = AdapterChoiceItem(
-            getString(R.string.video_player_key), getString(R.string.video_player),
-            R.drawable.ic_play_arrow)
-        val backgroundPlayer = AdapterChoiceItem(
-            getString(R.string.background_player_key), getString(R.string.background_player),
-            R.drawable.ic_headset)
-        val popupPlayer = AdapterChoiceItem(
-            getString(R.string.popup_player_key), getString(R.string.popup_player),
-            R.drawable.ic_picture_in_picture)
+    private fun getChoicesForService(service: StreamingService?, linkType: LinkType?): List<AdapterChoiceItem> {
+        val showInfo = AdapterChoiceItem(getString(R.string.show_info_key), getString(R.string.show_info), R.drawable.ic_info_outline)
+        val videoPlayer = AdapterChoiceItem(getString(R.string.video_player_key), getString(R.string.video_player), R.drawable.ic_play_arrow)
+        val backgroundPlayer = AdapterChoiceItem(getString(R.string.background_player_key), getString(R.string.background_player), R.drawable.ic_headset)
+        val popupPlayer = AdapterChoiceItem(getString(R.string.popup_player_key), getString(R.string.popup_player), R.drawable.ic_picture_in_picture)
 
         val returnedItems: MutableList<AdapterChoiceItem> = ArrayList()
         returnedItems.add(showInfo) // Always present
 
-        val capabilities =
-            service!!.serviceInfo.mediaCapabilities
+        val capabilities = service!!.serviceInfo.mediaCapabilities
 
         if (linkType == LinkType.STREAM) {
             if (capabilities.contains(MediaCapability.VIDEO)) {
@@ -496,24 +444,17 @@ class RouterActivity : AppCompatActivity() {
             }
             // download is redundant for linkType CHANNEL AND PLAYLIST (till playlist downloading is
             // not supported )
-            returnedItems.add(AdapterChoiceItem(getString(R.string.download_key),
-                getString(R.string.download),
-                R.drawable.ic_file_download))
+            returnedItems.add(AdapterChoiceItem(getString(R.string.download_key), getString(R.string.download), R.drawable.ic_file_download))
 
             // Add to playlist is not necessary for CHANNEL and PLAYLIST linkType since those can
             // not be added to a playlist
-            returnedItems.add(AdapterChoiceItem(getString(R.string.add_to_playlist_key),
-                getString(R.string.add_to_playlist),
-                R.drawable.ic_add))
+            returnedItems.add(AdapterChoiceItem(getString(R.string.add_to_playlist_key), getString(R.string.add_to_playlist), R.drawable.ic_add))
         } else {
             // LinkType.NONE is never present because it's filtered out before
             // channels and playlist can be played as they contain a list of videos
-            val preferences = PreferenceManager
-                .getDefaultSharedPreferences(this)
-            val isExtVideoEnabled = preferences.getBoolean(
-                getString(R.string.use_external_video_player_key), false)
-            val isExtAudioEnabled = preferences.getBoolean(
-                getString(R.string.use_external_audio_player_key), false)
+            val preferences = PreferenceManager.getDefaultSharedPreferences(this)
+            val isExtVideoEnabled = preferences.getBoolean(getString(R.string.use_external_video_player_key), false)
+            val isExtAudioEnabled = preferences.getBoolean(getString(R.string.use_external_audio_player_key), false)
 
             if (capabilities.contains(MediaCapability.VIDEO) && !isExtVideoEnabled) {
                 returnedItems.add(videoPlayer)
@@ -528,21 +469,18 @@ class RouterActivity : AppCompatActivity() {
     }
 
     protected val themeWrapperContext: Context
-        get() = ContextThemeWrapper(this, if (isLightThemeSelected(this)
-        ) R.style.LightTheme else R.style.DarkTheme)
+        get() = ContextThemeWrapper(this, if (isLightThemeSelected(this)) R.style.LightTheme else R.style.DarkTheme)
 
     private fun setDialogButtonsState(dialog: AlertDialog, state: Boolean) {
         val negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
         val positiveButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE)
-        if (negativeButton == null || positiveButton == null) {
-            return
-        }
+        if (negativeButton == null || positiveButton == null) return
 
         negativeButton.isEnabled = state
         positiveButton.isEnabled = state
     }
 
-    private fun handleText() {
+    @OptIn(UnstableApi::class) private fun handleText() {
         val searchString = intent.getStringExtra(Intent.EXTRA_TEXT)
         val serviceId = intent.getIntExtra(KEY_SERVICE_ID, 0)
         val intent = Intent(themeWrapperContext, MainActivity::class.java)
@@ -551,7 +489,7 @@ class RouterActivity : AppCompatActivity() {
         openSearch(themeWrapperContext, serviceId, searchString)
     }
 
-    private fun handleChoice(selectedChoiceKey: String) {
+    @OptIn(UnstableApi::class) private fun handleChoice(selectedChoiceKey: String) {
         val validChoicesList = Arrays.asList(*resources
             .getStringArray(R.array.preferred_open_action_values_list))
         if (validChoicesList.contains(selectedChoiceKey)) {
@@ -567,8 +505,7 @@ class RouterActivity : AppCompatActivity() {
         }
 
         if (selectedChoiceKey == getString(R.string.download_key)) {
-            if (checkStoragePermissions(this,
-                        PermissionHelper.DOWNLOAD_DIALOG_REQUEST_CODE)) {
+            if (checkStoragePermissions(this, PermissionHelper.DOWNLOAD_DIALOG_REQUEST_CODE)) {
                 selectionIsDownload = true
                 openDownloadDialog()
             }
@@ -592,17 +529,14 @@ class RouterActivity : AppCompatActivity() {
                     startActivity(intent)
                     finish()
                 }, { throwable: Throwable? ->
-                    handleError(this, ErrorInfo(
-                        throwable!!,
-                        UserAction.SHARE_TO_NEWPIPE, "Starting info activity: $currentUrl"))
+                    handleError(this, ErrorInfo(throwable!!, UserAction.SHARE_TO_NEWPIPE, "Starting info activity: $currentUrl"))
                 })
             )
             return
         }
 
         val intent = Intent(this, FetcherService::class.java)
-        val choice = Choice(currentService!!.serviceId, currentLinkType,
-            currentUrl, selectedChoiceKey)
+        val choice = Choice(currentService!!.serviceId, currentLinkType, currentUrl, selectedChoiceKey)
         intent.putExtra(FetcherService.KEY_CHOICE, choice)
         startService(intent)
 
@@ -610,24 +544,18 @@ class RouterActivity : AppCompatActivity() {
     }
 
     private fun canHandleChoiceLikeShowInfo(selectedChoiceKey: String): Boolean {
-        if (selectedChoiceKey != getString(R.string.video_player_key)) {
-            return false
-        }
+        if (selectedChoiceKey != getString(R.string.video_player_key)) return false
 
         // "video player" can be handled like "show info" (because VideoDetailFragment can load
         // the stream instead of FetcherService) when...
 
         // ...Autoplay is enabled
-        if (!PlayerHelper.isAutoplayAllowedByUser(themeWrapperContext)) {
-            return false
-        }
+        if (!PlayerHelper.isAutoplayAllowedByUser(themeWrapperContext)) return false
 
         val isExtVideoEnabled = PreferenceManager.getDefaultSharedPreferences(this)
             .getBoolean(getString(R.string.use_external_video_player_key), false)
         // ...it's not done via an external player
-        if (isExtVideoEnabled) {
-            return false
-        }
+        if (isExtVideoEnabled) return false
 
         // ...the player is not running or in normal Video-mode/type
         val playerType = PlayerHolder.instance?.type
@@ -647,8 +575,7 @@ class RouterActivity : AppCompatActivity() {
                 running--
                 if (running <= 0) {
                     activityContext.ifPresent { context: AppCompatActivity? ->
-                        this@PersistentFragment.parentFragmentManager
-                            .beginTransaction().remove(this).commit()
+                        this@PersistentFragment.parentFragmentManager.beginTransaction().remove(this).commit()
                     }
                 }
             }
@@ -699,20 +626,19 @@ class RouterActivity : AppCompatActivity() {
                     lifecycle.addObserver(object : DefaultLifecycleObserver {
                         override fun onResume(owner: LifecycleOwner) {
                             lifecycle.removeObserver(this)
-                            this@PersistentFragment.activityContext.ifPresentOrElse(Consumer<AppCompatActivity?> { context: AppCompatActivity? ->
+                            this@PersistentFragment.activityContext.ifPresentOrElse({ context: AppCompatActivity? ->
                                 context?.runOnUiThread {
                                     runnable.accept(context)
                                     inFlight(false)
                                 }
                             },
-                                Runnable { inFlight(false) }
+                                { inFlight(false) }
                             )
                         }
                     })
                     // this trick doesn't seem to work on Android 10+ (API 29)
                     // which places restrictions on starting activities from the background
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
-                            && !(context?.isChangingConfigurations?:false)) {
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && !(context?.isChangingConfigurations?:false)) {
                         // try to bring the activity back to front if minimised
                         val i = Intent(context, RouterActivity::class.java)
                         i.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
@@ -732,9 +658,7 @@ class RouterActivity : AppCompatActivity() {
                     context?.runOnUiThread {
                         // Getting the stream info usually takes a moment
                         // Notifying the user here to ensure that no confusion arises
-                        val toast = Toast.makeText(context,
-                            getString(R.string.processing_may_take_a_moment),
-                            Toast.LENGTH_LONG)
+                        val toast = Toast.makeText(context, getString(R.string.processing_may_take_a_moment), Toast.LENGTH_LONG)
                         toast.show()
                         emitter.setCancellable { toast.cancel() }
                     }
@@ -776,13 +700,11 @@ class RouterActivity : AppCompatActivity() {
                 .subscribe(
                     { info: StreamInfo? ->
                         activityContext.ifPresent { context: AppCompatActivity? ->
-                            PlaylistDialog.createCorrespondingDialog(context,
-                                java.util.List.of(StreamEntity(info!!))
+                            PlaylistDialog.createCorrespondingDialog(context, listOf(StreamEntity(info!!))
                             ) { playlistDialog: PlaylistDialog ->
                                 runOnVisible { ctx: AppCompatActivity? ->
                                     // dismiss listener to be handled by FragmentManager
-                                    val fm =
-                                        ctx!!.supportFragmentManager
+                                    val fm = ctx!!.supportFragmentManager
                                     playlistDialog.show(fm, "addToPlaylistDialog")
                                 }
                             }
@@ -790,10 +712,7 @@ class RouterActivity : AppCompatActivity() {
                     },
                     { throwable: Throwable? ->
                         runOnVisible { ctx: AppCompatActivity? ->
-                            handleError(ctx, ErrorInfo(
-                                throwable!!,
-                                UserAction.REQUESTED_STREAM,
-                                "Tried to add $currentUrl to a playlist",
+                            handleError(ctx, ErrorInfo(throwable!!, UserAction.REQUESTED_STREAM, "Tried to add $currentUrl to a playlist",
                                 (ctx as RouterActivity?)!!.currentService!!.serviceId)
                             )
                         }
@@ -825,10 +744,7 @@ class RouterActivity : AppCompatActivity() {
             return persistFragment
         }
 
-    override fun onRequestPermissionsResult(requestCode: Int,
-                                            permissions: Array<String>,
-                                            grantResults: IntArray
-    ) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         for (i in grantResults) {
             if (i == PackageManager.PERMISSION_DENIED) {
@@ -841,14 +757,9 @@ class RouterActivity : AppCompatActivity() {
         }
     }
 
-    class AdapterChoiceItem internal constructor(val key: String,
-                                                 val description: String,
-                                                 @field:DrawableRes val icon: Int
-    )
+    class AdapterChoiceItem internal constructor(val key: String, val description: String, @field:DrawableRes val icon: Int)
 
-    class Choice internal constructor(val serviceId: Int, val linkType: LinkType?,
-                                      val url: String?, val playerChoice: String
-    ) : Serializable {
+    class Choice internal constructor(val serviceId: Int, val linkType: LinkType?, val url: String?, val playerChoice: String) : Serializable {
         override fun toString(): String {
             return "$serviceId:$url > $linkType ::: $playerChoice"
         }
@@ -859,13 +770,19 @@ class RouterActivity : AppCompatActivity() {
 
         override fun onCreate() {
             super.onCreate()
-            startForeground(ID, createNotification().build())
+//            startForeground(ID, createNotification().build())
+            val intent = Intent(this, FetcherService::class.java)
+            startService(intent)
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//                val serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+//                startForeground(ID, createNotification().build(), serviceType)
+//            } else {
+//                startForeground(ID, createNotification().build())
+//            }
         }
 
         override fun onHandleIntent(intent: Intent?) {
-            if (intent == null) {
-                return
-            }
+            if (intent == null) return
 
             val serializable = intent.getSerializableExtra(KEY_CHOICE) as? Choice ?: return
             handleChoice(serializable)
@@ -897,14 +814,10 @@ class RouterActivity : AppCompatActivity() {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe({ info: Info ->
                         resultHandler.accept(info)
-                        if (fetcher != null) {
-                            fetcher!!.dispose()
-                        }
+                        fetcher?.dispose()
                     }, { throwable: Throwable? ->
-                        handleError(this, ErrorInfo(
-                            throwable!!, finalUserAction,
-                            choice.url + " opened with " + choice.playerChoice,
-                            choice.serviceId))
+                        handleError(this, ErrorInfo(throwable!!, finalUserAction,
+                            choice.url + " opened with " + choice.playerChoice, choice.serviceId))
                     })
             }
         }
@@ -915,45 +828,54 @@ class RouterActivity : AppCompatActivity() {
                 val backgroundPlayerKey = getString(R.string.background_player_key)
                 val popupPlayerKey = getString(R.string.popup_player_key)
 
-                val preferences = PreferenceManager
-                    .getDefaultSharedPreferences(this)
-                val isExtVideoEnabled = preferences.getBoolean(
-                    getString(R.string.use_external_video_player_key), false)
-                val isExtAudioEnabled = preferences.getBoolean(
-                    getString(R.string.use_external_audio_player_key), false)
+                val preferences = PreferenceManager.getDefaultSharedPreferences(this)
+                val isExtVideoEnabled = preferences.getBoolean(getString(R.string.use_external_video_player_key), false)
+                val isExtAudioEnabled = preferences.getBoolean(getString(R.string.use_external_audio_player_key), false)
 
                 val playQueue: PlayQueue
-                if (info is StreamInfo) {
-                    if (choice.playerChoice == backgroundPlayerKey && isExtAudioEnabled) {
-                        playOnExternalAudioPlayer(this, info)
-                        return@Consumer
-                    } else if (choice.playerChoice == videoPlayerKey && isExtVideoEnabled) {
-                        playOnExternalVideoPlayer(this, info)
-                        return@Consumer
+                when (info) {
+                    is StreamInfo -> {
+                        when {
+                            choice.playerChoice == backgroundPlayerKey && isExtAudioEnabled -> {
+                                playOnExternalAudioPlayer(this, info)
+                                return@Consumer
+                            }
+                            choice.playerChoice == videoPlayerKey && isExtVideoEnabled -> {
+                                playOnExternalVideoPlayer(this, info)
+                                return@Consumer
+                            }
+                            else -> playQueue = SinglePlayQueue(info)
+                        }
                     }
-                    playQueue = SinglePlayQueue(info)
-                } else if (info is ChannelInfo) {
-                    val playableTab = info.tabs
-                        .stream()
-                        .filter(Predicate<ListLinkHandler> { obj: ListLinkHandler -> ChannelTabHelper.isStreamsTab(obj) })
-                        .findFirst()
+                    is ChannelInfo -> {
+                        val playableTab = info.tabs
+                            .stream()
+                            .filter(Predicate<ListLinkHandler> { obj: ListLinkHandler -> ChannelTabHelper.isStreamsTab(obj) })
+                            .findFirst()
 
-                    if (playableTab.isPresent) {
-                        playQueue = ChannelTabPlayQueue(info.getServiceId(), playableTab.get())
-                    } else {
-                        return@Consumer  // there is no playable tab
+                        if (playableTab.isPresent) {
+                            playQueue = ChannelTabPlayQueue(info.getServiceId(), playableTab.get())
+                        } else {
+                            return@Consumer  // there is no playable tab
+                        }
                     }
-                } else if (info is PlaylistInfo) {
-                    playQueue = PlaylistPlayQueue(info)
-                } else {
-                    return@Consumer
+                    is PlaylistInfo -> {
+                        playQueue = PlaylistPlayQueue(info)
+                    }
+                    else -> {
+                        return@Consumer
+                    }
                 }
-                if (choice.playerChoice == videoPlayerKey) {
-                    playOnMainPlayer(this, playQueue, false)
-                } else if (choice.playerChoice == backgroundPlayerKey) {
-                    playOnBackgroundPlayer(this, playQueue, true)
-                } else if (choice.playerChoice == popupPlayerKey) {
-                    playOnPopupPlayer(this, playQueue, true)
+                when (choice.playerChoice) {
+                    videoPlayerKey -> {
+                        playOnMainPlayer(this, playQueue, false)
+                    }
+                    backgroundPlayerKey -> {
+                        playOnBackgroundPlayer(this, playQueue, true)
+                    }
+                    popupPlayerKey -> {
+                        playOnPopupPlayer(this, playQueue, true)
+                    }
                 }
             }
         }
@@ -961,9 +883,7 @@ class RouterActivity : AppCompatActivity() {
         override fun onDestroy() {
             super.onDestroy()
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
-            if (fetcher != null) {
-                fetcher!!.dispose()
-            }
+            fetcher?.dispose()
         }
 
         private fun createNotification(): NotificationCompat.Builder {
@@ -971,10 +891,8 @@ class RouterActivity : AppCompatActivity() {
                 .setOngoing(true)
                 .setSmallIcon(R.drawable.ic_newpipe_triangle_white)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setContentTitle(
-                    getString(R.string.preferred_player_fetcher_notification_title))
-                .setContentText(
-                    getString(R.string.preferred_player_fetcher_notification_message))
+                .setContentTitle(getString(R.string.preferred_player_fetcher_notification_title))
+                .setContentText(getString(R.string.preferred_player_fetcher_notification_message))
         }
 
         companion object {
@@ -988,13 +906,16 @@ class RouterActivity : AppCompatActivity() {
     ////////////////////////////////////////////////////////////////////////// */
     private fun getUrl(intent: Intent): String? {
         var foundUrl: String? = null
-        if (intent.data != null) {
-            // Called from another app
-            foundUrl = intent.data.toString()
-        } else if (intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
-            // Called from the share menu
-            val extraText = intent.getStringExtra(Intent.EXTRA_TEXT)
-            foundUrl = firstUrlFromInput(extraText)
+        when {
+            intent.data != null -> {
+                // Called from another app
+                foundUrl = intent.data.toString()
+            }
+            intent.getStringExtra(Intent.EXTRA_TEXT) != null -> {
+                // Called from the share menu
+                val extraText = intent.getStringExtra(Intent.EXTRA_TEXT)
+                foundUrl = firstUrlFromInput(extraText)
+            }
         }
 
         return foundUrl
@@ -1007,40 +928,46 @@ class RouterActivity : AppCompatActivity() {
          * @param errorInfo the error information
          */
         private fun handleError(context: Context?, errorInfo: ErrorInfo) {
-            if (errorInfo.throwable != null) {
-                errorInfo.throwable!!.printStackTrace()
-            }
+            errorInfo.throwable?.printStackTrace()
 
-            if (errorInfo.throwable is ReCaptchaException) {
-                Toast.makeText(context, R.string.recaptcha_request_toast, Toast.LENGTH_LONG).show()
-                // Starting ReCaptcha Challenge Activity
-                val intent = Intent(context, ReCaptchaActivity::class.java)
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                context!!.startActivity(intent)
-            } else if (errorInfo.throwable != null
-                    && errorInfo.throwable!!.isNetworkRelated) {
-                Toast.makeText(context, R.string.network_error, Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is AgeRestrictedContentException) {
-                Toast.makeText(context, R.string.restricted_video_no_stream,
-                    Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is GeographicRestrictionException) {
-                Toast.makeText(context, R.string.georestricted_content, Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is PaidContentException) {
-                Toast.makeText(context, R.string.paid_content, Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is PrivateContentException) {
-                Toast.makeText(context, R.string.private_content, Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is SoundCloudGoPlusContentException) {
-                Toast.makeText(context, R.string.soundcloud_go_plus_content,
-                    Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is YoutubeMusicPremiumContentException) {
-                Toast.makeText(context, R.string.youtube_music_premium_content,
-                    Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is ContentNotAvailableException) {
-                Toast.makeText(context, R.string.content_not_available, Toast.LENGTH_LONG).show()
-            } else if (errorInfo.throwable is ContentNotSupportedException) {
-                Toast.makeText(context, R.string.content_not_supported, Toast.LENGTH_LONG).show()
-            } else {
-                createNotification(context!!, errorInfo)
+            when {
+                errorInfo.throwable is ReCaptchaException -> {
+                    Toast.makeText(context, R.string.recaptcha_request_toast, Toast.LENGTH_LONG).show()
+                    // Starting ReCaptcha Challenge Activity
+                    val intent = Intent(context, ReCaptchaActivity::class.java)
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context!!.startActivity(intent)
+                }
+                errorInfo.throwable != null && errorInfo.throwable!!.isNetworkRelated -> {
+                    Toast.makeText(context, R.string.network_error, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is AgeRestrictedContentException -> {
+                    Toast.makeText(context, R.string.restricted_video_no_stream, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is GeographicRestrictionException -> {
+                    Toast.makeText(context, R.string.georestricted_content, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is PaidContentException -> {
+                    Toast.makeText(context, R.string.paid_content, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is PrivateContentException -> {
+                    Toast.makeText(context, R.string.private_content, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is SoundCloudGoPlusContentException -> {
+                    Toast.makeText(context, R.string.soundcloud_go_plus_content, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is YoutubeMusicPremiumContentException -> {
+                    Toast.makeText(context, R.string.youtube_music_premium_content, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is ContentNotAvailableException -> {
+                    Toast.makeText(context, R.string.content_not_available, Toast.LENGTH_LONG).show()
+                }
+                errorInfo.throwable is ContentNotSupportedException -> {
+                    Toast.makeText(context, R.string.content_not_supported, Toast.LENGTH_LONG).show()
+                }
+                else -> {
+                    createNotification(context!!, errorInfo)
+                }
             }
 
             if (context is RouterActivity) {

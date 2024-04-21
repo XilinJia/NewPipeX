@@ -87,11 +87,9 @@ import kotlin.math.min
      * enough for phones, but not for tablets since the mini player can be also shown in landscape.
      */
     private fun directlyOpenFullscreenIfNeeded() {
-        if (PlayerHelper.isStartMainPlayerFullscreenEnabled(player.service)
-                && isTablet(player.service)
+        if (PlayerHelper.isStartMainPlayerFullscreenEnabled(player.service) && isTablet(player.service)
                 && PlayerHelper.globalScreenOrientationLocked(player.service)) {
-            player.getFragmentListener()
-                .ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
+            player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
         }
     }
 
@@ -124,8 +122,7 @@ import kotlin.math.min
             // Only if it's not a vertical video or vertical video but in landscape with locked
             // orientation a screen orientation can be changed automatically
             if (!isVerticalVideo || (isLandscape && PlayerHelper.globalScreenOrientationLocked(context))) {
-                player.getFragmentListener()
-                    .ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
+                player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
             } else {
                 toggleFullscreen()
             }
@@ -149,8 +146,7 @@ import kotlin.math.min
         binding.root.addOnLayoutChangeListener(this)
 
         binding.moreOptionsButton.setOnLongClickListener { v: View? ->
-            player.getFragmentListener()
-                .ifPresent { obj: PlayerServiceEventListener -> obj.onMoreOptionsLongClicked() }
+            player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onMoreOptionsLongClicked() }
             hideControls(0, 0)
             hideSystemUIIfNeeded()
             true
@@ -180,29 +176,22 @@ import kotlin.math.min
     override fun removeViewFromParent() {
         // view was added to fragment
         val parent = binding.root.parent
-        if (parent is ViewGroup) {
-            parent.removeView(binding.root)
-        }
+        if (parent is ViewGroup) parent.removeView(binding.root)
     }
 
     override fun destroy() {
         super.destroy()
 
         // Exit from fullscreen when user closes the player via notification
-        if (isFullscreen) {
-            toggleFullscreen()
-        }
+        if (isFullscreen) toggleFullscreen()
 
         removeViewFromParent()
     }
 
     override fun destroyPlayer() {
         super.destroyPlayer()
-
-        if (playQueueAdapter != null) {
-            playQueueAdapter!!.unsetSelectedListener()
-            playQueueAdapter!!.dispose()
-        }
+        playQueueAdapter?.unsetSelectedListener()
+        playQueueAdapter?.dispose()
     }
 
     override fun smoothStopForImmediateReusing() {
@@ -216,8 +205,7 @@ import kotlin.math.min
     private fun initVideoPlayer() {
         // restore last resize mode
         setResizeMode(PlayerHelper.retrieveResizeModeFromPrefs(player))
-        binding.root.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT)
+        binding.root.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
     override fun setupElementsVisibility() {
@@ -233,8 +221,7 @@ import kotlin.math.min
         binding.topControls.orientation = LinearLayout.VERTICAL
         binding.primaryControls.layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
         binding.secondaryControls.visibility = View.INVISIBLE
-        binding.moreOptionsButton.setImageDrawable(AppCompatResources.getDrawable(context,
-            R.drawable.ic_expand_more))
+        binding.moreOptionsButton.setImageDrawable(AppCompatResources.getDrawable(context, R.drawable.ic_expand_more))
         binding.share.visibility = View.VISIBLE
         binding.openInBrowser.visibility = View.VISIBLE
         binding.switchMute.visibility = View.VISIBLE
@@ -249,12 +236,7 @@ import kotlin.math.min
     }
 
     override fun setupElementsSize(resources: Resources) {
-        setupElementsSize(
-            resources.getDimensionPixelSize(R.dimen.player_main_buttons_min_width),
-            resources.getDimensionPixelSize(R.dimen.player_main_top_padding),
-            resources.getDimensionPixelSize(R.dimen.player_main_controls_padding),
-            resources.getDimensionPixelSize(R.dimen.player_main_buttons_padding)
-        )
+        setupElementsSize(resources.getDimensionPixelSize(R.dimen.player_main_buttons_min_width), resources.getDimensionPixelSize(R.dimen.player_main_top_padding), resources.getDimensionPixelSize(R.dimen.player_main_controls_padding), resources.getDimensionPixelSize(R.dimen.player_main_buttons_padding))
     }
 
 
@@ -265,28 +247,29 @@ import kotlin.math.min
     //region Broadcast receiver
     override fun onBroadcastReceived(intent: Intent?) {
         super.onBroadcastReceived(intent)
-        if (Intent.ACTION_CONFIGURATION_CHANGED == intent!!.action) {
-            // Close it because when changing orientation from portrait
-            // (in fullscreen mode) the size of queue layout can be larger than the screen size
-            closeItemsList()
-        } else if (NotificationConstants.ACTION_PLAY_PAUSE == intent.action) {
-            // Ensure that we have audio-only stream playing when a user
-            // started to play from notification's play button from outside of the app
-            if (!fragmentIsVisible) {
+        when {
+            Intent.ACTION_CONFIGURATION_CHANGED == intent!!.action -> {
+                // Close it because when changing orientation from portrait
+                // (in fullscreen mode) the size of queue layout can be larger than the screen size
+                closeItemsList()
+            }
+            NotificationConstants.ACTION_PLAY_PAUSE == intent.action -> {
+                // Ensure that we have audio-only stream playing when a user
+                // started to play from notification's play button from outside of the app
+                if (!fragmentIsVisible) onFragmentStopped()
+            }
+            VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED == intent.action -> {
+                fragmentIsVisible = false
                 onFragmentStopped()
             }
-        } else if (VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED == intent.action) {
-            fragmentIsVisible = false
-            onFragmentStopped()
-        } else if (VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED == intent.action) {
-            // Restore video source when user returns to the fragment
-            fragmentIsVisible = true
-            player.useVideoSource(true)
+            VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED == intent.action -> {
+                // Restore video source when user returns to the fragment
+                fragmentIsVisible = true
+                player.useVideoSource(true)
 
-            // When a user returns from background, the system UI will always be shown even if
-            // controls are invisible: hide it in that case
-            if (!isControlsVisible) {
-                hideSystemUIIfNeeded()
+                // When a user returns from background, the system UI will always be shown even if
+                // controls are invisible: hide it in that case
+                if (!isControlsVisible) hideSystemUIIfNeeded()
             }
         }
     }
@@ -334,14 +317,11 @@ import kotlin.math.min
     // Playback states
     ////////////////////////////////////////////////////////////////////////// */
     //region Playback states
-    override fun onUpdateProgress(currentProgress: Int,
-                                  duration: Int,
-                                  bufferPercent: Int
-    ) {
+    override fun onUpdateProgress(currentProgress: Int, duration: Int, bufferPercent: Int) {
         super.onUpdateProgress(currentProgress, duration, bufferPercent)
 
         if (areSegmentsVisible) {
-            segmentAdapter!!.selectSegmentAt(getNearestStreamSegmentPosition(currentProgress.toLong()))
+            segmentAdapter?.selectSegmentAt(getNearestStreamSegmentPosition(currentProgress.toLong()))
         }
         if (isQueueVisible) {
             updateQueueTime(currentProgress)
@@ -355,9 +335,7 @@ import kotlin.math.min
 
     override fun onCompleted() {
         super.onCompleted()
-        if (isFullscreen) {
-            toggleFullscreen()
-        }
+        if (isFullscreen) toggleFullscreen()
     }
 
 
@@ -387,9 +365,7 @@ import kotlin.math.min
             parentActivity.map { obj: AppCompatActivity? -> obj!!.window }.ifPresent { window: Window ->
                 window.statusBarColor = Color.TRANSPARENT
                 window.navigationBarColor = Color.TRANSPARENT
-                val visibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+                val visibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
                 window.decorView.systemUiVisibility = visibility
                 window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             }
@@ -426,26 +402,26 @@ import kotlin.math.min
     override fun calculateMaxEndScreenThumbnailHeight(bitmap: Bitmap): Float {
         val screenHeight = context.resources.displayMetrics.heightPixels
 
-        if (isTv(context) && !isFullscreen) {
-            val videoInfoHeight = (dpToPx(DETAIL_ROOT_MINIMUM_HEIGHT, context)
-                    + spToPx(DETAIL_TITLE_TEXT_SIZE_TV, context))
-            return min(bitmap.height.toDouble(), (screenHeight - videoInfoHeight).toDouble()).toFloat()
-        } else if (isTablet(context) && isLandscape && !isFullscreen) {
-            val videoInfoHeight = (dpToPx(DETAIL_ROOT_MINIMUM_HEIGHT, context)
-                    + spToPx(DETAIL_TITLE_TEXT_SIZE_TABLET, context))
-            return min(bitmap.height.toDouble(), (screenHeight - videoInfoHeight).toDouble()).toFloat()
-        } else { // fullscreen player: max height is the device height
-            return min(bitmap.height.toDouble(), screenHeight.toDouble()).toFloat()
+        when {
+            isTv(context) && !isFullscreen -> {
+                val videoInfoHeight = (dpToPx(DETAIL_ROOT_MINIMUM_HEIGHT, context) + spToPx(DETAIL_TITLE_TEXT_SIZE_TV, context))
+                return min(bitmap.height.toDouble(), (screenHeight - videoInfoHeight).toDouble()).toFloat()
+            }
+            isTablet(context) && isLandscape && !isFullscreen -> {
+                val videoInfoHeight = (dpToPx(DETAIL_ROOT_MINIMUM_HEIGHT, context) + spToPx(DETAIL_TITLE_TEXT_SIZE_TABLET, context))
+                return min(bitmap.height.toDouble(), (screenHeight - videoInfoHeight).toDouble()).toFloat()
+            }
+            else -> { // fullscreen player: max height is the device height
+                return min(bitmap.height.toDouble(), screenHeight.toDouble()).toFloat()
+            }
         }
     }
 
     private fun showHideKodiButton() {
         // show kodi button if it supports the current service and it is enabled in settings
         val playQueue = player.playQueue
-        binding.playWithKodi.visibility = if (playQueue != null && playQueue.item != null && shouldShowPlayWithKodi(
-                    context,
-                    playQueue.item!!.serviceId)
-        ) View.VISIBLE else View.GONE
+        binding.playWithKodi.visibility =
+            if (playQueue?.item != null && shouldShowPlayWithKodi(context, playQueue.item!!.serviceId)) View.VISIBLE else View.GONE
     }
 
 
@@ -458,8 +434,7 @@ import kotlin.math.min
         val metrics = context.resources.displayMetrics
         val minimumLength = min(metrics.heightPixels.toDouble(), metrics.widthPixels.toDouble()).toInt()
         val captionRatioInverse = 20f + 4f * (1.0f - captionScale)
-        binding.subtitleView.setFixedTextSize(
-            TypedValue.COMPLEX_UNIT_PX, minimumLength / captionRatioInverse)
+        binding.subtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_PX, minimumLength / captionRatioInverse)
     }
 
 
@@ -468,9 +443,7 @@ import kotlin.math.min
     // Gestures
     ////////////////////////////////////////////////////////////////////////// */
     //region Gestures
-    override fun onLayoutChange(view: View, l: Int, t: Int, r: Int, b: Int,
-                                ol: Int, ot: Int, or: Int, ob: Int
-    ) {
+    override fun onLayoutChange(view: View, l: Int, t: Int, r: Int, b: Int, ol: Int, ot: Int, or: Int, ob: Int) {
         if (l != ol || t != ot || r != or || b != ob) {
             // Use a smaller value to be consistent across screen orientations, and to make usage
             // easier. Multiply by 3/4 to ensure the user does not need to move the finger up to the
@@ -488,8 +461,7 @@ import kotlin.math.min
             binding.brightnessProgressBar.max = maxGestureLength
 
             setInitialGestureValues()
-            binding.itemsListPanel.layoutParams.height =
-                height - binding.itemsListPanel.top
+            binding.itemsListPanel.layoutParams.height = height - binding.itemsListPanel.top
         }
     }
 
@@ -539,8 +511,7 @@ import kotlin.math.min
 
         hideControls(0, 0)
         binding.itemsListPanel.requestFocus()
-        binding.itemsListPanel.animate(true, DEFAULT_CONTROLS_DURATION,
-            AnimationType.SLIDE_AND_ALPHA)
+        binding.itemsListPanel.animate(true, DEFAULT_CONTROLS_DURATION, AnimationType.SLIDE_AND_ALPHA)
 
         val playQueue = player.playQueue
         if (playQueue != null) {
@@ -593,9 +564,7 @@ import kotlin.math.min
         binding.itemsList.isLongClickable = true
 
         binding.itemsList.clearOnScrollListeners()
-        if (itemTouchHelper != null) {
-            itemTouchHelper!!.attachToRecyclerView(null)
-        }
+        itemTouchHelper?.attachToRecyclerView(null)
 
         player.currentStreamInfo.ifPresent { info: StreamInfo? ->
             segmentAdapter!!.setItems(info!!)
@@ -612,9 +581,7 @@ import kotlin.math.min
             isQueueVisible = false
             areSegmentsVisible = false
 
-            if (itemTouchHelper != null) {
-                itemTouchHelper!!.attachToRecyclerView(null)
-            }
+            itemTouchHelper?.attachToRecyclerView(null)
 
             binding.itemsListPanel.animate(false, DEFAULT_CONTROLS_DURATION,
                 AnimationType.SLIDE_AND_ALPHA, 0) { // Even when queueLayout is GONE it receives touch events
@@ -650,16 +617,13 @@ import kotlin.math.min
 
             override fun onItemLongClick(item: StreamSegmentItem, seconds: Int) {
                 val currentMetadata = player.currentMetadata
-                if (currentMetadata == null || currentMetadata.serviceId != ServiceList.YouTube.serviceId) {
-                    return
-                }
+                if (currentMetadata == null || currentMetadata.serviceId != ServiceList.YouTube.serviceId) return
 
                 val currentItem = player.currentItem
                 if (currentItem != null) {
                     var videoUrl = player.videoUrl
                     videoUrl += ("&t=$seconds")
-                    shareText(context, currentItem.title,
-                        videoUrl, currentItem.thumbnails)
+                    shareText(context, currentItem.title, videoUrl, currentItem.thumbnails)
                 }
             }
         }
@@ -671,9 +635,7 @@ import kotlin.math.min
             .orElse(emptyList())
 
         for (i in segments.indices) {
-            if (segments[i].startTimeSeconds * 1000L > playbackPosition) {
-                break
-            }
+            if (segments[i].startTimeSeconds * 1000L > playbackPosition) break
             nearestPosition++
         }
         return max(0.0, (nearestPosition - 1).toDouble()).toInt()
@@ -688,8 +650,8 @@ import kotlin.math.min
 
             override fun onSwiped(index: Int) {
                 val playQueue = player.playQueue
-                if (playQueue != null && index != -1) {
-                    playQueue.remove(index)
+                if (index != -1) {
+                    playQueue?.remove(index)
                 }
             }
         }
@@ -704,15 +666,12 @@ import kotlin.math.min
                 val playQueue = player.playQueue
                 val parentActivity: AppCompatActivity? = parentActivity?.orElse(null)
                 if (playQueue != null && parentActivity != null && playQueue.indexOf(item) != -1) {
-                    openPopupMenu(player.playQueue!!, item, view, true,
-                        parentActivity.supportFragmentManager, context)
+                    openPopupMenu(player.playQueue!!, item, view, true, parentActivity.supportFragmentManager, context)
                 }
             }
 
             override fun onStartDrag(viewHolder: PlayQueueItemHolder) {
-                if (itemTouchHelper != null) {
-                    itemTouchHelper!!.startDrag(viewHolder)
-                }
+                itemTouchHelper?.startDrag(viewHolder)
             }
         }
 
@@ -757,11 +716,7 @@ import kotlin.math.min
                 player.playbackPitch.toDouble(),
                 player.playbackSkipSilence,
                 object : PlaybackParameterDialog.Callback {
-                    override fun onPlaybackParameterChanged(
-                            speed: Float,
-                            pitch: Float,
-                            skipSilence: Boolean
-                    ) {
+                    override fun onPlaybackParameterChanged(speed: Float, pitch: Float, skipSilence: Boolean) {
                         player.setPlaybackParameters(speed, pitch, skipSilence)
                     }
                 }
@@ -773,9 +728,8 @@ import kotlin.math.min
     override fun onKeyDown(keyCode: Int): Boolean {
         if (keyCode == KeyEvent.KEYCODE_SPACE && isFullscreen) {
             player.playPause()
-            if (player.isPlaying) {
-                hideControls(0, 0)
-            }
+            if (player.isPlaying) hideControls(0, 0)
+
             return true
         }
         return super.onKeyDown(keyCode)
@@ -788,26 +742,20 @@ import kotlin.math.min
     ////////////////////////////////////////////////////////////////////////// */
     //region Video size, orientation, fullscreen
     private fun setupScreenRotationButton() {
-        binding.screenRotationButton.visibility = if (PlayerHelper.globalScreenOrientationLocked(context)
-                || isVerticalVideo || isTablet(context)
-        ) View.VISIBLE else View.GONE
+        binding.screenRotationButton.visibility =
+            if (PlayerHelper.globalScreenOrientationLocked(context) || isVerticalVideo || isTablet(context)) View.VISIBLE else View.GONE
         binding.screenRotationButton.setImageDrawable(AppCompatResources.getDrawable(context,
-            if (isFullscreen) R.drawable.ic_fullscreen_exit
-            else R.drawable.ic_fullscreen))
+            if (isFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen))
     }
 
     override fun onVideoSizeChanged(videoSize: VideoSize) {
         super.onVideoSizeChanged(videoSize)
         isVerticalVideo = videoSize.width < videoSize.height
 
-        if ((PlayerHelper.globalScreenOrientationLocked(context)
-                        && isFullscreen) && isLandscape == isVerticalVideo && !isTv(context)
-                && !isTablet(context)) {
+        if ((PlayerHelper.globalScreenOrientationLocked(context) && isFullscreen) && isLandscape == isVerticalVideo && !isTv(context) && !isTablet(context)) {
             // set correct orientation
-            player.getFragmentListener()
-                .ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
+            player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
         }
-
         setupScreenRotationButton()
     }
 
@@ -815,11 +763,8 @@ import kotlin.math.min
         if (MainActivity.DEBUG) {
             Log.d(TAG, "toggleFullscreen() called")
         }
-        val fragmentListener = player.getFragmentListener()
-            .orElse(null)
-        if (fragmentListener == null || player.exoPlayerIsNull()) {
-            return
-        }
+        val fragmentListener = player.getFragmentListener().orElse(null)
+        if (fragmentListener == null || player.exoPlayerIsNull()) return
 
         isFullscreen = !isFullscreen
         if (isFullscreen) {
@@ -842,19 +787,13 @@ import kotlin.math.min
 
     fun checkLandscape() {
         // check if landscape is correct
-        val videoInLandscapeButNotInFullscreen = (isLandscape
-                && !isFullscreen
-                && !player.isAudioOnly)
-        val notPaused = (player.currentState != Player.STATE_COMPLETED
-                && player.currentState != Player.STATE_PAUSED)
+        val videoInLandscapeButNotInFullscreen = (isLandscape && !isFullscreen && !player.isAudioOnly)
+        val notPaused = (player.currentState != Player.STATE_COMPLETED && player.currentState != Player.STATE_PAUSED)
 
-        if (videoInLandscapeButNotInFullscreen
-                && notPaused
-                && !isTablet(context)) {
+        if (videoInLandscapeButNotInFullscreen && notPaused && !isTablet(context)) {
             toggleFullscreen()
         }
     }
-
 
     private val parentContext: Optional<Context>
         //endregion

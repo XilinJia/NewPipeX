@@ -4,11 +4,11 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class SinglePlayQueue : PlayQueue {
-    constructor(item: StreamInfoItem?) : super(0, java.util.List.of<PlayQueueItem>(PlayQueueItem(item!!)))
+    constructor(item: StreamInfoItem?) : super(0, listOf<PlayQueueItem>(PlayQueueItem(item!!)))
 
-    constructor(info: StreamInfo?) : super(0, java.util.List.of<PlayQueueItem>(PlayQueueItem(info!!)))
+    constructor(info: StreamInfo?) : super(0, listOf<PlayQueueItem>(PlayQueueItem(info!!)))
 
-    constructor(info: StreamInfo?, startPosition: Long) : super(0, java.util.List.of<PlayQueueItem>(PlayQueueItem(
+    constructor(info: StreamInfo?, startPosition: Long) : super(0, listOf<PlayQueueItem>(PlayQueueItem(
         info!!))) {
         item!!.recoveryPosition = startPosition
     }

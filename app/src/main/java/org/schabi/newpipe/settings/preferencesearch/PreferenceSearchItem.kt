@@ -47,7 +47,7 @@ class PreferenceSearchItem(key: String,
     }
 
     val allRelevantSearchFields: List<String>
-        get() = java.util.List.of(title, summary, entries, breadcrumbs)
+        get() = listOf(title, summary, entries, breadcrumbs)
 
     override fun toString(): String {
         return "PreferenceItem: $title $summary $key"

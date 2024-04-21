@@ -174,7 +174,7 @@ object ImageStrategy {
         return if (url == null) {
             listOf()
         } else {
-            java.util.List.of(Image(url,
+            listOf(Image(url,
                 -1,
                 -1,
                 ResolutionLevel.UNKNOWN))

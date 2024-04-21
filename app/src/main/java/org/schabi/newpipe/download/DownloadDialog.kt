@@ -895,40 +895,42 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
                 msgBody = R.string.download_already_running
             }
             MissionState.None -> {
-                if (mainStorage == null) {
-                    // This part is called if:
-                    // * using SAF on older android version
-                    // * save path not defined
-                    // * if the file exists overwrite it, is not necessary ask
-                    if (!storage.existsAsFile() && !storage.create()) {
-                        showFailedDialog(R.string.error_file_creation)
+                when {
+                    mainStorage == null -> {
+                        // This part is called if:
+                        // * using SAF on older android version
+                        // * save path not defined
+                        // * if the file exists overwrite it, is not necessary ask
+                        if (!storage.existsAsFile() && !storage.create()) {
+                            showFailedDialog(R.string.error_file_creation)
+                            return
+                        }
+                        continueSelectedDownload(storage)
                         return
                     }
-                    continueSelectedDownload(storage)
-                    return
-                } else if (targetFile == null) {
-                    // This part is called if:
-                    // * the filename is not used in a pending/finished download
-                    // * the file does not exists, create
+                    targetFile == null -> {
+                        // This part is called if:
+                        // * the filename is not used in a pending/finished download
+                        // * the file does not exists, create
 
-                    if (!mainStorage.mkdirs()) {
-                        showFailedDialog(R.string.error_path_creation)
+                        if (!mainStorage.mkdirs()) {
+                            showFailedDialog(R.string.error_path_creation)
+                            return
+                        }
+                        storage = mainStorage.createFile(filename!!, mime!!)
+                        if (storage == null || !storage.canWrite()) {
+                            showFailedDialog(R.string.error_file_creation)
+                            return
+                        }
+                        continueSelectedDownload(storage)
                         return
                     }
-
-                    storage = mainStorage.createFile(filename!!, mime!!)
-                    if (storage == null || !storage.canWrite()) {
-                        showFailedDialog(R.string.error_file_creation)
-                        return
+                    else -> {
+                        msgBtn = R.string.overwrite
+                        msgBody = R.string.overwrite_unrelated_warning
                     }
-
-                    continueSelectedDownload(storage)
-                    return
                 }
-                msgBtn = R.string.overwrite
-                msgBody = R.string.overwrite_unrelated_warning
             }
-            else -> return  // unreachable
         }
         val askDialog = AlertDialog.Builder(requireContext())
             .setTitle(R.string.download_dialog_title)
@@ -1090,28 +1092,22 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
             else -> return
         }
         if (secondaryStream == null) {
-            urls = arrayOf(selectedStream.content
-            )
-            recoveryInfo = java.util.List.of(MissionRecoveryInfo(selectedStream))
+            urls = arrayOf(selectedStream.content)
+            recoveryInfo = listOf(MissionRecoveryInfo(selectedStream))
         } else {
             require(secondaryStream.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP) {
-                ("Unsupported stream delivery format"
-                        + secondaryStream.deliveryMethod)
+                ("Unsupported stream delivery format" + secondaryStream.deliveryMethod)
             }
 
             urls = arrayOf(selectedStream.content, secondaryStream.content
             )
-            recoveryInfo = java.util.List.of(
-                MissionRecoveryInfo(selectedStream),
-                MissionRecoveryInfo(secondaryStream)
-            )
+            recoveryInfo = listOf(MissionRecoveryInfo(selectedStream), MissionRecoveryInfo(secondaryStream))
         }
 
         startMission(requireContext(), urls, storage, kind, threads,
             currentInfo!!.url, psName, psArgs, nearLength, ArrayList(recoveryInfo))
 
-        Toast.makeText(context, getString(R.string.download_has_started),
-            Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, getString(R.string.download_has_started), Toast.LENGTH_SHORT).show()
 
         dismiss()
     }

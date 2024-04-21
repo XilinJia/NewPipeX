@@ -15,27 +15,29 @@ internal class TtmlConverter : Postprocessing(false, true, ALGORITHM_TTML_CONVER
         val format = getArgumentAt(0, "")
         val ignoreEmptyFrames = getArgumentAt(1, "true") == "true"
 
-        if (format == "" || format == "ttml") {
-            val writer = SrtFromTtmlWriter(out!!, ignoreEmptyFrames)
+        when (format) {
+            "", "ttml" -> {
+                val writer = if (out != null) SrtFromTtmlWriter(out, ignoreEmptyFrames) else null
 
-            try {
-                writer.build((sources.filterNotNull().toTypedArray())[0])
-            } catch (err: Exception) {
-                Log.e(TAG, "subtitle parse failed", err)
-                return if (err is IOException) 1 else 8
-            }
+                try {
+                    writer?.build((sources.filterNotNull().toTypedArray())[0])
+                } catch (err: Exception) {
+                    Log.e(TAG, "subtitle parse failed", err)
+                    return if (err is IOException) 1 else 8
+                }
 
-            return OK_RESULT.toInt()
-        } else if (format == "srt") {
-            val buffer = ByteArray(8 * 1024)
-            var read: Int
-            while (((sources.filterNotNull().toTypedArray())[0].read(buffer).also { read = it }) > 0) {
-                out!!.write(buffer, 0, read)
+                return OK_RESULT.toInt()
             }
-            return OK_RESULT.toInt()
+            "srt" -> {
+                val buffer = ByteArray(8 * 1024)
+                var read: Int
+                while (((sources.filterNotNull().toTypedArray())[0].read(buffer).also { read = it }) > 0) {
+                    out?.write(buffer, 0, read)
+                }
+                return OK_RESULT.toInt()
+            }
+            else -> throw UnsupportedOperationException("Can't convert this subtitle, unimplemented format: $format")
         }
-
-        throw UnsupportedOperationException("Can't convert this subtitle, unimplemented format: $format")
     }
 
     companion object {

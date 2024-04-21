@@ -16,8 +16,8 @@ class MissionRecoveryInfo(
     var isDesired2: Boolean = false,
     var desiredBitrate: Int = 0,
     var kind: Char = Char.MIN_VALUE,
-    var validateCondition: String? = null,
-) : Serializable, Parcelable {
+    var validateCondition: String? = null, ) : Serializable, Parcelable {
+
     constructor(stream: Stream) : this(format = stream.format) {
         when (stream) {
             is AudioStream -> {

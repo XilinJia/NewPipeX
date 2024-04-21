@@ -1,6 +1,8 @@
 package org.schabi.newpipe.streams
 
+import android.util.Log
 import org.schabi.newpipe.streams.io.SharpStream
+import org.schabi.newpipe.util.printStackTrace
 import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
@@ -22,9 +24,7 @@ class DataReader(private val stream: SharpStream) {
 
     @Throws(IOException::class)
     fun read(): Int {
-        if (fillBuffer()) {
-            return -1
-        }
+        if (fillBuffer()) return -1
 
         position++
         readCount--
@@ -35,18 +35,22 @@ class DataReader(private val stream: SharpStream) {
     @Throws(IOException::class)
     fun skipBytes(byteAmount: Long): Long {
         var amount = byteAmount
-        if (readCount < 0) {
-            return 0
-        } else if (readCount == 0) {
-            amount = stream.skip(amount)
-        } else {
-            if (readCount > amount) {
-                readCount -= amount.toInt()
-                readOffset += amount.toInt()
-            } else {
-                amount = readCount + stream.skip(amount - readCount)
-                readCount = 0
-                readOffset = readBuffer.size
+        when {
+            readCount < 0 -> {
+                return 0
+            }
+            readCount == 0 -> {
+                amount = stream.skip(amount)
+            }
+            else -> {
+                if (readCount > amount) {
+                    readCount -= amount.toInt()
+                    readOffset += amount.toInt()
+                } else {
+                    amount = readCount + stream.skip(amount - readCount)
+                    readCount = 0
+                    readOffset = readBuffer.size
+                }
             }
         }
 
@@ -66,7 +70,6 @@ class DataReader(private val stream: SharpStream) {
         return value and 0xffffffffL
     }
 
-
     @Throws(IOException::class)
     fun readShort(): Short {
         primitiveRead(SHORT_SIZE)
@@ -76,11 +79,8 @@ class DataReader(private val stream: SharpStream) {
     @Throws(IOException::class)
     fun readLong(): Long {
         primitiveRead(LONG_SIZE)
-        val high =
-            (
-                    primitive[0].toInt() shl 24 or (primitive[1].toInt() shl 16) or (primitive[2].toInt() shl 8) or primitive[3].toInt()).toLong()
-        val low =
-            (primitive[4].toInt() shl 24 or (primitive[5].toInt() shl 16) or (primitive[6].toInt() shl 8) or primitive[7].toInt()).toLong()
+        val high = (primitive[0].toInt() shl 24 or (primitive[1].toInt() shl 16) or (primitive[2].toInt() shl 8) or primitive[3].toInt()).toLong()
+        val low = (primitive[4].toInt() shl 24 or (primitive[5].toInt() shl 16) or (primitive[6].toInt() shl 8) or primitive[7].toInt()).toLong()
         return high shl 32 or low
     }
 
@@ -90,9 +90,8 @@ class DataReader(private val stream: SharpStream) {
         var offset = off
         var count = c
 
-        if (readCount < 0) {
-            return -1
-        }
+        if (readCount < 0) return -1
+
         var total = 0
 
         if (count >= readBuffer.size) {
@@ -106,11 +105,11 @@ class DataReader(private val stream: SharpStream) {
                 total = readCount
                 readCount = 0
             }
-            val total_ = total + max(stream.read(buffer, offset, count).toDouble(), 0.0)
-            total = total_.toInt()
+            val total_ = total + max(stream.read(buffer, offset, count), 0)
+            total = total_
         } else {
             while (count > 0 && !fillBuffer()) {
-                val read = min(readCount.toDouble(), count.toDouble()).toInt()
+                val read = min(readCount, count)
                 System.arraycopy(readBuffer, readOffset, buffer, offset, read)
 
                 readOffset += read
@@ -163,13 +162,11 @@ class DataReader(private val stream: SharpStream) {
             view = object : InputStream() {
                 @Throws(IOException::class)
                 override fun read(): Int {
-                    if (viewSize < 1) {
-                        return -1
-                    }
+                    if (viewSize < 1) return -1
+
                     val res = this@DataReader.read()
-                    if (res > 0) {
-                        viewSize--
-                    }
+                    if (res > 0) viewSize--
+
                     return res
                 }
 
@@ -180,12 +177,9 @@ class DataReader(private val stream: SharpStream) {
 
                 @Throws(IOException::class)
                 override fun read(buffer: ByteArray, offset: Int, count: Int): Int {
-                    if (viewSize < 1) {
-                        return -1
-                    }
+                    if (viewSize < 1) return -1
 
-                    val res = this@DataReader.read(buffer, offset, min(viewSize.toDouble(), count.toDouble())
-                        .toInt())
+                    val res = this@DataReader.read(buffer, offset, min(viewSize, count))
                     viewSize -= res
 
                     return res
@@ -193,11 +187,9 @@ class DataReader(private val stream: SharpStream) {
 
                 @Throws(IOException::class)
                 override fun skip(amount: Long): Long {
-                    if (viewSize < 1) {
-                        return 0
-                    }
-                    val res = skipBytes(min(amount.toDouble(), viewSize.toDouble())
-                        .toLong()).toInt()
+                    if (viewSize < 1) return 0
+
+                    val res = skipBytes(min(amount, viewSize.toLong())).toInt()
                     viewSize -= res
 
                     return res.toLong()
@@ -229,11 +221,12 @@ class DataReader(private val stream: SharpStream) {
         val read = read(buffer, 0, amount)
 
         if (read != amount) {
-            throw EOFException("Truncated stream, missing "
-                    + (amount - read) + " bytes")
+            Log.e("DataReader", "Truncated stream, missing bytes: $amount $read")
+//            printStackTrace()
+//            throw EOFException("Truncated stream, missing ${amount - read} bytes")
         }
 
-        for (i in 0 until amount) {
+        for (i in 0 until read) {
             // the "byte" data type in java is signed and is very annoying
             primitive[i] = (buffer[i].toInt() and 0xFF).toShort()
         }
@@ -249,9 +242,8 @@ class DataReader(private val stream: SharpStream) {
 
     @Throws(IOException::class)
     private fun fillBuffer(): Boolean {
-        if (readCount < 0) {
-            return true
-        }
+        if (readCount < 0) return true
+
         if (readOffset >= readBuffer.size) {
             readCount = stream.read(readBuffer)
             if (readCount < 1) {

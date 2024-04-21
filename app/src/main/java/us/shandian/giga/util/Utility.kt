@@ -88,18 +88,14 @@ object Utility {
         }
 
         index = url.lastIndexOf(".")
-        if (index == -1) {
-            return null
-        } else {
-            var ext = url.substring(index)
-            if ((ext.indexOf("%").also { index = it }) > -1) {
-                ext = ext.substring(0, index)
-            }
-            if ((ext.indexOf("/").also { index = it }) > -1) {
-                ext = ext.substring(0, index)
-            }
-            return ext.lowercase(Locale.getDefault())
-        }
+        if (index == -1) return null
+
+        var ext = url.substring(index)
+        if ((ext.indexOf("%").also { index = it }) > -1) ext = ext.substring(0, index)
+
+        if ((ext.indexOf("/").also { index = it }) > -1) ext = ext.substring(0, index)
+
+        return ext.lowercase(Locale.getDefault())
     }
 
     fun getFileType(kind: Char, file: String): FileType {
@@ -162,10 +158,13 @@ object Utility {
         SharpInputStream(source.stream).use { inputStream ->
             byteString = ByteString.of(*Util.toByteArray(inputStream))
         }
-        if (algorithmId == R.id.md5) {
-            byteString = byteString.md5()
-        } else if (algorithmId == R.id.sha1) {
-            byteString = byteString.sha1()
+        when (algorithmId) {
+            R.id.md5 -> {
+                byteString = byteString.md5()
+            }
+            R.id.sha1 -> {
+                byteString = byteString.sha1()
+            }
         }
         return byteString.hex()
     }
@@ -180,9 +179,7 @@ object Utility {
     }
 
     fun getContentLength(connection: HttpURLConnection): Long {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            return connection.contentLengthLong
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) return connection.contentLengthLong
 
         try {
             return connection.getHeaderField("Content-Length").toLong()

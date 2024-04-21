@@ -13,7 +13,7 @@ internal class Mp4FromDashMuxer : Postprocessing(true, true, ALGORITHM_MP4_FROM_
         val muxer = Mp4FromDashWriter(*sources.filterNotNull().toTypedArray())
         muxer.parseSources()
         muxer.selectTracks(0, 0)
-        muxer.build(out!!)
+        if (out != null) muxer.build(out)
 
         return OK_RESULT.toInt()
     }

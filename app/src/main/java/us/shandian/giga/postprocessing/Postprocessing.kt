@@ -63,7 +63,7 @@ internal constructor(
         mission!!.done = 0
 
         val length = mission!!.storage!!.length() - mission!!.offsets[0]
-        mission!!.length = max(length.toDouble(), mission!!.nearLength.toDouble()).toLong()
+        mission!!.length = max(length, mission!!.nearLength)
 
         val readProgress: ProgressReport = ProgressReport { position: Long ->
             var position = position
@@ -103,8 +103,7 @@ internal constructor(
                         -1
                     }
 
-                    CircularFileWriter(
-                        mission!!.storage!!.stream, tempFile!!, checker).use { out ->
+                    CircularFileWriter(mission!!.storage!!.stream, tempFile!!, checker).use { out ->
                         out.onProgress = ProgressReport { position: Long -> mission!!.done = position }
                         out.onWriteError = WriteErrorHandle { err: Exception? ->
                             mission!!.psState = 3
@@ -129,23 +128,17 @@ internal constructor(
                 }
             } finally {
                 for (source in sources) {
-                    if (source != null && !source.isClosed) {
-                        source.close()
-                    }
+                    if (source != null && !source.isClosed) source.close()
                 }
-                if (tempFile != null) {
-                    tempFile!!.delete()
-                    tempFile = null
-                }
+                tempFile?.delete()
+                tempFile = null
             }
         } else {
             result = if (test()) process(null) else OK_RESULT.toInt()
         }
 
         if (result == OK_RESULT.toInt()) {
-            if (finalLength != -1L) {
-                mission!!.length = finalLength
-            }
+            if (finalLength != -1L) mission!!.length = finalLength
         } else {
             mission!!.errCode = DownloadMission.ERROR_POSTPROCESSING
             mission!!.errObject = RuntimeException("post-processing algorithm returned $result")
@@ -180,9 +173,7 @@ internal constructor(
     abstract fun process(out: SharpStream?, vararg sources: SharpStream?): Int
 
     fun getArgumentAt(index: Int, defaultValue: String): String {
-        if (args == null || index >= args!!.size) {
-            return defaultValue
-        }
+        if (args == null || index >= args!!.size) return defaultValue
 
         return args!![index]
     }

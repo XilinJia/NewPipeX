@@ -42,18 +42,12 @@ class ErrorPanelHelper(
     private val errorPanelRoot: View = rootView.findViewById(R.id.error_panel)
 
     // the only element that is visible by default
-    private val errorTextView: TextView =
-        errorPanelRoot.findViewById(R.id.error_message_view)
-    private val errorServiceInfoTextView: TextView =
-        errorPanelRoot.findViewById(R.id.error_message_service_info_view)
-    private val errorServiceExplanationTextView: TextView =
-        errorPanelRoot.findViewById(R.id.error_message_service_explanation_view)
-    private val errorActionButton: Button =
-        errorPanelRoot.findViewById(R.id.error_action_button)
-    private val errorRetryButton: Button =
-        errorPanelRoot.findViewById(R.id.error_retry_button)
-    private val errorOpenInBrowserButton: Button =
-        errorPanelRoot.findViewById(R.id.error_open_in_browser)
+    private val errorTextView: TextView = errorPanelRoot.findViewById(R.id.error_message_view)
+    private val errorServiceInfoTextView: TextView = errorPanelRoot.findViewById(R.id.error_message_service_info_view)
+    private val errorServiceExplanationTextView: TextView = errorPanelRoot.findViewById(R.id.error_message_service_explanation_view)
+    private val errorActionButton: Button = errorPanelRoot.findViewById(R.id.error_action_button)
+    private val errorRetryButton: Button = errorPanelRoot.findViewById(R.id.error_retry_button)
+    private val errorOpenInBrowserButton: Button = errorPanelRoot.findViewById(R.id.error_open_in_browser)
 
     private var errorDisposable: Disposable? = null
 
@@ -88,15 +82,10 @@ class ErrorPanelHelper(
         if (errorInfo.throwable is ReCaptchaException) {
             errorTextView.setText(R.string.recaptcha_request_toast)
 
-            showAndSetErrorButtonAction(
-                R.string.recaptcha_solve,
-            ) {
+            showAndSetErrorButtonAction(R.string.recaptcha_solve) {
                 // Starting ReCaptcha Challenge Activity
                 val intent = Intent(context, ReCaptchaActivity::class.java)
-                intent.putExtra(
-                    ReCaptchaActivity.RECAPTCHA_URL_EXTRA,
-                    (errorInfo.throwable as ReCaptchaException).url,
-                )
+                intent.putExtra(ReCaptchaActivity.RECAPTCHA_URL_EXTRA, (errorInfo.throwable as ReCaptchaException).url)
                 fragment.startActivityForResult(intent, ReCaptchaActivity.RECAPTCHA_REQUEST)
                 errorActionButton.setOnClickListener(null)
             }
@@ -107,29 +96,23 @@ class ErrorPanelHelper(
             errorTextView.setText(R.string.account_terminated)
 
             if (!isNullOrEmpty((errorInfo.throwable as AccountTerminatedException).message)) {
-                errorServiceInfoTextView.text =
-                    context.resources.getString(
+                errorServiceInfoTextView.text = context.resources.getString(
                         R.string.service_provides_reason,
                         ServiceHelper.getSelectedService(context)?.serviceInfo?.name ?: "<unknown>",
                     )
                 errorServiceInfoTextView.isVisible = true
 
-                errorServiceExplanationTextView.text =
-                    (errorInfo.throwable as AccountTerminatedException).message
+                errorServiceExplanationTextView.text = (errorInfo.throwable as AccountTerminatedException).message
                 errorServiceExplanationTextView.isVisible = true
             }
         } else {
-            showAndSetErrorButtonAction(
-                R.string.error_snackbar_action,
-            ) {
+            showAndSetErrorButtonAction(R.string.error_snackbar_action, ) {
                 ErrorUtil.openActivity(context, errorInfo)
             }
 
             errorTextView.setText(getExceptionDescription(errorInfo.throwable))
 
-            if (errorInfo.throwable !is ContentNotAvailableException &&
-                errorInfo.throwable !is ContentNotSupportedException
-            ) {
+            if (errorInfo.throwable !is ContentNotAvailableException && errorInfo.throwable !is ContentNotSupportedException) {
                 // show retry button only for content which is not unavailable or unsupported
                 errorRetryButton.isVisible = true
             }
@@ -142,10 +125,7 @@ class ErrorPanelHelper(
     /**
      * Shows the errorButtonAction, sets a text into it and sets the click listener.
      */
-    private fun showAndSetErrorButtonAction(
-        @StringRes resid: Int,
-        listener: View.OnClickListener,
-    ) {
+    private fun showAndSetErrorButtonAction(@StringRes resid: Int, listener: View.OnClickListener) {
         errorActionButton.isVisible = true
         errorActionButton.setText(resid)
         errorActionButton.setOnClickListener(listener)
@@ -200,13 +180,10 @@ class ErrorPanelHelper(
                 is YoutubeMusicPremiumContentException -> R.string.youtube_music_premium_content
                 is ContentNotAvailableException -> R.string.content_not_available
                 is ContentNotSupportedException -> R.string.content_not_supported
+                // show retry button only for content which is not unavailable or unsupported
                 else -> {
-                    // show retry button only for content which is not unavailable or unsupported
-                    if (throwable != null && throwable.isNetworkRelated) {
-                        R.string.network_error
-                    } else {
-                        R.string.error_snackbar_message
-                    }
+                    if (throwable != null && throwable.isNetworkRelated) R.string.network_error
+                    else R.string.error_snackbar_message
                 }
             }
         }

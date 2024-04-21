@@ -44,7 +44,7 @@ class SubscriptionsExportService : BaseImportExportService() {
     private var outFile: StoredFileHelper? = null
     private var outputStream: OutputStream? = null
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent == null || subscription != null) {
             return START_NOT_STICKY
         }

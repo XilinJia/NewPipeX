@@ -10,7 +10,6 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
@@ -43,8 +42,8 @@ import java.util.stream.IntStream
         super.initPlayer()
         destroyPlayer() // release previously used resources
 
-        val player = ExoPlayer.Builder(context).build()
-        mediaSession = MediaSession.Builder(context, player)
+//        val player = ExoPlayer.Builder(context).build()
+        mediaSession = MediaSession.Builder(context, player.exoPlayer!!)
 //            .setSessionCallback(MySessionCallback())
             .build()
 //        mediaSession = MediaSessionCompat(context, TAG)
@@ -73,6 +72,7 @@ import java.util.stream.IntStream
 
     override fun destroyPlayer() {
         super.destroyPlayer()
+        Log.d(TAG, "session destroyPlayer")
         player.prefs.unregisterOnSharedPreferenceChangeListener(this)
 //        if (sessionConnector != null) {
 //            sessionConnector!!.setMediaButtonEventHandler(null)
@@ -102,17 +102,12 @@ import java.util.stream.IntStream
     }
 
 
-    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences,
-                                           key: String?
-    ) {
-        if (key == null || key == ignoreHardwareMediaButtonsKey) {
-            updateShouldIgnoreHardwareMediaButtons(sharedPreferences)
-        }
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String?) {
+        if (key == null || key == ignoreHardwareMediaButtonsKey) updateShouldIgnoreHardwareMediaButtons(sharedPreferences)
     }
 
     fun updateShouldIgnoreHardwareMediaButtons(sharedPreferences: SharedPreferences) {
-        shouldIgnoreHardwareMediaButtons =
-            sharedPreferences.getBoolean(ignoreHardwareMediaButtonsKey, false)
+        shouldIgnoreHardwareMediaButtons = sharedPreferences.getBoolean(ignoreHardwareMediaButtonsKey, false)
     }
 
 
@@ -123,7 +118,7 @@ import java.util.stream.IntStream
     val sessionToken: Optional<MediaSessionCompat.Token>
 //        get() = Optional.ofNullable(mediaSession).map { obj: MediaSessionCompat -> obj.sessionToken }
         get() = Optional.ofNullable(mediaSession).map { obj: MediaSession ->
-            obj.getSessionCompatToken()
+            obj.sessionCompatToken
         }
 
 
@@ -189,8 +184,8 @@ import java.util.stream.IntStream
         // only use the fourth and fifth actions (the settings page also shows only the last 2 on
         // Android 13+)
         val newNotificationActions = IntStream.of(3, 4)
-            .map { i: Int -> player.prefs.getInt(player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]),
-                NotificationConstants.SLOT_DEFAULTS[i])
+            .map { i: Int ->
+                player.prefs.getInt(player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]), NotificationConstants.SLOT_DEFAULTS[i])
             }
             .mapToObj { action: Int -> fromNotificationActionEnum(player, action) }
             .filter { obj: NotificationActionData? -> Objects.nonNull(obj) }

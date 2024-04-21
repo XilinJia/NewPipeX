@@ -217,17 +217,13 @@ class DownloadMissionRecover internal constructor(private val mMission: Download
         var value: String? = value
         val range = LongArray(3)
 
-        if (value == null) {
-            // this never should happen
-            return range
-        }
+        // this never should happen
+        if (value == null) return range
 
         try {
             value = value.trim { it <= ' ' }
 
-            if (!value.startsWith("bytes")) {
-                return range // unknown range type
-            }
+            if (!value.startsWith("bytes")) return range // unknown range type
 
             val space = value.lastIndexOf(' ') + 1
             val dash = value.indexOf('-', space) + 1

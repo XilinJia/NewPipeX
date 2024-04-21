@@ -25,7 +25,7 @@ internal class M4aNoDash : Postprocessing(false, true, ALGORITHM_M4A_NO_DASH) {
         muxer.setMainBrand(0x4D344120) // binary string "M4A "
         muxer.parseSources()
         muxer.selectTracks(0)
-        muxer.build(out!!)
+        if (out != null) muxer.build(out)
 
         return OK_RESULT.toInt()
     }

@@ -17,26 +17,26 @@ import java.util.stream.Collectors
 object ListHelper {
     // Video format in order of quality. 0=lowest quality, n=highest quality
     private val VIDEO_FORMAT_QUALITY_RANKING: List<MediaFormat?> =
-        java.util.List.of(MediaFormat.v3GPP, MediaFormat.WEBM, MediaFormat.MPEG_4)
+        listOf(MediaFormat.v3GPP, MediaFormat.WEBM, MediaFormat.MPEG_4)
 
     // Audio format in order of quality. 0=lowest quality, n=highest quality
     private val AUDIO_FORMAT_QUALITY_RANKING: List<MediaFormat> =
-        java.util.List.of(MediaFormat.MP3, MediaFormat.WEBMA, MediaFormat.M4A)
+        listOf(MediaFormat.MP3, MediaFormat.WEBMA, MediaFormat.M4A)
 
     // Audio format in order of efficiency. 0=least efficient, n=most efficient
     private val AUDIO_FORMAT_EFFICIENCY_RANKING: List<MediaFormat?> =
-        java.util.List.of(MediaFormat.MP3, MediaFormat.M4A, MediaFormat.WEBMA)
+        listOf(MediaFormat.MP3, MediaFormat.M4A, MediaFormat.WEBMA)
 
     // Use a Set for better performance
     private val HIGH_RESOLUTION_LIST = setOf("1440p", "2160p")
 
     // Audio track types in order of priority. 0=lowest, n=highest
     private val AUDIO_TRACK_TYPE_RANKING: List<AudioTrackType> =
-        java.util.List.of(AudioTrackType.DESCRIPTIVE, AudioTrackType.DUBBED, AudioTrackType.ORIGINAL)
+        listOf(AudioTrackType.DESCRIPTIVE, AudioTrackType.DUBBED, AudioTrackType.ORIGINAL)
 
     // Audio track types in order of priority when descriptive audio is preferred.
     private val AUDIO_TRACK_TYPE_RANKING_DESCRIPTIVE: List<AudioTrackType?> =
-        java.util.List.of(AudioTrackType.ORIGINAL, AudioTrackType.DUBBED, AudioTrackType.DESCRIPTIVE)
+        listOf(AudioTrackType.ORIGINAL, AudioTrackType.DUBBED, AudioTrackType.DESCRIPTIVE)
 
     /**
      * List of supported YouTube Itag ids.

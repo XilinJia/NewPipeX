@@ -138,7 +138,7 @@ object PlayQueueTest {
         @Test
         fun itemsAreNotCloned() {
             val item = makeItemWithUrl("A url")
-            val playQueue = makePlayQueue(0, java.util.List.of(item))
+            val playQueue = makePlayQueue(0, listOf(item))
 
             // make sure that items are not cloned when added to the queue
             Assert.assertSame(playQueue.item, item)

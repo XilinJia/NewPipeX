@@ -1,6 +1,9 @@
 package org.schabi.newpipe.player
 
 import android.content.Intent
+import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 
 enum class PlayerType {
     MAIN,
@@ -23,10 +26,11 @@ enum class PlayerType {
          * @throws ArrayIndexOutOfBoundsException if the intent contains an invalid player type integer
          * @see .valueForIntent
          */
-        @JvmStatic
+        @OptIn(UnstableApi::class) @JvmStatic
         fun retrieveFromIntent(intent: Intent): PlayerType {
-            return entries[intent.getIntExtra(Player.PLAYER_TYPE,
-                MAIN.valueForIntent())]
+            val ext = intent.getIntExtra(Player.PLAYER_TYPE, MAIN.valueForIntent())
+            Log.d("PlayerType", "retrieveFromIntent $ext")
+            return entries[ext]
         }
     }
 }

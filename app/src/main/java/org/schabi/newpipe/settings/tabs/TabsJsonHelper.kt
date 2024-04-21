@@ -9,7 +9,7 @@ import org.schabi.newpipe.settings.tabs.Tab.Companion.from
 object TabsJsonHelper {
     private const val JSON_TABS_ARRAY_KEY = "tabs"
 
-    val defaultTabs: List<Tab> = java.util.List.of(
+    val defaultTabs: List<Tab> = listOf(
         Tab.Type.DEFAULT_KIOSK.tab,
         Tab.Type.FEED.tab,
         Tab.Type.SUBSCRIPTIONS.tab,

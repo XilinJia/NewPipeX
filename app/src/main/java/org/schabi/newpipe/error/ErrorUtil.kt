@@ -115,18 +115,9 @@ class ErrorUtil {
                     .setContentTitle(context.getString(R.string.error_report_notification_title))
                     .setContentText(context.getString(errorInfo.messageStringId))
                     .setAutoCancel(true)
-                    .setContentIntent(
-                        PendingIntentCompat.getActivity(
-                            context,
-                            0,
-                            getErrorActivityIntent(context, errorInfo),
-                            PendingIntent.FLAG_UPDATE_CURRENT,
-                            false,
-                        ),
-                    )
+                    .setContentIntent(PendingIntentCompat.getActivity(context, 0, getErrorActivityIntent(context, errorInfo), PendingIntent.FLAG_UPDATE_CURRENT, false))
 
-            if (ActivityCompat.checkSelfPermission(context,
-                        Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
                 // here to request the missing permissions, and then overriding
@@ -136,12 +127,10 @@ class ErrorUtil {
                 // for ActivityCompat#requestPermissions for more details.
                 return
             }
-            NotificationManagerCompat.from(context)
-                .notify(ERROR_REPORT_NOTIFICATION_ID, notificationBuilder.build())
+            NotificationManagerCompat.from(context).notify(ERROR_REPORT_NOTIFICATION_ID, notificationBuilder.build())
 
             // since the notification is silent, also show a toast, otherwise the user is confused
-            Toast.makeText(context, R.string.error_report_notification_toast, Toast.LENGTH_SHORT)
-                .show()
+            Toast.makeText(context, R.string.error_report_notification_toast, Toast.LENGTH_SHORT).show()
         }
 
         private fun getErrorActivityIntent(context: Context, errorInfo: ErrorInfo): Intent {
@@ -151,12 +140,12 @@ class ErrorUtil {
             return intent
         }
 
-        private fun showSnackbar(
-            context: Context,
-            rootView: View?,
-            errorInfo: ErrorInfo,
-        ) {
-            Log.d("ErrorUtil", "${errorInfo}}")
+        private fun showSnackbar(context: Context, rootView: View?, errorInfo: ErrorInfo) {
+//            Log.d("ErrorUtil", "${errorInfo}}")
+//            if (errorInfo.stackTraces.isNotEmpty()) Log.d("ErrorUtil", "Trace[0]: ${errorInfo.stackTraces[0]}")
+            for (i in errorInfo.stackTraces) {
+                Log.d("ErrorUtil", "Trace: ${i.substringBefore('\n')}")
+            }
             if (rootView == null) {
                 // fallback to showing a notification if no root view is available
                 createNotification(context, errorInfo)

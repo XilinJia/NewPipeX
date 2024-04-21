@@ -8,13 +8,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.*
-import android.os.Binder
-import android.os.Handler
-import android.os.IBinder
-import android.os.Message
+import android.os.*
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.StringRes
@@ -140,7 +139,7 @@ class DownloadManagerService : Service() {
         mLock = LockManager(this)
     }
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (BuildConfig.DEBUG) {
             Log.d(TAG, if (intent == null) "Restarting" else "Starting")
         }
@@ -281,9 +280,11 @@ class DownloadManagerService : Service() {
 
     fun updateForegroundState(state: Boolean) {
         if (state == mForeground) return
-
+        Log.d(TAG, "updateForegroundState state: $state")
         if (state) {
-            startForeground(FOREGROUND_NOTIFICATION_ID, mNotification)
+//            startForeground(FOREGROUND_NOTIFICATION_ID, mNotification)
+            val intent = Intent(this, DownloadManagerService::class.java)
+            startService(intent)
         } else {
             ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         }
@@ -529,8 +530,7 @@ class DownloadManagerService : Service() {
         fun startMission(context: Context, urls: Array<String?>?, storage: StoredFileHelper,
                          kind: Char, threads: Int, source: String?, psName: String?,
                          psArgs: Array<String?>?, nearLength: Long,
-                         recoveryInfo: ArrayList<MissionRecoveryInfo?>?
-        ) {
+                         recoveryInfo: ArrayList<MissionRecoveryInfo?>?) {
             val intent = Intent(context, DownloadManagerService::class.java)
                 .setAction(Intent.ACTION_RUN)
                 .putExtra(EXTRA_URLS, urls)

@@ -6,6 +6,8 @@ import android.app.Activity
 import android.content.*
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.ActivityInfo
+import android.content.pm.ServiceInfo
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.Rect
@@ -78,6 +80,7 @@ import org.schabi.newpipe.local.dialog.PlaylistDialog
 import org.schabi.newpipe.local.history.HistoryRecordManager
 import org.schabi.newpipe.local.playlist.LocalPlaylistFragment
 import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.Player.Companion.PLAYER_TYPE
 import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerType
 import org.schabi.newpipe.player.event.OnKeyDownListener
@@ -214,7 +217,7 @@ import kotlin.math.min
     ////////////////////////////////////////////////////////////////////////// */
     private var binding_: FragmentVideoDetailBinding? = null
     private val binding get() = binding_!!
-    private var pageAdapter: TabAdapter? = null
+    private lateinit var pageAdapter: TabAdapter
 
     private var settingsContentObserver: ContentObserver? = null
     private var playerService: PlayerService? = null
@@ -304,7 +307,7 @@ import kotlin.math.min
         restoreDefaultBrightness()
         PreferenceManager.getDefaultSharedPreferences(requireContext())
             .edit()
-            .putString(getString(R.string.stream_info_selected_tab_key), pageAdapter!!.getItemTitle(binding.viewPager.currentItem))
+            .putString(getString(R.string.stream_info_selected_tab_key), pageAdapter.getItemTitle(binding.viewPager.currentItem))
             .apply()
     }
 
@@ -431,8 +434,8 @@ import kotlin.math.min
                     }
                 }
 
-                disposables.add(PlaylistDialog.createCorrespondingDialog(requireContext(), listOf(StreamEntity(info!!))
-                ) { dialog -> dialog.show(parentFragmentManager, TAG) })
+                disposables.add(PlaylistDialog.createCorrespondingDialog(requireContext(), listOf(StreamEntity(info!!))) { dialog ->
+                    dialog.show(parentFragmentManager, TAG) })
             }
         })
         binding.detailControlsDownload.setOnClickListener { v: View? ->
@@ -557,9 +560,8 @@ import kotlin.math.min
 
         binding.detailThumbnailRootLayout.requestFocus()
 
-        binding.detailControlsPlayWithKodi.visibility = if (shouldShowPlayWithKodi(requireContext(), serviceId)
-        ) View.VISIBLE
-        else View.GONE
+        binding.detailControlsPlayWithKodi.visibility =
+            if (shouldShowPlayWithKodi(requireContext(), serviceId)) View.VISIBLE else View.GONE
         binding.detailControlsCrashThePlayer.visibility =
             if (DEBUG && PreferenceManager.getDefaultSharedPreferences(requireContext())
                         .getBoolean(getString(R.string.show_crash_the_player_key), false)) View.VISIBLE else View.GONE
@@ -761,40 +763,40 @@ import kotlin.math.min
     // Tabs
     ////////////////////////////////////////////////////////////////////////// */
     private fun initTabs() {
-        if (pageAdapter!!.count != 0) {
-            selectedTabTag = pageAdapter!!.getItemTitle(binding.viewPager.currentItem)
+        if (pageAdapter.count != 0) {
+            selectedTabTag = pageAdapter.getItemTitle(binding.viewPager.currentItem)
         }
-        pageAdapter!!.clearAllItems()
+        pageAdapter.clearAllItems()
         tabIcons.clear()
         tabContentDescriptions.clear()
 
         if (shouldShowComments()) {
-            pageAdapter!!.addFragment(CommentsFragment.getInstance(serviceId, url, title), COMMENTS_TAB_TAG)
+            pageAdapter.addFragment(CommentsFragment.getInstance(serviceId, url, title), COMMENTS_TAB_TAG)
             tabIcons.add(R.drawable.ic_comment)
             tabContentDescriptions.add(R.string.comments_tab_description)
         }
 
         if (showRelatedItems && binding.relatedItemsLayout == null) {
             // temp empty fragment. will be updated in handleResult
-            pageAdapter!!.addFragment(newInstance(false), RELATED_TAB_TAG)
+            pageAdapter.addFragment(newInstance(false), RELATED_TAB_TAG)
             tabIcons.add(R.drawable.ic_art_track)
             tabContentDescriptions.add(R.string.related_items_tab_description)
         }
 
         if (showDescription) {
             // temp empty fragment. will be updated in handleResult
-            pageAdapter!!.addFragment(newInstance(false), DESCRIPTION_TAB_TAG)
+            pageAdapter.addFragment(newInstance(false), DESCRIPTION_TAB_TAG)
             tabIcons.add(R.drawable.ic_description)
             tabContentDescriptions.add(R.string.description_tab_description)
         }
 
-        if (pageAdapter!!.count == 0) {
-            pageAdapter!!.addFragment(newInstance(true), EMPTY_TAB_TAG)
+        if (pageAdapter.count == 0) {
+            pageAdapter.addFragment(newInstance(true), EMPTY_TAB_TAG)
         }
-        pageAdapter!!.notifyDataSetUpdate()
+        pageAdapter.notifyDataSetUpdate()
 
-        if (pageAdapter!!.count >= 2) {
-            val position = pageAdapter!!.getItemPositionByTitle(selectedTabTag!!)
+        if (pageAdapter.count >= 2) {
+            val position = pageAdapter.getItemPositionByTitle(selectedTabTag!!)
             if (position != -1) {
                 binding.viewPager.currentItem = position
             }
@@ -821,7 +823,7 @@ import kotlin.math.min
     private fun updateTabs(info: StreamInfo) {
         if (showRelatedItems) {
             if (binding.relatedItemsLayout == null) { // phone
-                pageAdapter!!.updateItem(RELATED_TAB_TAG, RelatedItemsFragment.getInstance(info))
+                pageAdapter.updateItem(RELATED_TAB_TAG, RelatedItemsFragment.getInstance(info))
             } else { // tablet + TV
                 childFragmentManager.beginTransaction()
                     .replace(R.id.relatedItemsLayout, RelatedItemsFragment.getInstance(info))
@@ -831,13 +833,13 @@ import kotlin.math.min
         }
 
         if (showDescription) {
-            pageAdapter!!.updateItem(DESCRIPTION_TAB_TAG, DescriptionFragment(info))
+            pageAdapter.updateItem(DESCRIPTION_TAB_TAG, DescriptionFragment(info))
         }
 
         binding.viewPager.visibility = View.VISIBLE
         // make sure the tab layout is visible
         updateTabLayoutVisibility()
-        pageAdapter!!.notifyDataSetUpdate()
+        pageAdapter.notifyDataSetUpdate()
         updateTabIconsAndContentDescriptions()
     }
 
@@ -854,9 +856,9 @@ import kotlin.math.min
 
     fun updateTabLayoutVisibility() {
         //If binding is null we do not need to and should not do anything with its object(s)
-        if (binding == null) return
+        if (binding_ == null) return
 
-        if (pageAdapter!!.count < 2 || binding.viewPager.visibility != View.VISIBLE) {
+        if (pageAdapter.count < 2 || binding.viewPager.visibility != View.VISIBLE) {
             // hide tab layout if there is only one tab or if the view pager is also hidden
             binding.tabLayout.visibility = View.GONE
         } else {
@@ -893,8 +895,8 @@ import kotlin.math.min
     }
 
     fun scrollToComment(comment: CommentsInfoItem) {
-        val commentsTabPos = pageAdapter!!.getItemPositionByTitle(COMMENTS_TAB_TAG)
-        val fragment = pageAdapter!!.getItem(commentsTabPos) as? CommentsFragment ?: return
+        val commentsTabPos = pageAdapter.getItemPositionByTitle(COMMENTS_TAB_TAG)
+        val fragment = pageAdapter.getItem(commentsTabPos) as? CommentsFragment ?: return
 
         // unexpand the app bar only if scrolling to the comment succeeded
         if (fragment.scrollToComment(comment)) {
@@ -1028,6 +1030,8 @@ import kotlin.math.min
         tryAddVideoPlayerView()
 
         val playerIntent = getPlayerIntent(requireContext(), PlayerService::class.java, queue, true, autoPlayEnabled)
+//        playerIntent.putExtra(FOREGROUND_SERVICE_TYPE, FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+//        playerIntent.putExtra(PLAYER_TYPE, "mediaPlayback")
         ContextCompat.startForegroundService(requireActivity(), playerIntent)
     }
 
@@ -1191,7 +1195,7 @@ import kotlin.math.min
     }
 
     private fun setErrorImage(imageResource: Int) {
-        if (binding == null || activity == null) return
+        if (binding_ == null || activity == null) return
 
         binding.detailThumbnailImageView.setImageDrawable(AppCompatResources.getDrawable(requireContext(), imageResource))
         binding.detailThumbnailImageView.animate(false, 0, AnimationType.ALPHA, 0) {
@@ -2106,7 +2110,7 @@ import kotlin.math.min
 
     private fun updateOverlayPlayQueueButtonVisibility() {
         val isPlayQueueEmpty = player == null || player!!.playQueue == null || player!!.playQueue!!.isEmpty
-        if (binding != null) {
+        if (binding_ != null) {
             // binding is null when rotating the device...
             binding.overlayPlayQueueButton.visibility = if (isPlayQueueEmpty) View.GONE else View.VISIBLE
         }

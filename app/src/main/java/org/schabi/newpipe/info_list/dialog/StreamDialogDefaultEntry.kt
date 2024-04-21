@@ -25,7 +25,6 @@ import org.schabi.newpipe.util.SparseItemUtil.fetchUploaderUrlIfSparse
 import org.schabi.newpipe.util.external_communication.KoreUtils.playWithKore
 import org.schabi.newpipe.util.external_communication.ShareUtils.openUrlInBrowser
 import org.schabi.newpipe.util.external_communication.ShareUtils.shareText
-import java.util.List
 import java.util.function.Consumer
 
 /**
@@ -122,7 +121,7 @@ enum class StreamDialogDefaultEntry(@field:StringRes @param:StringRes val resour
     APPEND_PLAYLIST(R.string.add_to_playlist, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
         PlaylistDialog.createCorrespondingDialog(
             fragment!!.context,
-            List.of(StreamEntity(item!!))
+            kotlin.collections.listOf(StreamEntity(item!!))
         ) { dialog ->
             dialog.show(
                 fragment.parentFragmentManager,

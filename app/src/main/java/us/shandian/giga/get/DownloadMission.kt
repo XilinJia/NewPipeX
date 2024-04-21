@@ -256,7 +256,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
             Log.d(TAG, threadId.toString() + ":[response] Content-Range=" + conn.getHeaderField("Content-Range"))
         }
 
-
         when (statusCode) {
             204, 205, 207 -> throw HttpError(statusCode)
             416 -> return  // let the download thread handle this error
@@ -273,9 +272,7 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
 
     @Synchronized
     fun notifyProgress(deltaLen: Long) {
-        if (unknownLength) {
-            length += deltaLen // Update length before proceeding
-        }
+        if (unknownLength) length += deltaLen // Update length before proceeding
 
         done += deltaLen
 
@@ -292,20 +289,28 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
     fun notifyError(err: Exception?) {
         Log.e(TAG, "notifyError()", err)
 
-        if (err is FileNotFoundException) {
-            notifyError(ERROR_FILE_CREATION, null)
-        } else if (err is SSLException) {
-            notifyError(ERROR_SSL_EXCEPTION, null)
-        } else if (err is HttpError) {
-            notifyError(err.statusCode, null)
-        } else if (err is ConnectException) {
-            notifyError(ERROR_CONNECT_HOST, null)
-        } else if (err is UnknownHostException) {
-            notifyError(ERROR_UNKNOWN_HOST, null)
-        } else if (err is SocketTimeoutException) {
-            notifyError(ERROR_TIMEOUT, null)
-        } else {
-            notifyError(ERROR_UNKNOWN_EXCEPTION, err)
+        when (err) {
+            is FileNotFoundException -> {
+                notifyError(ERROR_FILE_CREATION, null)
+            }
+            is SSLException -> {
+                notifyError(ERROR_SSL_EXCEPTION, null)
+            }
+            is HttpError -> {
+                notifyError(err.statusCode, null)
+            }
+            is ConnectException -> {
+                notifyError(ERROR_CONNECT_HOST, null)
+            }
+            is UnknownHostException -> {
+                notifyError(ERROR_UNKNOWN_HOST, null)
+            }
+            is SocketTimeoutException -> {
+                notifyError(ERROR_TIMEOUT, null)
+            }
+            else -> {
+                notifyError(ERROR_UNKNOWN_EXCEPTION, err)
+            }
         }
     }
 
@@ -326,15 +331,19 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
         }
 
         if (err is IOException) {
-            if (err.message!!.contains("Permission denied")) {
-                code = ERROR_PERMISSION_DENIED
-                err = null
-            } else if (err.message!!.contains("ENOSPC")) {
-                code = ERROR_INSUFFICIENT_STORAGE
-                err = null
-            } else if (!storage!!.canWrite()) {
-                code = ERROR_FILE_CREATION
-                err = null
+            when {
+                err.message!!.contains("Permission denied") -> {
+                    code = ERROR_PERMISSION_DENIED
+                    err = null
+                }
+                err.message!!.contains("ENOSPC") -> {
+                    code = ERROR_INSUFFICIENT_STORAGE
+                    err = null
+                }
+                !storage!!.canWrite() -> {
+                    code = ERROR_FILE_CREATION
+                    err = null
+                }
             }
         }
 
@@ -343,8 +352,8 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
 
         when (code) {
             ERROR_SSL_EXCEPTION, ERROR_UNKNOWN_HOST, ERROR_CONNECT_HOST, ERROR_TIMEOUT -> {}
-            else ->                 // also checks for server errors
-                if (code < 500 || code > 599) enqueued = false
+            // also checks for server errors
+            else -> if (code < 500 || code > 599) enqueued = false
         }
         notify(DownloadManagerService.MESSAGE_ERROR)
 
@@ -370,11 +379,9 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
         }
 
         if (psAlgorithm != null && psState == 0) {
-            threads = arrayOf(runAsync(1) { this.doPostprocessing() }
-            )
+            threads = arrayOf(runAsync(1) { this.doPostprocessing() })
             return
         }
-
 
         // this mission is fully finished
         unknownLength = false
@@ -455,8 +462,7 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
                 return
             }
 
-            threads = arrayOfNulls(min(threadCount.toDouble(), remainingBlocks.toDouble())
-                .toInt())
+            threads = arrayOfNulls(min(threadCount, remainingBlocks))
 
             for (i in threads.indices) {
                 threads[i] = runAsync(i + 1, DownloadRunnable(this, i))
@@ -609,7 +615,7 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
             var calculated = offsets[if (current < offsets.size) current else offsets.size - 1] + field
             calculated -= offsets[0] // don't count reserved space
 
-            return max(calculated.toDouble(), nearLength.toDouble()).toLong()
+            return max(calculated, nearLength)
         }
         set(length) {
             super.length = length

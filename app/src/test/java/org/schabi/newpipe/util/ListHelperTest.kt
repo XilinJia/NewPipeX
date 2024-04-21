@@ -102,7 +102,7 @@ class ListHelperTest {
 
     val defaultResolutionTest: Unit
         get() {
-            val testList: List<VideoStream> = ArrayList(java.util.List.of(
+            val testList: List<VideoStream> = ArrayList(listOf(
                 generateVideoStream("mpeg_4-720", MediaFormat.MPEG_4, "720p", false),
                 generateVideoStream("v3gpp-240", MediaFormat.v3GPP, "240p", false),
                 generateVideoStream("webm-480", MediaFormat.WEBM, "480p", false),
@@ -194,7 +194,7 @@ class ListHelperTest {
             //////////////////////////////////////////
             // Doesn't contain the preferred format //
             ////////////////////////////////////////
-            var testList = java.util.List.of(
+            var testList = listOf(
                 generateAudioStream("m4a-128", MediaFormat.M4A, 128),
                 generateAudioStream("webma-192", MediaFormat.WEBMA, 192))
             // List doesn't contains this format
@@ -206,7 +206,7 @@ class ListHelperTest {
             ////////////////////////////////////////////////////////
             // Multiple not-preferred-formats and equal bitrates //
             //////////////////////////////////////////////////////
-            testList = ArrayList(java.util.List.of(
+            testList = ArrayList(listOf(
                 generateAudioStream("webma-192-1", MediaFormat.WEBMA, 192),
                 generateAudioStream("m4a-192-1", MediaFormat.M4A, 192),
                 generateAudioStream("webma-192-2", MediaFormat.WEBMA, 192),
@@ -265,7 +265,7 @@ class ListHelperTest {
             //////////////////////////////////////////
             // Doesn't contain the preferred format //
             ////////////////////////////////////////
-            var testList: MutableList<AudioStream?> = ArrayList(java.util.List.of(
+            var testList: MutableList<AudioStream?> = ArrayList(listOf(
                 generateAudioStream("m4a-128", MediaFormat.M4A, 128),
                 generateAudioStream("webma-192-1", MediaFormat.WEBMA, 192)))
             // List doesn't contains this format
@@ -283,7 +283,7 @@ class ListHelperTest {
             ////////////////////////////////////////////////////////
             // Multiple not-preferred-formats and equal bitrates //
             //////////////////////////////////////////////////////
-            testList = ArrayList(java.util.List.of(
+            testList = ArrayList(listOf(
                 generateAudioStream("webma-192-1", MediaFormat.WEBMA, 192),
                 generateAudioStream("m4a-192-1", MediaFormat.M4A, 192),
                 generateAudioStream("webma-256", MediaFormat.WEBMA, 256),
@@ -346,7 +346,7 @@ class ListHelperTest {
 
     val videoDefaultStreamIndexCombinations: Unit
         get() {
-            val testList = java.util.List.of(
+            val testList = listOf(
                 generateVideoStream("mpeg_4-1080", MediaFormat.MPEG_4, "1080p", false),
                 generateVideoStream("mpeg_4-720_60", MediaFormat.MPEG_4, "720p60", false),
                 generateVideoStream("mpeg_4-720", MediaFormat.MPEG_4, "720p", false),
@@ -390,7 +390,7 @@ class ListHelperTest {
 
     companion object {
         private const val BEST_RESOLUTION_KEY = "best_resolution"
-        private val AUDIO_STREAMS_TEST_LIST: List<AudioStream?> = java.util.List.of(
+        private val AUDIO_STREAMS_TEST_LIST: List<AudioStream?> = listOf(
             generateAudioStream("m4a-128-1", MediaFormat.M4A, 128),
             generateAudioStream("webma-192", MediaFormat.WEBMA, 192),
             generateAudioStream("mp3-64", MediaFormat.MP3, 64),
@@ -402,7 +402,7 @@ class ListHelperTest {
             generateAudioStream("mp3-192", MediaFormat.MP3, 192),
             generateAudioStream("webma-320", MediaFormat.WEBMA, 320))
 
-        private val AUDIO_TRACKS_TEST_LIST: List<AudioStream?> = java.util.List.of(
+        private val AUDIO_TRACKS_TEST_LIST: List<AudioStream?> = listOf(
             generateAudioTrack("en.or", "en.or", Locale.ENGLISH, AudioTrackType.ORIGINAL),
             generateAudioTrack("en.du", "en.du", Locale.ENGLISH, AudioTrackType.DUBBED),
             generateAudioTrack("en.ds", "en.ds", Locale.ENGLISH, AudioTrackType.DESCRIPTIVE),
@@ -411,7 +411,7 @@ class ListHelperTest {
             generateAudioTrack("de.ds", "de.ds", Locale.GERMAN, AudioTrackType.DESCRIPTIVE)
         )
 
-        private val VIDEO_STREAMS_TEST_LIST: List<VideoStream> = java.util.List.of(
+        private val VIDEO_STREAMS_TEST_LIST: List<VideoStream> = listOf(
             generateVideoStream("mpeg_4-720", MediaFormat.MPEG_4, "720p", false),
             generateVideoStream("v3gpp-240", MediaFormat.v3GPP, "240p", false),
             generateVideoStream("webm-480", MediaFormat.WEBM, "480p", false),
@@ -419,7 +419,7 @@ class ListHelperTest {
             generateVideoStream("mpeg_4-360", MediaFormat.MPEG_4, "360p", false),
             generateVideoStream("webm-360", MediaFormat.WEBM, "360p", false))
 
-        private val VIDEO_ONLY_STREAMS_TEST_LIST: List<VideoStream> = java.util.List.of(
+        private val VIDEO_ONLY_STREAMS_TEST_LIST: List<VideoStream> = listOf(
             generateVideoStream("mpeg_4-720-1", MediaFormat.MPEG_4, "720p", true),
             generateVideoStream("mpeg_4-720-2", MediaFormat.MPEG_4, "720p", true),
             generateVideoStream("mpeg_4-2160", MediaFormat.MPEG_4, "2160p", true),

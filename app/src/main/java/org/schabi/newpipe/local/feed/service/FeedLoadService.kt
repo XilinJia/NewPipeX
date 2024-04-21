@@ -26,6 +26,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -38,6 +39,7 @@ import org.schabi.newpipe.App
 import org.schabi.newpipe.MainActivity.Companion.DEBUG
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
+import us.shandian.giga.service.DownloadManagerService
 import java.util.concurrent.TimeUnit
 
 class FeedLoadService : Service() {
@@ -93,7 +95,15 @@ class FeedLoadService : Service() {
             feedLoadManager.startLoading(groupId)
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnSubscribe {
-                    startForeground(NOTIFICATION_ID, notificationBuilder.build())
+//                    startForeground(NOTIFICATION_ID, notificationBuilder.build())
+                    val intent = Intent(this, FeedLoadService::class.java)
+                    startService(intent)
+//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//                        val serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+//                        startForeground(NOTIFICATION_ID, notificationBuilder.build(), serviceType)
+//                    } else {
+//                        startForeground(NOTIFICATION_ID, notificationBuilder.build())
+//                    }
                 }
                 .subscribe { _, error: Throwable? -> // explicitly mark error as nullable
                     if (error != null) {

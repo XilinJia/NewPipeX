@@ -10,7 +10,7 @@
 -dontwarn org.mozilla.javascript.tools.**
 
 ## Rules for ExoPlayer
--keep class com.google.android.exoplayer2.** { *; }
+#-keep class com.google.android.exoplayer2.** { *; }
 
 ## Rules for Icepick. Copy pasted from https://github.com/frankiesardo/icepick
 -dontwarn icepick.**

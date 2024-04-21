@@ -36,7 +36,6 @@ import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketException
 import java.util.*
-import java.util.List
 
 /*
 * Copyright (C) Hans-Christoph Steiner 2016 <hans@eds.org>
@@ -67,19 +66,15 @@ open class App : Application() {
         app = this
 
         if (ProcessPhoenix.isPhoenixProcess(this)) {
-            Log.i(TAG, "This is a phoenix process! "
-                    + "Aborting initialization of App[onCreate]")
+            Log.i(TAG, "This is a phoenix process! Aborting initialization of App[onCreate]")
             return
         }
 
         // Initialize settings first because others inits can use its values
         initSettings(this)
 
-        NewPipe.init(downloader,
-            getPreferredLocalization(this),
-            getPreferredContentCountry(this))
-        initPrettyTime(resolvePrettyTime(
-            applicationContext))
+        NewPipe.init(downloader, getPreferredLocalization(this), getPreferredContentCountry(this))
+        initPrettyTime(resolvePrettyTime(applicationContext))
 
         StateSaver.init(this)
         initNotificationChannels()
@@ -89,11 +84,8 @@ open class App : Application() {
         // Initialize image loader
         val prefs = PreferenceManager.getDefaultSharedPreferences(this)
         PicassoHelper.init(this)
-        setPreferredImageQuality(fromPreferenceKey(this,
-            prefs.getString(getString(R.string.image_quality_key),
-                getString(R.string.image_quality_default))!!))
-        setIndicatorsEnabled(MainActivity.DEBUG
-                && prefs.getBoolean(getString(R.string.show_image_indicators_key), false))
+        setPreferredImageQuality(fromPreferenceKey(this, prefs.getString(getString(R.string.image_quality_key), getString(R.string.image_quality_default))!!))
+        setIndicatorsEnabled(MainActivity.DEBUG && prefs.getBoolean(getString(R.string.show_image_indicators_key), false))
 
         configureRxJavaErrorHandler()
     }
@@ -121,8 +113,7 @@ open class App : Application() {
         // https://github.com/ReactiveX/RxJava/wiki/What's-different-in-2.0#error-handling
         RxJavaPlugins.setErrorHandler(object : Consumer<Throwable> {
             override fun accept(throwable: Throwable) {
-                Log.e(TAG, "RxJavaPlugins.ErrorHandler called with -> : "
-                        + "throwable = [" + throwable.javaClass.name + "]")
+                Log.e(TAG, "RxJavaPlugins.ErrorHandler called with -> : throwable = [${throwable.javaClass.name}]")
                 val actualThrowable = if (throwable is UndeliverableException) {
                     // As UndeliverableException is a wrapper,
                     // get the cause of it to get the "real" exception
@@ -130,16 +121,11 @@ open class App : Application() {
                 } else {
                     throwable
                 }
-                val errors = if (actualThrowable is CompositeException) {
-                    actualThrowable.exceptions
-                } else {
-                    List.of(actualThrowable)
-                }
+                val errors = if (actualThrowable is CompositeException) actualThrowable.exceptions else listOf(actualThrowable)
 
                 for (error in errors) {
-                    if (isThrowableIgnored(error)) {
-                        return
-                    }
+                    if (isThrowableIgnored(error)) return
+
                     if (isThrowableCritical(error)) {
                         reportException(error)
                         return
@@ -174,8 +160,7 @@ open class App : Application() {
 
             private fun reportException(throwable: Throwable) {
                 // Throw uncaught exception that will trigger the report system
-                Thread.currentThread().uncaughtExceptionHandler
-                    .uncaughtException(Thread.currentThread(), throwable)
+                Thread.currentThread().uncaughtExceptionHandler?.uncaughtException(Thread.currentThread(), throwable)
             }
         })
     }
@@ -185,45 +170,35 @@ open class App : Application() {
      * Should be overridden if MultiDex is enabled, since it has to be initialized before ACRA.
      */
     protected fun initACRA() {
-        if (isACRASenderServiceProcess()) {
-            return
-        }
+        if (isACRASenderServiceProcess()) return
 
-        val acraConfig = CoreConfigurationBuilder()
-            .withBuildConfigClass(BuildConfig::class.java)
+        val acraConfig = CoreConfigurationBuilder().withBuildConfigClass(BuildConfig::class.java)
         init(this, acraConfig)
     }
 
     private fun initNotificationChannels() {
         // Keep the importance below DEFAULT to avoid making noise on every notification update for
         // the main and update channels
-        val notificationChannelCompats = List.of(
-            NotificationChannelCompat.Builder(getString(R.string.notification_channel_id),
-                NotificationManagerCompat.IMPORTANCE_LOW)
+        val notificationChannelCompats = listOf(
+            NotificationChannelCompat.Builder(getString(R.string.notification_channel_id), NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(getString(R.string.notification_channel_name))
                 .setDescription(getString(R.string.notification_channel_description))
                 .build(),
-            NotificationChannelCompat.Builder(getString(R.string.app_update_notification_channel_id),
-                NotificationManagerCompat.IMPORTANCE_LOW)
+            NotificationChannelCompat.Builder(getString(R.string.app_update_notification_channel_id), NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(getString(R.string.app_update_notification_channel_name))
-                .setDescription(
-                    getString(R.string.app_update_notification_channel_description))
+                .setDescription(getString(R.string.app_update_notification_channel_description))
                 .build(),
-            NotificationChannelCompat.Builder(getString(R.string.hash_channel_id),
-                NotificationManagerCompat.IMPORTANCE_HIGH)
+            NotificationChannelCompat.Builder(getString(R.string.hash_channel_id), NotificationManagerCompat.IMPORTANCE_HIGH)
                 .setName(getString(R.string.hash_channel_name))
                 .setDescription(getString(R.string.hash_channel_description))
                 .build(),
-            NotificationChannelCompat.Builder(getString(R.string.error_report_channel_id),
-                NotificationManagerCompat.IMPORTANCE_LOW)
+            NotificationChannelCompat.Builder(getString(R.string.error_report_channel_id), NotificationManagerCompat.IMPORTANCE_LOW)
                 .setName(getString(R.string.error_report_channel_name))
                 .setDescription(getString(R.string.error_report_channel_description))
                 .build(),
-            NotificationChannelCompat.Builder(getString(R.string.streams_notification_channel_id),
-                NotificationManagerCompat.IMPORTANCE_DEFAULT)
+            NotificationChannelCompat.Builder(getString(R.string.streams_notification_channel_id), NotificationManagerCompat.IMPORTANCE_DEFAULT)
                 .setName(getString(R.string.streams_notification_channel_name))
-                .setDescription(
-                    getString(R.string.streams_notification_channel_description))
+                .setDescription(getString(R.string.streams_notification_channel_description))
                 .build()
         )
 

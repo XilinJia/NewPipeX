@@ -41,3 +41,28 @@ The reason to set it to collapsed is this: on my S21 Android 14 device, bottomSh
 Now it's set to collapsed, so when a new video is starting, on S21 Android14, the user need to manually expand the bottomsheet.
 
 On my Android 9 device however, expand on play is automatic.
+
+## 0.26.5
+
+* various bug fixes
+* further media3 tuning
+* some services like download, feedload, fetcher are now started as background services
+
+### Issues
+
+Download process runs through but gets invalid mp4 files
+
+The "something went wrong" popups don't seem to indicate anything important.  Printed a stacktrace when it happens, basically:
+```
+ org.schabi.newpipe.extractor.exceptions.ParsingException: Could not get comment id
+ org.schabi.newpipe.extractor.exceptions.ParsingException: Could not get comment text
+ org.schabi.newpipe.extractor.exceptions.ParsingException: Could not get author thumbnails
+ org.schabi.newpipe.extractor.exceptions.ParsingException: Could not get publishedTimeText
+```	
+
+Noticed these Logcat messages on my S21 Android 14
+```
+BufferQueueProducer     org.schabi.newpipex.debug.main       W  [SurfaceView[org.schabi.newpipex.debug.main/org.schabi.newpipe.MainActivity]@0#1(BLAST Consumer)1](id:195c00000001,api:3,p:6492,c:6492) detachBuffer: slot 41 is not owned by the producer (state = FREE)
+BufferQueueProducer     org.schabi.newpipex.debug.main       W  [SurfaceTexture-1-6492-0](id:195c00000002,api:3,p:6492,c:6492) detachBuffer: slot 50 is not owned by the producer (state = FREE)
+BufferQueueProducer     org.schabi.newpipex.debug.main       W  [MediaCodec.release](id:195c00000003,api:3,p:6492,c:6492) detachBuffer: slot 42 is not owned by the producer (state = FREE)
+```

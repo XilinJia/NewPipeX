@@ -1,9 +1,12 @@
 package us.shandian.giga.io
 
+import android.util.Log
 import org.schabi.newpipe.streams.io.SharpStream
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
+import kotlin.math.min
+import kotlin.math.max
 
 /**
  * @author kapodamy
@@ -31,7 +34,8 @@ class FileStream : SharpStream {
 
     @Throws(IOException::class)
     override fun read(b: ByteArray?, off: Int, len: Int): Int {
-        return source!!.read(b, off, len)
+        if (b == null || b.isEmpty() || len <= 0) return 0
+        return source!!.read(b, off, min(len, b.size-off))
     }
 
     @Throws(IOException::class)
@@ -48,9 +52,8 @@ class FileStream : SharpStream {
     }
 
     override fun close() {
-        if (source == null) return
         try {
-            source!!.close()
+            source?.close()
         } catch (err: IOException) {
             // nothing to do
         }
@@ -97,7 +100,9 @@ class FileStream : SharpStream {
 
     @Throws(IOException::class)
     override fun write(buffer: ByteArray?, offset: Int, count: Int) {
-        source!!.write(buffer, offset, count)
+        if (buffer == null || buffer.isEmpty() || count <= 0) return
+//        Log.d("FileStream", "${buffer.size} $offset $count ${buffer.size-offset}")
+        source!!.write(buffer, offset, min(count, buffer.size-offset))
     }
 
     @Throws(IOException::class)
@@ -108,6 +113,7 @@ class FileStream : SharpStream {
     @Throws(IOException::class)
     override fun seek(offset: Long) {
         source!!.seek(offset)
+//        source!!.seek(max(0, offset))
     }
 
     @Throws(IOException::class)

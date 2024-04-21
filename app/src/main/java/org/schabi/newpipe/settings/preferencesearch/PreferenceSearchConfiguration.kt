@@ -11,8 +11,8 @@ class PreferenceSearchConfiguration {
             field = Objects.requireNonNull(searcher)
         }
 
-    val parserIgnoreElements: List<String> = java.util.List.of(PreferenceCategory::class.java.simpleName)
-    val parserContainerElements: List<String> = java.util.List.of(
+    val parserIgnoreElements: List<String> = listOf(PreferenceCategory::class.java.simpleName)
+    val parserContainerElements: List<String> = listOf(
         PreferenceCategory::class.java.simpleName,
         PreferenceScreen::class.java.simpleName)
 

@@ -186,7 +186,6 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         }
         Toast.makeText(context, R.string.enqueued_next, Toast.LENGTH_SHORT).show()
         val intent = getPlayerEnqueueNextIntent(context, PlayerService::class.java, queue)
-
         intent.putExtra(Player.PLAYER_TYPE, playerType.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
     }

@@ -6,13 +6,16 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
+import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.App.Companion.getApp
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.Player.Companion.PLAYER_TYPE
 import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerService.LocalBinder
 import org.schabi.newpipe.player.PlayerType
@@ -20,7 +23,7 @@ import org.schabi.newpipe.player.event.PlayerServiceEventListener
 import org.schabi.newpipe.player.event.PlayerServiceExtendedEventListener
 import org.schabi.newpipe.player.playqueue.PlayQueue
 
-class PlayerHolder private constructor() {
+@OptIn(UnstableApi::class) class PlayerHolder private constructor() {
     private var listener: PlayerServiceExtendedEventListener? = null
 
     private val serviceConnection = PlayerServiceConnection()
@@ -96,7 +99,9 @@ class PlayerHolder private constructor() {
         // and NullPointerExceptions inside the service because the service will be
         // bound twice. Prevent it with unbinding first
         unbind(context)
-        ContextCompat.startForegroundService(context, Intent(context, PlayerService::class.java))
+        val intent = Intent(context, PlayerService::class.java)
+//        intent.putExtra(PLAYER_TYPE, "mediaPlayback")
+        ContextCompat.startForegroundService(context, intent)
         serviceConnection.doPlayAfterConnect(playAfterConnect)
         bind(context)
     }
@@ -163,11 +168,11 @@ class PlayerHolder private constructor() {
         }
     }
 
-    private fun startPlayerListener() {
+    @OptIn(UnstableApi::class) private fun startPlayerListener() {
         player?.setFragmentListener(internalListener)
     }
 
-    private fun stopPlayerListener() {
+    @OptIn(UnstableApi::class) private fun stopPlayerListener() {
         player?.removeFragmentListener(internalListener)
     }
 

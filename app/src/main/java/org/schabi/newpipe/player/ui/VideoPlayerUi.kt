@@ -74,6 +74,7 @@ import java.util.stream.Collectors
 
 @UnstableApi abstract class VideoPlayerUi protected constructor(player: Player, playerBinding: PlayerBinding)
     : PlayerUi(player), OnSeekBarChangeListener, PopupMenu.OnMenuItemClickListener, PopupMenu.OnDismissListener {
+
     private enum class PlayButtonAction {
         PLAY, PAUSE, REPLAY
     }
@@ -977,7 +978,7 @@ import java.util.stream.Collectors
                 audioTrackName(context, audioStream))
         }
 
-        player.selectedAudioStream.ifPresent { s: AudioStream? -> binding.audioTrackTextView.text = audioTrackName(context, s!!) }
+        player.selectedAudioStream?.ifPresent { s: AudioStream? -> binding.audioTrackTextView.text = audioTrackName(context, s!!) }
         binding.audioTrackTextView.visibility = View.VISIBLE
         audioTrackPopupMenu!!.setOnMenuItemClickListener(this)
         audioTrackPopupMenu!!.setOnDismissListener(this)

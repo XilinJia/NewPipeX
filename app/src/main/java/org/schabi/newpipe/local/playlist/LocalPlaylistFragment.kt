@@ -118,10 +118,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         isModified = AtomicBoolean()
     }
 
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_playlist, container, false)
     }
 
@@ -174,10 +171,8 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         itemListAdapter!!.setSelectedListener(object : OnClickGesture<LocalItem> {
             @OptIn(UnstableApi::class) override fun selected(selectedItem: LocalItem) {
                 if (selectedItem is PlaylistStreamEntry) {
-                    val item =
-                        selectedItem.streamEntity
-                    openVideoDetailFragment(requireContext(), fM!!,
-                        item.serviceId, item.url, item.title, null, false)
+                    val item = selectedItem.streamEntity
+                    openVideoDetailFragment(requireContext(), fM!!, item.serviceId, item.url, item.title, null, false)
                 }
             }
 
@@ -188,9 +183,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             }
 
             override fun drag(selectedItem: LocalItem, viewHolder: RecyclerView.ViewHolder?) {
-                if (itemTouchHelper != null) {
-                    itemTouchHelper!!.startDrag(viewHolder!!)
-                }
+                itemTouchHelper?.startDrag(viewHolder!!)
             }
         })
     }
@@ -242,8 +235,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: "
-                    + "menu = [" + menu + "], inflater = [" + inflater + "]")
+            Log.d(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
         }
         super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.menu_local_playlist, menu)
@@ -384,8 +376,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         val historyIdsMaybe = recordManager.streamHistorySortedById
             .firstElement() // already sorted by ^ getStreamHistorySortedById(), binary search can be used
             .map { historyList: List<StreamHistoryEntry> ->
-                historyList.stream().map<Long>(StreamHistoryEntry::streamId)
-                    .collect(Collectors.toList())
+                historyList.stream().map<Long>(StreamHistoryEntry::streamId).collect(Collectors.toList())
             }
         val streamsMaybe = playlistManager!!.getPlaylistStreams(playlistId!!)
             .firstElement()
@@ -437,21 +428,16 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
                 itemListAdapter!!.addItems(itemsToKeep.filterNotNull())
                 saveChanges()
 
-                if (thumbnailVideoRemoved) {
-                    updateThumbnailUrl()
-                }
+                if (thumbnailVideoRemoved) updateThumbnailUrl()
 
                 val videoCount = itemListAdapter!!.itemsList.size.toLong()
                 setVideoCount(videoCount)
-                if (videoCount == 0L) {
-                    showEmptyState()
-                }
+                if (videoCount == 0L) showEmptyState()
 
                 hideLoading()
                 isRewritingPlaylist = false
             }, { throwable: Throwable? ->
-                showError(ErrorInfo(throwable!!, UserAction.REQUESTED_BOOKMARK,
-                    "Removing watched videos, partially watched=$removePartiallyWatched"))
+                showError(ErrorInfo(throwable!!, UserAction.REQUESTED_BOOKMARK, "Removing watched videos, partially watched=$removePartiallyWatched"))
             }))
     }
 
@@ -634,9 +620,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         val items: List<LocalItem> = itemListAdapter!!.itemsList
         val streamIds: MutableList<Long?> = ArrayList(items.size)
         for (item in items) {
-            if (item is PlaylistStreamEntry) {
-                streamIds.add(item.streamId)
-            }
+            if (item is PlaylistStreamEntry) streamIds.add(item.streamId)
         }
 
         if (DEBUG) {
@@ -665,11 +649,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             }
             return object : ItemTouchHelper.SimpleCallback(directions,
                 ItemTouchHelper.ACTION_STATE_IDLE) {
-                override fun interpolateOutOfBoundsScroll(recyclerView: RecyclerView,
-                                                          viewSize: Int,
-                                                          viewSizeOutOfBounds: Int,
-                                                          totalSize: Int,
-                                                          msSinceStartScroll: Long): Int {
+                override fun interpolateOutOfBoundsScroll(recyclerView: RecyclerView, viewSize: Int, viewSizeOutOfBounds: Int, totalSize: Int, msSinceStartScroll: Long): Int {
                     val standardSpeed = super.interpolateOutOfBoundsScroll(recyclerView, viewSize, viewSizeOutOfBounds, totalSize, msSinceStartScroll)
                     val minimumAbsVelocity = max(MINIMUM_INITIAL_DRAG_VELOCITY.toDouble(), abs(standardSpeed.toDouble())).toInt()
                     return minimumAbsVelocity * sign(viewSizeOutOfBounds.toDouble()).toInt()
@@ -713,14 +693,10 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
 
         try {
             val context = context
-            val dialogBuilder =
-                InfoItemDialog.Builder(requireActivity(), context!!, this, infoItem)
+            val dialogBuilder = InfoItemDialog.Builder(requireActivity(), context!!, this, infoItem)
 
             // add entries in the middle
-            dialogBuilder.addAllEntries(
-                StreamDialogDefaultEntry.SET_AS_PLAYLIST_THUMBNAIL,
-                StreamDialogDefaultEntry.DELETE
-            )
+            dialogBuilder.addAllEntries(StreamDialogDefaultEntry.SET_AS_PLAYLIST_THUMBNAIL, StreamDialogDefaultEntry.DELETE)
 
             // set custom actions
             // all entries modified below have already been added within the builder

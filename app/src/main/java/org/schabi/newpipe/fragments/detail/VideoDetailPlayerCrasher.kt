@@ -33,7 +33,7 @@ object VideoDetailPlayerCrasher {
 
     private const val DEFAULT_MSG = "Dummy"
 
-    private val AVAILABLE_EXCEPTION_TYPES: List<Pair<String, Supplier<ExoPlaybackException>>> = java.util.List.of(
+    private val AVAILABLE_EXCEPTION_TYPES: List<Pair<String, Supplier<ExoPlaybackException>>> = listOf(
         Pair("Source", Supplier {
             ExoPlaybackException.createForSource(IOException(DEFAULT_MSG), PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW)
         }),

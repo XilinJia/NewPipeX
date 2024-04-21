@@ -95,9 +95,8 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
             Log.e(TAG, "listFiles() returned null")
             return
         }
-        if (subs.size < 1) {
-            return
-        }
+        if (subs.size < 1) return
+
         if (BuildConfig.DEBUG) {
             Log.d(TAG, "Loading pending downloads from directory: " + mPendingMissionsDir.absolutePath)
         }
@@ -127,29 +126,30 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
                 exists = false
             }
 
-            if (mis.isPsRunning) {
-                if (mis.psAlgorithm!!.worksOnSameFile) {
-                    // Incomplete post-processing results in a corrupted download file
-                    // because the selected algorithm works on the same file to save space.
-                    // the file will be deleted if the storage API
-                    // is Java IO (avoid showing the "Save as..." dialog)
-                    if (exists && mis.storage!!.isDirect && !mis.storage!!.delete()) Log.w(TAG,
-                        "Unable to delete incomplete download file: " + sub.path)
+            when {
+                mis.isPsRunning -> {
+                    if (mis.psAlgorithm!!.worksOnSameFile) {
+                        // Incomplete post-processing results in a corrupted download file
+                        // because the selected algorithm works on the same file to save space.
+                        // the file will be deleted if the storage API
+                        // is Java IO (avoid showing the "Save as..." dialog)
+                        if (exists && mis.storage!!.isDirect && !mis.storage!!.delete()) Log.w(TAG,
+                            "Unable to delete incomplete download file: " + sub.path)
+                    }
+
+                    mis.psState = 0
+                    mis.errCode = DownloadMission.ERROR_POSTPROCESSING_STOPPED
                 }
+                !exists -> {
+                    tryRecover(mis)
 
-                mis.psState = 0
-                mis.errCode = DownloadMission.ERROR_POSTPROCESSING_STOPPED
-            } else if (!exists) {
-                tryRecover(mis)
-
-                // the progress is lost, reset mission state
-                if (mis.isInitialized) mis.resetState(true, true, DownloadMission.ERROR_PROGRESS_LOST)
+                    // the progress is lost, reset mission state
+                    if (mis.isInitialized) mis.resetState(true, true, DownloadMission.ERROR_PROGRESS_LOST)
+                }
             }
 
-            if (mis.psAlgorithm != null) {
-                mis.psAlgorithm!!.cleanupTemporalDir()
-                mis.psAlgorithm!!.setTemporalDir(tempDir!!)
-            }
+            mis.psAlgorithm?.cleanupTemporalDir()
+            mis.psAlgorithm?.setTemporalDir(tempDir!!)
 
             mis.metadata = sub
             mis.maxRetry = mPrefMaxRetry
@@ -210,9 +210,7 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
 
 
     fun resumeMission(mission: DownloadMission) {
-        if (!mission.running) {
-            mission.start()
-        }
+        if (!mission.running) mission.start()
     }
 
     fun pauseMission(mission: DownloadMission) {
@@ -224,11 +222,14 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
 
     fun deleteMission(mission: Mission) {
         synchronized(this) {
-            if (mission is DownloadMission) {
-                mMissionsPending.remove(mission)
-            } else if (mission is FinishedMission) {
-                mMissionsFinished.remove(mission)
-                mFinishedMissionStore.deleteMission(mission)
+            when (mission) {
+                is DownloadMission -> {
+                    mMissionsPending.remove(mission)
+                }
+                is FinishedMission -> {
+                    mMissionsFinished.remove(mission)
+                    mFinishedMissionStore.deleteMission(mission)
+                }
             }
             mission.delete()
         }
@@ -237,11 +238,14 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
     fun forgetMission(storage: StoredFileHelper) {
         synchronized(this) {
             val mission = getAnyMission(storage) ?: return
-            if (mission is DownloadMission) {
-                mMissionsPending.remove(mission)
-            } else if (mission is FinishedMission) {
-                mMissionsFinished.remove(mission)
-                mFinishedMissionStore.deleteMission(mission)
+            when (mission) {
+                is DownloadMission -> {
+                    mMissionsPending.remove(mission)
+                }
+                is FinishedMission -> {
+                    mMissionsFinished.remove(mission)
+                    mFinishedMissionStore.deleteMission(mission)
+                }
             }
 
             mission.storage = null
@@ -268,7 +272,6 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
         if (newStorage != null) mission.storage = newStorage
     }
 
-
     /**
      * Get a pending mission by its path
      *
@@ -277,9 +280,7 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
      */
     private fun getPendingMission(storage: StoredFileHelper): DownloadMission? {
         for (mission in mMissionsPending) {
-            if (mission.storage!!.equals(storage)) {
-                return mission
-            }
+            if (mission.storage!!.equals(storage)) return mission
         }
         return null
     }
@@ -444,11 +445,14 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
             for (mission in mMissionsPending) {
                 if (mission.isCorrupt || mission.isPsRunning) continue
 
-                if (mission.running && isMetered) {
-                    mission.pause()
-                } else if (!mission.running && !isMetered && mission.enqueued) {
-                    mission.start()
-                    if (mPrefQueueLimit) break
+                when {
+                    mission.running && isMetered -> {
+                        mission.pause()
+                    }
+                    !mission.running && !isMetered && mission.enqueued -> {
+                        mission.start()
+                        if (mPrefQueueLimit) break
+                    }
                 }
             }
         }
@@ -466,10 +470,12 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
             if (pending == null) {
                 if (getFinishedMissionIndex(storage) >= 0) return MissionState.Finished
             } else {
+                // this never should happen (race-condition)
                 return if (pending.isFinished) {
-                    MissionState.Finished // this never should happen (race-condition)
+                    MissionState.Finished
                 } else {
-                    if (pending.running) MissionState.PendingRunning else MissionState.Pending
+                    if (pending.running) MissionState.PendingRunning
+                    else MissionState.Pending
                 }
             }
         }
@@ -611,9 +617,7 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
             val x = snapshot!![oldItemPosition]
             val y = current!![newItemPosition]
 
-            if (x is Mission && y is Mission) {
-                return x.storage!!.equals(y.storage!!)
-            }
+            if (x is Mission && y is Mission) return x.storage!!.equals(y.storage!!)
 
             return false
         }

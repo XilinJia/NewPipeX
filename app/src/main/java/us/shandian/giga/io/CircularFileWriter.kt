@@ -1,5 +1,6 @@
 package us.shandian.giga.io
 
+import android.util.Log
 import org.schabi.newpipe.streams.io.SharpStream
 import java.io.File
 import java.io.IOException
@@ -25,9 +26,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
         Objects.requireNonNull(checker)
 
         if (!temp.exists()) {
-            if (!temp.createNewFile()) {
-                throw IOException("Cannot create a temporal file")
-            }
+            if (!temp.createNewFile()) throw IOException("Cannot create a temporal file")
         }
 
         aux = BufferedFile(temp)
@@ -41,9 +40,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
     @Throws(IOException::class)
     private fun flushAuxiliar(amount: Long) {
         var amount = amount
-        if (aux!!.length < 1) {
-            return
-        }
+        if (aux!!.length < 1) return
 
         out!!.flush()
         aux!!.flush()
@@ -56,8 +53,8 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
 
         var length = amount
         while (length > 0) {
-            var read = min(length.toDouble(), Double.MAX_VALUE) as Int
-            read = aux!!.target.read(buffer, 0, min(read.toDouble(), buffer.size.toDouble()).toInt())
+            var read = min(length, Long.MAX_VALUE).toInt()
+            read = aux!!.target.read(buffer, 0, min(read, buffer.size))
 
             if (read < 1) {
                 amount -= length
@@ -101,8 +98,10 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
             aux!!.length -= amount
             length = aux!!.length
             while (length > 0) {
-                var read = min(length.toDouble(), Double.MAX_VALUE) as Int
-                read = aux!!.target.read(buffer, 0, min(read.toDouble(), buffer.size.toDouble()).toInt())
+                var read = min(length, Long.MAX_VALUE).toInt()
+                read = aux!!.target.read(buffer, 0, min(read, buffer.size))
+                Log.d("CircularFileWriter", "writeOffset: $writeOffset read: $read")
+                if (read <= 0) break
 
                 aux!!.target.seek(writeOffset)
                 aux!!.writeProof(buffer, read)
@@ -139,7 +138,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
         out!!.flush()
 
         // change file length (if required)
-        val length = max(maxLengthKnown.toDouble(), out!!.length.toDouble()).toLong()
+        val length = max(maxLengthKnown, out!!.length)
         if (length != out!!.target.length()) {
             out!!.target.setLength(length)
         }
@@ -153,14 +152,10 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
      * Close the file without flushing any buffer
      */
     override fun close() {
-        if (out != null) {
-            out!!.close()
-            out = null
-        }
-        if (aux != null) {
-            aux!!.close()
-            aux = null
-        }
+        out?.close()
+        out = null
+        aux?.close()
+        aux = null
     }
 
     @Throws(IOException::class)
@@ -177,9 +172,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
     override fun write(b: ByteArray?, off: Int, len: Int) {
         var off = off
         var len = len
-        if (len == 0) {
-            return
-        }
+        if (len == 0) return
 
         var available: Long
         val offsetOut = out!!.getAbsOffset()
@@ -201,33 +194,25 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
             // before continue calculate the final length of aux
             var length = offsetAux + len
             if (underflow) {
-                if (aux!!.length > length) {
-                    length = aux!!.length // the length is not changed
-                }
+                if (aux!!.length > length) length = aux!!.length // the length is not changed
             } else {
                 length = aux!!.length + len
             }
 
             aux!!.write(b, off, len)
 
-            if (length >= THRESHOLD_AUX_LENGTH && length <= available) {
-                flushAuxiliar(available)
-            }
-        } else {
-            if (underflow) {
-                available = out!!.length - offsetOut
-            }
+            if (length >= THRESHOLD_AUX_LENGTH && length <= available) flushAuxiliar(available)
 
-            val length = min(len.toDouble(), (min(Double.MAX_VALUE, available.toDouble()) as Int).toDouble())
-                .toInt()
+        } else {
+            if (underflow) available = out!!.length - offsetOut
+
+            val length = min(len.toLong(), min(Long.MAX_VALUE, available)).toInt()
             out!!.write(b, off, length)
 
             len -= length
             off += length
 
-            if (len > 0) {
-                aux!!.write(b, off, len)
-            }
+            if (len > 0) aux!!.write(b, off, len)
         }
 
         if (onProgress != null) {
@@ -258,9 +243,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
 
     @Throws(IOException::class)
     override fun rewind() {
-        if (onProgress != null) {
-            onProgress!!.report(0) // rollback the whole progress
-        }
+        onProgress?.report(0) // rollback the whole progress
 
         seek(0)
 
@@ -274,17 +257,13 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
         if (offset == total) {
             // do not ignore the seek offset if a underflow exists
             val relativeOffset = out!!.getAbsOffset() + aux!!.getAbsOffset()
-            if (relativeOffset == total) {
-                return
-            }
+            if (relativeOffset == total) return
         }
 
         // flush everything, avoid any underflow
         flush()
 
-        if (offset < 0 || offset > total) {
-            throw IOException("desired offset is outside of range=0-$total offset=$offset")
-        }
+        if (offset < 0 || offset > total) throw IOException("desired offset is outside of range=0-$total offset=$offset")
 
         if (offset > out!!.length) {
             out!!.seek(out!!.length)
@@ -389,7 +368,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
             var len = len
             while (len > 0) {
                 // if the queue is full, the method available() will flush the queue
-                val read = min(available().toDouble(), len.toDouble()).toInt()
+                val read = min(available(), len)
 
                 // enqueue incoming buffer
                 System.arraycopy(b, off, queue, queueSize, read)
@@ -437,9 +416,8 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
 
         @Throws(IOException::class)
         fun seek(absoluteOffset: Long) {
-            if (absoluteOffset == getAbsOffset()) {
-                return  // nothing to do
-            }
+            if (absoluteOffset == getAbsOffset()) return  // nothing to do
+
             offset = absoluteOffset
             target.seek(absoluteOffset)
         }
@@ -451,16 +429,15 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
                 return
             }
 
-            while (true) {
+//            TODO: while loop is useless
+//            while (true) {
                 try {
                     target.write(buffer, 0, length)
                     return
                 } catch (e: Exception) {
-                    if (!onWriteError!!.handle(e)) {
-                        throw e // give up
-                    }
+                    if (!onWriteError!!.handle(e)) throw e // give up
                 }
-            }
+//            }
         }
 
         override fun toString(): String {
@@ -470,9 +447,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
                 "[" + e.localizedMessage + "]"
             }
 
-            return String.format(
-                "offset=%s  length=%s  queue=%s  absLength=%s",
-                getAbsOffset(), length, queueSize, absLength
+            return String.format("offset=%s  length=%s  queue=%s  absLength=%s", getAbsOffset(), length, queueSize, absLength
             )
         }
     }

@@ -35,6 +35,7 @@ import org.schabi.newpipe.error.ErrorUtil.Companion.createNotification
 import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.extractor.Image
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
 import org.schabi.newpipe.extractor.stream.VideoStream
@@ -97,7 +98,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     /*//////////////////////////////////////////////////////////////////////////
     // Player
     ////////////////////////////////////////////////////////////////////////// */
-    var exoPlayer: ExoPlayer? = null
+    var  exoPlayer: ExoPlayer? = null
         private set
     var audioReactor: AudioReactor? = null
         private set
@@ -130,8 +131,9 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     // keep the unusual member name
     private val UIs: PlayerUiList
 
-    private var broadcastReceiver: BroadcastReceiver? = null
-    private var intentFilter: IntentFilter? = null
+    private lateinit var broadcastReceiver: BroadcastReceiver
+    private lateinit var intentFilter: IntentFilter
+
     private var fragmentListener: PlayerServiceEventListener? = null
     private var activityListener: PlayerEventListener? = null
 
@@ -430,7 +432,6 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         }
     }
 
-
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
     // Destroy and recovery
@@ -443,9 +444,9 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         UIs.call { obj: PlayerUi -> obj.destroyPlayer() }
 
         if (!exoPlayerIsNull()) {
-            exoPlayer!!.removeListener(this)
-            exoPlayer!!.stop()
-            exoPlayer!!.release()
+            exoPlayer?.removeListener(this)
+            exoPlayer?.stop()
+//            exoPlayer?.release()  // to be release in mediasession
         }
         if (isProgressLoopRunning) {
             stopProgressLoop()
@@ -453,7 +454,6 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         playQueue?.dispose()
         audioReactor?.dispose()
         playQueueManager?.dispose()
-
     }
 
     fun destroy() {
@@ -543,29 +543,29 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         }
         intentFilter = IntentFilter()
 
-        intentFilter!!.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
+        intentFilter.addAction(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
 
-        intentFilter!!.addAction(NotificationConstants.ACTION_CLOSE)
-        intentFilter!!.addAction(NotificationConstants.ACTION_PLAY_PAUSE)
-        intentFilter!!.addAction(NotificationConstants.ACTION_PLAY_PREVIOUS)
-        intentFilter!!.addAction(NotificationConstants.ACTION_PLAY_NEXT)
-        intentFilter!!.addAction(NotificationConstants.ACTION_FAST_REWIND)
-        intentFilter!!.addAction(NotificationConstants.ACTION_FAST_FORWARD)
-        intentFilter!!.addAction(NotificationConstants.ACTION_REPEAT)
-        intentFilter!!.addAction(NotificationConstants.ACTION_SHUFFLE)
-        intentFilter!!.addAction(NotificationConstants.ACTION_RECREATE_NOTIFICATION)
+        intentFilter.addAction(NotificationConstants.ACTION_CLOSE)
+        intentFilter.addAction(NotificationConstants.ACTION_PLAY_PAUSE)
+        intentFilter.addAction(NotificationConstants.ACTION_PLAY_PREVIOUS)
+        intentFilter.addAction(NotificationConstants.ACTION_PLAY_NEXT)
+        intentFilter.addAction(NotificationConstants.ACTION_FAST_REWIND)
+        intentFilter.addAction(NotificationConstants.ACTION_FAST_FORWARD)
+        intentFilter.addAction(NotificationConstants.ACTION_REPEAT)
+        intentFilter.addAction(NotificationConstants.ACTION_SHUFFLE)
+        intentFilter.addAction(NotificationConstants.ACTION_RECREATE_NOTIFICATION)
 
-        intentFilter!!.addAction(VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED)
-        intentFilter!!.addAction(VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED)
+        intentFilter.addAction(VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED)
+        intentFilter.addAction(VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED)
 
-        intentFilter!!.addAction(Intent.ACTION_CONFIGURATION_CHANGED)
-        intentFilter!!.addAction(Intent.ACTION_SCREEN_ON)
-        intentFilter!!.addAction(Intent.ACTION_SCREEN_OFF)
-        intentFilter!!.addAction(Intent.ACTION_HEADSET_PLUG)
+        intentFilter.addAction(Intent.ACTION_CONFIGURATION_CHANGED)
+        intentFilter.addAction(Intent.ACTION_SCREEN_ON)
+        intentFilter.addAction(Intent.ACTION_SCREEN_OFF)
+        intentFilter.addAction(Intent.ACTION_HEADSET_PLUG)
     }
 
     private fun onBroadcastReceived(intent: Intent?) {
-        if (intent == null || intent.action == null) return
+        if (intent?.action == null) return
 
         if (DEBUG) {
             Log.d(TAG, "onBroadcastReceived() called with: intent = [$intent]")
@@ -1124,6 +1124,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                     playQueue!!.index = newIndex
                 }
             androidx.media3.common.Player.DISCONTINUITY_REASON_SKIP -> {}
+            androidx.media3.common.Player.DISCONTINUITY_REASON_SILENCE_SKIP -> {}
         }
     }
 
@@ -1274,7 +1275,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                 Log.e(TAG,
                     "Playback - Play Queue may be not in sync: item index=[$playQueueIndex], queue index=[${playQueue!!.index}]")
             }
-            playlistSize > 0 && playQueueIndex >= playlistSize || playQueueIndex < 0 -> {
+            playlistSize in 1..playQueueIndex || playQueueIndex < 0 -> {
                 // the queue and the player's timeline are not in sync, since the play queue index
                 // points outside of the timeline
                 Log.e(TAG,
@@ -1587,10 +1588,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
             }
             .map { quality: MediaItemTag.Quality -> quality.sortedVideoStreams[quality.selectedVideoStreamIndex] }
 
-    val selectedAudioStream
+    val selectedAudioStream:  Optional<AudioStream?>?
         get() = Optional.ofNullable<MediaItemTag>(currentMetadata)
-            .flatMap { obj: MediaItemTag -> obj.maybeAudioTrack }
-            .map({ it.selectedAudioStream })
+            .flatMap { obj: MediaItemTag? -> obj?.maybeAudioTrack }
+            .map { it.selectedAudioStream }
 
     val captionRendererIndex: Int
         //endregion
@@ -1867,9 +1868,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
          * @return the video renderer index or [.RENDERER_UNAVAILABLE] if it cannot be get
          */
         get() {
-            val mappedTrackInfo = trackSelector.currentMappedTrackInfo
-
-            if (mappedTrackInfo == null) return RENDERER_UNAVAILABLE
+            val mappedTrackInfo = trackSelector.currentMappedTrackInfo ?: return RENDERER_UNAVAILABLE
 
             // Check every renderer
             return IntStream.range(0, mappedTrackInfo.rendererCount) // Check the renderer is a video renderer and has at least one track

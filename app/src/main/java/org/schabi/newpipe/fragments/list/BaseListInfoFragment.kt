@@ -85,8 +85,8 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
     @Throws(Exception::class)
     override fun readFrom(savedObjects: Queue<Any>) {
         super.readFrom(savedObjects)
-        currentInfo = savedObjects.poll() as L
-        currentNextPage = savedObjects.poll() as Page
+        currentInfo = savedObjects.poll() as? L
+        currentNextPage = savedObjects.poll() as? Page
     }
 
     /*//////////////////////////////////////////////////////////////////////////

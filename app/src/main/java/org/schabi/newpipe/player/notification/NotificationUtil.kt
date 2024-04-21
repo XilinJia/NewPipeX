@@ -94,24 +94,24 @@ import kotlin.math.min
             Log.d(TAG, "createNotification()")
         }
         notificationManager = NotificationManagerCompat.from(player.context)
-        val builder =
-            NotificationCompat.Builder(player.context, player.context.getString(R.string.notification_channel_id))
-        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
+        val builder = NotificationCompat.Builder(player.context, player.context.getString(R.string.notification_channel_id))
+//        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
 
         // setup media style (compact notification slots and media session)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             // notification actions are ignored on Android 13+, and are replaced by code in
             // MediaSessionPlayerUi
             val compactSlots = initializeNotificationSlots()
-            mediaStyle.setShowActionsInCompactView(*compactSlots)
+//            mediaStyle.setShowActionsInCompactView(*compactSlots)
         }
         player.UIs()
             .get(MediaSessionPlayerUi::class.java)
             .flatMap { obj: MediaSessionPlayerUi -> obj.sessionToken }
-            .ifPresent { token: MediaSessionCompat.Token? -> mediaStyle.setMediaSession(token) }
+//            .ifPresent { token: MediaSessionCompat.Token? -> mediaStyle.setMediaSession(token) }
 
         // setup notification builder
-        builder.setStyle(mediaStyle)
+        builder
+//            .setStyle(mediaStyle)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)

@@ -55,32 +55,17 @@ object ExtractorHelper {
         require(serviceId != NO_SERVICE_ID) { "serviceId is NO_SERVICE_ID" }
     }
 
-    fun searchFor(serviceId: Int, searchString: String?,
-                  contentFilter: List<String?>?,
-                  sortFilter: String?
-    ): Single<SearchInfo> {
+    fun searchFor(serviceId: Int, searchString: String?, contentFilter: List<String?>?, sortFilter: String?): Single<SearchInfo> {
         checkServiceId(serviceId)
         return Single.fromCallable {
-            SearchInfo.getInfo(NewPipe.getService(serviceId),
-                NewPipe.getService(serviceId)
-                    .searchQHFactory
-                    .fromQuery(searchString, contentFilter, sortFilter))
+            SearchInfo.getInfo(NewPipe.getService(serviceId), NewPipe.getService(serviceId).searchQHFactory.fromQuery(searchString, contentFilter, sortFilter))
         }
     }
 
-    fun getMoreSearchItems(
-            serviceId: Int,
-            searchString: String?,
-            contentFilter: List<String?>?,
-            sortFilter: String?,
-            page: Page?
-    ): Single<InfoItemsPage<InfoItem>> {
+    fun getMoreSearchItems(serviceId: Int, searchString: String?, contentFilter: List<String?>?, sortFilter: String?, page: Page?): Single<InfoItemsPage<InfoItem>> {
         checkServiceId(serviceId)
         return Single.fromCallable {
-            SearchInfo.getMoreItems(NewPipe.getService(serviceId),
-                NewPipe.getService(serviceId)
-                    .searchQHFactory
-                    .fromQuery(searchString, contentFilter, sortFilter), page)
+            SearchInfo.getMoreItems(NewPipe.getService(serviceId), NewPipe.getService(serviceId).searchQHFactory.fromQuery(searchString, contentFilter, sortFilter), page)
         }
     }
 
@@ -88,117 +73,78 @@ object ExtractorHelper {
     fun suggestionsFor(serviceId: Int, query: String?): Single<List<String>> {
         checkServiceId(serviceId)
         return Single.fromCallable {
-            val extractor = NewPipe.getService(serviceId)
-                .suggestionExtractor
-            if (extractor != null
-            ) extractor.suggestionList(query)
-            else emptyList()
+            val extractor = NewPipe.getService(serviceId).suggestionExtractor
+            if (extractor != null) extractor.suggestionList(query) else emptyList()
         }
     }
 
     @JvmStatic
-    fun getStreamInfo(serviceId: Int, url: String,
-                      forceLoad: Boolean
-    ): Single<StreamInfo> {
+    fun getStreamInfo(serviceId: Int, url: String, forceLoad: Boolean): Single<StreamInfo> {
         checkServiceId(serviceId)
-        return checkCache(forceLoad, serviceId, url, InfoType.STREAM,
-            Single.fromCallable { StreamInfo.getInfo(NewPipe.getService(serviceId), url) })
+        return checkCache(forceLoad, serviceId, url, InfoType.STREAM, Single.fromCallable { StreamInfo.getInfo(NewPipe.getService(serviceId), url) })
     }
 
     @JvmStatic
-    fun getChannelInfo(serviceId: Int, url: String,
-                       forceLoad: Boolean
-    ): Single<ChannelInfo> {
+    fun getChannelInfo(serviceId: Int, url: String, forceLoad: Boolean): Single<ChannelInfo> {
         checkServiceId(serviceId)
-        return checkCache(forceLoad, serviceId, url, InfoType.CHANNEL,
-            Single.fromCallable { ChannelInfo.getInfo(NewPipe.getService(serviceId), url) })
+        return checkCache(forceLoad, serviceId, url, InfoType.CHANNEL, Single.fromCallable { ChannelInfo.getInfo(NewPipe.getService(serviceId), url) })
     }
 
     @JvmStatic
-    fun getChannelTab(serviceId: Int,
-                      listLinkHandler: ListLinkHandler,
-                      forceLoad: Boolean
-    ): Single<ChannelTabInfo> {
+    fun getChannelTab(serviceId: Int, listLinkHandler: ListLinkHandler, forceLoad: Boolean): Single<ChannelTabInfo> {
         checkServiceId(serviceId)
-        return checkCache(forceLoad, serviceId,
-            listLinkHandler.url, InfoType.CHANNEL,
+        return checkCache(forceLoad, serviceId, listLinkHandler.url, InfoType.CHANNEL,
             Single.fromCallable { ChannelTabInfo.getInfo(NewPipe.getService(serviceId), listLinkHandler) })
     }
 
     @JvmStatic
-    fun getMoreChannelTabItems(
-            serviceId: Int,
-            listLinkHandler: ListLinkHandler?,
-            nextPage: Page?
-    ): Single<InfoItemsPage<InfoItem>> {
+    fun getMoreChannelTabItems(serviceId: Int, listLinkHandler: ListLinkHandler?, nextPage: Page?): Single<InfoItemsPage<InfoItem>> {
         checkServiceId(serviceId)
         return Single.fromCallable {
-            ChannelTabInfo.getMoreItems(NewPipe.getService(serviceId),
-                listLinkHandler!!, nextPage!!)
+            ChannelTabInfo.getMoreItems(NewPipe.getService(serviceId), listLinkHandler!!, nextPage!!)
         }
     }
 
     @JvmStatic
-    fun getCommentsInfo(serviceId: Int, url: String,
-                        forceLoad: Boolean
-    ): Single<CommentsInfo> {
+    fun getCommentsInfo(serviceId: Int, url: String, forceLoad: Boolean): Single<CommentsInfo> {
         checkServiceId(serviceId)
         return checkCache(forceLoad, serviceId, url, InfoType.COMMENT,
             Single.fromCallable { CommentsInfo.getInfo(NewPipe.getService(serviceId), url) })
     }
 
     @JvmStatic
-    fun getMoreCommentItems(
-            serviceId: Int,
-            info: CommentsInfo?,
-            nextPage: Page?
-    ): Single<InfoItemsPage<CommentsInfoItem>> {
+    fun getMoreCommentItems(serviceId: Int, info: CommentsInfo?, nextPage: Page?): Single<InfoItemsPage<CommentsInfoItem>> {
         checkServiceId(serviceId)
         return Single.fromCallable { CommentsInfo.getMoreItems(NewPipe.getService(serviceId), info, nextPage) }
     }
 
     @JvmStatic
-    fun getMoreCommentItems(
-            serviceId: Int,
-            url: String?,
-            nextPage: Page?
-    ): Single<InfoItemsPage<CommentsInfoItem>> {
+    fun getMoreCommentItems(serviceId: Int, url: String?, nextPage: Page?): Single<InfoItemsPage<CommentsInfoItem>> {
         checkServiceId(serviceId)
         return Single.fromCallable { CommentsInfo.getMoreItems(NewPipe.getService(serviceId), url, nextPage) }
     }
 
     @JvmStatic
-    fun getPlaylistInfo(serviceId: Int,
-                        url: String,
-                        forceLoad: Boolean
-    ): Single<PlaylistInfo> {
+    fun getPlaylistInfo(serviceId: Int, url: String, forceLoad: Boolean): Single<PlaylistInfo> {
         checkServiceId(serviceId)
         return checkCache(forceLoad, serviceId, url, InfoType.PLAYLIST,
             Single.fromCallable { PlaylistInfo.getInfo(NewPipe.getService(serviceId), url) })
     }
 
     @JvmStatic
-    fun getMorePlaylistItems(serviceId: Int,
-                             url: String?,
-                             nextPage: Page?
-    ): Single<InfoItemsPage<StreamInfoItem>> {
+    fun getMorePlaylistItems(serviceId: Int, url: String?, nextPage: Page?): Single<InfoItemsPage<StreamInfoItem>> {
         checkServiceId(serviceId)
         return Single.fromCallable { PlaylistInfo.getMoreItems(NewPipe.getService(serviceId), url, nextPage) }
     }
 
     @JvmStatic
-    fun getKioskInfo(serviceId: Int, url: String,
-                     forceLoad: Boolean
-    ): Single<KioskInfo> {
+    fun getKioskInfo(serviceId: Int, url: String, forceLoad: Boolean): Single<KioskInfo> {
         return checkCache(forceLoad, serviceId, url, InfoType.PLAYLIST,
             Single.fromCallable { KioskInfo.getInfo(NewPipe.getService(serviceId), url) })
     }
 
     @JvmStatic
-    fun getMoreKioskItems(serviceId: Int,
-                          url: String?,
-                          nextPage: Page?
-    ): Single<InfoItemsPage<StreamInfoItem>> {
+    fun getMoreKioskItems(serviceId: Int, url: String?, nextPage: Page?): Single<InfoItemsPage<StreamInfoItem>> {
         return Single.fromCallable { KioskInfo.getMoreItems(NewPipe.getService(serviceId), url, nextPage) }
     }
 
@@ -218,14 +164,9 @@ object ExtractorHelper {
      * @param loadFromNetwork the [Single] to load the item from the network
      * @return a [Single] that loads the item
     </I> */
-    private fun <I : Info> checkCache(forceLoad: Boolean,
-                                       serviceId: Int, url: String,
-                                       infoType: InfoType,
-                                       loadFromNetwork: Single<I>
-    ): Single<I> {
+    private fun <I : Info> checkCache(forceLoad: Boolean, serviceId: Int, url: String, infoType: InfoType, loadFromNetwork: Single<I>): Single<I> {
         checkServiceId(serviceId)
-        val actualLoadFromNetwork = loadFromNetwork
-            .doOnSuccess { info: I -> CACHE.putInfo(serviceId, url, info, infoType) }
+        val actualLoadFromNetwork = loadFromNetwork.doOnSuccess { info: I -> CACHE.putInfo(serviceId, url, info, infoType) }
 
         val load: Single<I>
         if (forceLoad) {
@@ -250,27 +191,22 @@ object ExtractorHelper {
      * @param infoType  the [InfoItem.InfoType] of the item
      * @return a [Single] that loads the item
     </I> */
-    private fun <I : Info> loadFromCache(serviceId: Int, url: String,
-                                          infoType: InfoType
-    ): Maybe<I> {
+    private fun <I : Info> loadFromCache(serviceId: Int, url: String, infoType: InfoType): Maybe<I> {
         checkServiceId(serviceId)
-        return Maybe.defer<I>({
+        return Maybe.defer<I> {
             val info = CACHE.getFromKey(serviceId, url, infoType) as? I
             if (MainActivity.DEBUG) {
                 Log.d(TAG, "loadFromCache() called, info > $info")
             }
 
             // Only return info if it's not null (it is cached)
-            if (info != null) {
-                Maybe.just<I>(info)
-            } else Maybe.empty<I>()
-        })
+            if (info != null) Maybe.just<I>(info)
+            else Maybe.empty<I>()
+        }
     }
 
     @JvmStatic
-    fun isCached(serviceId: Int, url: String,
-                 infoType: InfoType
-    ): Boolean {
+    fun isCached(serviceId: Int, url: String, infoType: InfoType): Boolean {
         return null != loadFromCache<Info>(serviceId, url, infoType).blockingGet()
     }
 
@@ -285,23 +221,17 @@ object ExtractorHelper {
      * @param disposables       disposables created by the method are added here and their lifecycle
      * should be handled by the calling class
      */
-    fun showMetaInfoInTextView(metaInfos: List<MetaInfo>?,
-                               metaInfoTextView: TextView,
-                               metaInfoSeparator: View,
-                               disposables: CompositeDisposable?
-    ) {
+    fun showMetaInfoInTextView(metaInfos: List<MetaInfo>?, metaInfoTextView: TextView, metaInfoSeparator: View, disposables: CompositeDisposable?) {
         val context = metaInfoTextView.context
         if (metaInfos == null || metaInfos.isEmpty()
-                || !PreferenceManager.getDefaultSharedPreferences(context).getBoolean(
-                    context.getString(R.string.show_meta_info_key), true)) {
+                || !PreferenceManager.getDefaultSharedPreferences(context).getBoolean(context.getString(R.string.show_meta_info_key), true)) {
             metaInfoTextView.visibility = View.GONE
             metaInfoSeparator.visibility = View.GONE
         } else {
             val stringBuilder = StringBuilder()
             for (metaInfo in metaInfos) {
                 if (!Utils.isNullOrEmpty(metaInfo.title)) {
-                    stringBuilder.append("<b>").append(metaInfo.title).append("</b>")
-                        .append(Localization.DOT_SEPARATOR)
+                    stringBuilder.append("<b>").append(metaInfo.title).append("</b>").append(Localization.DOT_SEPARATOR)
                 }
 
                 var content = metaInfo.content.content.trim { it <= ' ' }
@@ -333,16 +263,11 @@ object ExtractorHelper {
 
     private fun capitalizeIfAllUppercase(text: String): String {
         for (i in 0 until text.length) {
-            if (Character.isLowerCase(text[i])) {
-                return text // there is at least a lowercase letter -> not all uppercase
-            }
+            // there is at least a lowercase letter -> not all uppercase
+            if (Character.isLowerCase(text[i])) return text
         }
 
-        return if (text.isEmpty()) {
-            text
-        } else {
-            text.substring(0, 1).uppercase(Locale.getDefault()) + text.substring(1)
-                .lowercase(Locale.getDefault())
-        }
+        return if (text.isEmpty()) text
+        else text.substring(0, 1).uppercase(Locale.getDefault()) + text.substring(1).lowercase(Locale.getDefault())
     }
 }

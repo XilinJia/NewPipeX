@@ -22,6 +22,7 @@ import android.Manifest
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.text.TextUtils
@@ -44,6 +45,7 @@ import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.extractor.subscription.SubscriptionExtractor.InvalidSourceException
 import org.schabi.newpipe.ktx.isNetworkRelated
 import org.schabi.newpipe.local.subscription.SubscriptionManager
+import us.shandian.giga.service.DownloadManagerService
 import java.io.FileNotFoundException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -107,7 +109,15 @@ abstract class BaseImportExportService : Service() {
     protected fun setupNotification() {
         notificationManager = NotificationManagerCompat.from(this)
         notificationBuilder = createNotification()
-        startForeground(notificationId, notificationBuilder!!.build())
+//        startForeground(notificationId, notificationBuilder!!.build())
+        val intent = Intent(this, SubscriptionsExportService::class.java)
+        startService(intent)
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+//            val serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+//            startForeground(notificationId, notificationBuilder!!.build(), serviceType)
+//        } else {
+//            startForeground(notificationId, notificationBuilder!!.build())
+//        }
 
         val throttleAfterFirstEmission = Function<Flowable<String>, Publisher<String>> { flow: Flowable<String> ->
             flow.take(1).concatWith(flow.skip(1)

@@ -36,9 +36,7 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
         }
 
         while (mMission.running && mMission.errCode == DownloadMission.ERROR_NOTHING) {
-            if (!retry) {
-                block = mMission.acquireBlock()
-            }
+            if (!retry) block = mMission.acquireBlock()
 
             if (block == null) {
                 if (BuildConfig.DEBUG) Log.d(TAG, "$mId:no more blocks left, exiting")
@@ -46,9 +44,8 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
             }
 
             if (BuildConfig.DEBUG) {
-                if (retry) Log.d(TAG, mId.toString() + ":retry block at position=" + block.position + " from the start")
-                else Log.d(TAG,
-                    mId.toString() + ":acquired block at position=" + block.position + " done=" + block.done)
+                if (retry) Log.d(TAG, "$mId:retry block at position=${block.position} from the start")
+                else Log.d(TAG, "$mId:acquired block at position=${block.position} done=${block.done}")
             }
 
             var start = block.position.toLong() * DownloadMission.BLOCK_SIZE
@@ -56,9 +53,7 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
 
             start += block.done.toLong()
 
-            if (end >= mMission.length) {
-                end = mMission.length - 1
-            }
+            if (end >= mMission.length) end = mMission.length - 1
 
             try {
                 mConn = mMission.openConnection(false, start, end)
@@ -83,7 +78,7 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
                 // The server may be ignoring the range request
                 if (mConn?.getResponseCode() != 206) {
                     if (BuildConfig.DEBUG) {
-                        Log.e(TAG, mId.toString() + ":Unsupported " + mConn?.getResponseCode())
+                        Log.e(TAG, "$mId:Unsupported ${mConn?.getResponseCode()}")
                     }
                     mMission.notifyError(DownloadMission.HttpError(mConn!!.getResponseCode()))
                     break
@@ -97,8 +92,7 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
 
                     // use always start <= end
                     // fixes a deadlock because in some videos, youtube is sending one byte alone
-                    while ((start <= end && mMission.running) && (`is`.read(buf, 0, buf.size)
-                                .also { len = it }) != -1) {
+                    while ((start <= end && mMission.running) && (`is`.read(buf, 0, buf.size).also { len = it }) != -1) {
                         f.write(buf, 0, len)
                         start += len.toLong()
                         block.done += len

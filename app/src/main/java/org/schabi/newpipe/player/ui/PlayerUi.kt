@@ -84,10 +84,7 @@ import org.schabi.newpipe.player.Player
      * @param duration        the duration of the stream being played
      * @param bufferPercent   the percentage of stream already buffered, see [                        ][androidx.media3.common.BasePlayer.getBufferedPercentage]
      */
-    open fun onUpdateProgress(currentProgress: Int,
-                              duration: Int,
-                              bufferPercent: Int
-    ) {}
+    open fun onUpdateProgress(currentProgress: Int, duration: Int, bufferPercent: Int) {}
 
     open fun onPrepared() {}
 

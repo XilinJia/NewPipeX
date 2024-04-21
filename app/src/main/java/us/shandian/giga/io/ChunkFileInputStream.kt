@@ -4,11 +4,9 @@ import org.schabi.newpipe.streams.io.SharpStream
 import java.io.IOException
 import kotlin.math.min
 
-class ChunkFileInputStream(private var source: SharpStream?,
-                           private val offset: Long,
-                           end: Long,
-                           private val onProgress: ProgressReport?
-) : SharpStream() {
+class ChunkFileInputStream(private var source: SharpStream?, private val offset: Long, end: Long, private val onProgress: ProgressReport?)
+    : SharpStream() {
+
     private val length = end - offset
     private var position: Long = 0
 
@@ -23,9 +21,7 @@ class ChunkFileInputStream(private var source: SharpStream?,
         }
         if (source!!.length() < end) {
             try {
-                throw IOException(String.format("invalid file length. expected = %s  found = %s",
-                    end,
-                    source!!.length()))
+                throw IOException(String.format("invalid file length. expected = %s  found = %s", end, source!!.length()))
             } finally {
                 source!!.close()
             }
@@ -44,14 +40,10 @@ class ChunkFileInputStream(private var source: SharpStream?,
 
     @Throws(IOException::class)
     override fun read(): Int {
-        if ((position + 1) > length) {
-            return 0
-        }
+        if ((position + 1) > length) return 0
 
         val res = source!!.read()
-        if (res >= 0) {
-            position++
-        }
+        if (res >= 0) position++
 
         return res
     }
@@ -64,12 +56,9 @@ class ChunkFileInputStream(private var source: SharpStream?,
     @Throws(IOException::class)
     override fun read(b: ByteArray?, off: Int, len: Int): Int {
         var len = len
-        if ((position + len) > length) {
-            len = (length - position).toInt()
-        }
-        if (len == 0) {
-            return 0
-        }
+        if ((position + len) > length) len = (length - position).toInt()
+
+        if (len == 0) return 0
 
         val res = source!!.read(b, off, len)
         position += res.toLong()
@@ -85,11 +74,9 @@ class ChunkFileInputStream(private var source: SharpStream?,
     @Throws(IOException::class)
     override fun skip(pos: Long): Long {
         var pos = pos
-        pos = min((pos + position).toDouble(), length.toDouble()).toLong()
+        pos = min((pos + position), length)
 
-        if (pos == 0L) {
-            return 0
-        }
+        if (pos == 0L) return 0
 
         source!!.seek(offset + pos)
 

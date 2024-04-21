@@ -16,10 +16,7 @@ import org.junit.runners.model.Statement
 class TrampolineSchedulerRule : TestRule {
     private val scheduler = Schedulers.trampoline()
 
-    override fun apply(
-        base: Statement,
-        description: Description,
-    ): Statement =
+    override fun apply(base: Statement, description: Description): Statement =
         object : Statement() {
             override fun evaluate() {
                 try {

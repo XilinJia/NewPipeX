@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright 2017 Mauricio Colli <mauriciocolli@outlook.com>
  * Part of NewPipe
  *
@@ -24,6 +24,8 @@ import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
 import org.schabi.newpipe.player.notification.NotificationPlayerUi
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
@@ -33,7 +35,7 @@ import java.lang.ref.WeakReference
 /**
  * One service for all players.
  */
-class PlayerService : Service() {
+@OptIn(UnstableApi::class) class PlayerService : Service() {
     private var player: Player? = null
 
     private val mBinder: IBinder = LocalBinder(this)
@@ -42,7 +44,7 @@ class PlayerService : Service() {
     /*//////////////////////////////////////////////////////////////////////////
     // Service's LifeCycle
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onCreate() {
+    @OptIn(UnstableApi::class) override fun onCreate() {
         if (DEBUG) {
             Log.d(TAG, "onCreate() called")
         }
@@ -60,10 +62,9 @@ class PlayerService : Service() {
             .ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
     }
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    @OptIn(UnstableApi::class) override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (DEBUG) {
-            Log.d(TAG, "onStartCommand() called with: intent = [" + intent
-                    + "], flags = [" + flags + "], startId = [" + startId + "]")
+            Log.d(TAG, "onStartCommand() called with: intent = [$intent], flags = [$flags], startId = [$startId]")
         }
 
         /*
@@ -81,7 +82,7 @@ class PlayerService : Service() {
                 .ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
         }
 
-        if (Intent.ACTION_MEDIA_BUTTON == intent.action && (player == null || player!!.playQueue == null)) {
+        if (Intent.ACTION_MEDIA_BUTTON == intent?.action && player?.playQueue == null) {
             /*
             No need to process media button's actions if the player is not working, otherwise
             the player service would strangely start with nothing to play
@@ -93,7 +94,7 @@ class PlayerService : Service() {
         }
 
         if (player != null) {
-            player!!.handleIntent(intent)
+            if (intent != null) player!!.handleIntent(intent)
 //            player!!.UIs().get(MediaSessionPlayerUi::class.java)
 //                .ifPresent { ui: MediaSessionPlayerUi -> ui.handleMediaButtonIntent(intent) }
         }
@@ -132,10 +133,8 @@ class PlayerService : Service() {
     }
 
     private fun cleanup() {
-        if (player != null) {
-            player!!.destroy()
-            player = null
-        }
+        player?.destroy()
+        player = null
     }
 
     fun stopService() {

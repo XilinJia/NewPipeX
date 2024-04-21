@@ -62,7 +62,7 @@ class SubscriptionsImportService : BaseImportExportService() {
     private var inputStream: InputStream? = null
     private var inputStreamType: String? = null
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent == null || subscription != null) {
             return START_NOT_STICKY
         }

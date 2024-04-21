@@ -36,8 +36,7 @@ class FinishedMissionStore(private val context: Context) :
 
             db.execSQL(MISSIONS_CREATE_TABLE)
 
-            val cursor = db.query(MISSIONS_TABLE_NAME_v2, null, null,
-                null, null, null, KEY_TIMESTAMP)
+            val cursor = db.query(MISSIONS_TABLE_NAME_v2, null, null, null, null, null, KEY_TIMESTAMP)
 
             val count = cursor.count
             if (count > 0) {
@@ -54,9 +53,7 @@ class FinishedMissionStore(private val context: Context) :
                     if (kk >= 0) values.put(KEY_KIND, cursor.getString(kk))
                     val kl = cursor.getColumnIndex(KEY_LOCATION)
                     val kn = cursor.getColumnIndex(KEY_NAME)
-                    if (kl >= 0 && kn >=0) values.put(KEY_PATH, Uri.fromFile(
-                        File(cursor.getString(kl), cursor.getString(kn))
-                    ).toString())
+                    if (kl >= 0 && kn >=0) values.put(KEY_PATH, Uri.fromFile(File(cursor.getString(kl), cursor.getString(kn))).toString())
 
                     db.insert(FINISHED_TABLE_NAME, null, values)
                 }
@@ -145,10 +142,8 @@ class FinishedMissionStore(private val context: Context) :
             if (mission.storage!!.isInvalid) {
                 database.delete(FINISHED_TABLE_NAME, KEY_TIMESTAMP + " = ?", arrayOf(ts))
             } else {
-                database.delete(FINISHED_TABLE_NAME,
-                    KEY_TIMESTAMP + " = ? AND " + KEY_PATH + " = ?",
-                    arrayOf(ts, mission.storage!!.uri.toString()
-                    ))
+                database.delete(FINISHED_TABLE_NAME, KEY_TIMESTAMP + " = ? AND " + KEY_PATH + " = ?",
+                    arrayOf(ts, mission.storage!!.uri.toString()))
             }
         } else {
             throw UnsupportedOperationException("DownloadMission")
@@ -164,17 +159,9 @@ class FinishedMissionStore(private val context: Context) :
 
         if (mission is FinishedMission) {
             rowsAffected = if (mission.storage!!.isInvalid) {
-                database.update(FINISHED_TABLE_NAME,
-                    values,
-                    KEY_TIMESTAMP + " = ?",
-                    arrayOf(ts))
+                database.update(FINISHED_TABLE_NAME, values, KEY_TIMESTAMP + " = ?", arrayOf(ts))
             } else {
-                database.update(FINISHED_TABLE_NAME,
-                    values,
-                    KEY_PATH + " = ?",
-                    arrayOf(
-                        mission.storage!!.uri.toString()
-                    ))
+                database.update(FINISHED_TABLE_NAME, values, KEY_PATH + " = ?", arrayOf(mission.storage!!.uri.toString()))
             }
         } else {
             throw UnsupportedOperationException("DownloadMission")
