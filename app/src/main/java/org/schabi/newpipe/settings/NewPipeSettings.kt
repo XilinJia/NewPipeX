@@ -107,13 +107,13 @@ object NewPipeSettings {
         if (isFireTv) {
             return false
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            return true
+            return true    // TODO: if true, always get no app on device can open this
         }
 
         val key = context.getString(R.string.storage_use_saf)
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
 
-        return prefs.getBoolean(key, true)
+        return prefs.getBoolean(key, false)
     }
 
     private fun showSearchSuggestions(context: Context,

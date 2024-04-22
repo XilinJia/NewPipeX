@@ -62,9 +62,7 @@ object SettingMigrations {
             // more issues with SAF and users should use that one instead of the old
             // NoNonsenseFilePicker. Also, there's a bug on FireOS in which SAF open/close
             // dialogs cannot be confirmed with a remote (see #6455).
-            sp!!.edit().putBoolean(
-                context.getString(R.string.storage_use_saf),
-                !isFireTv
+            sp!!.edit().putBoolean(context.getString(R.string.storage_use_saf), !isFireTv
             ).apply()
         }
     }

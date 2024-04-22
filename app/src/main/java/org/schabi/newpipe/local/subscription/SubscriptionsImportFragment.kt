@@ -54,7 +54,7 @@ class SubscriptionsImportFragment : BaseFragment() {
     private var inputButton: Button? = null
 
     private val requestImportFileLauncher =
-        registerForActivityResult<Intent, ActivityResult>(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             this.requestImportFileResult(result)
         }
 
@@ -71,10 +71,8 @@ class SubscriptionsImportFragment : BaseFragment() {
         setupServiceVariables()
         if (supportedSources!!.isEmpty() && currentServiceId != NO_SERVICE_ID) {
             showSnackbar(requireActivity(),
-                ErrorInfo(arrayOf(), UserAction.SUBSCRIPTION_IMPORT_EXPORT,
-                    getNameOfServiceById(currentServiceId),
-                    "Service does not support importing subscriptions",
-                    R.string.general_error))
+                ErrorInfo(arrayOf(), UserAction.SUBSCRIPTION_IMPORT_EXPORT, getNameOfServiceById(currentServiceId),
+                    "Service does not support importing subscriptions", R.string.general_error))
             requireActivity().finish()
         }
     }
@@ -84,10 +82,7 @@ class SubscriptionsImportFragment : BaseFragment() {
         setTitle(getString(R.string.import_title))
     }
 
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_import, container, false)
     }
 
@@ -137,7 +132,7 @@ class SubscriptionsImportFragment : BaseFragment() {
     private fun onImportClicked() {
         if (inputText!!.visibility == View.VISIBLE) {
             val value = inputText!!.text.toString()
-            if (!value.isEmpty()) {
+            if (value.isNotEmpty()) {
                 onImportUrl(value)
             }
         } else {
@@ -153,19 +148,13 @@ class SubscriptionsImportFragment : BaseFragment() {
     }
 
     fun onImportFile() {
-        launchSafe(
-            requestImportFileLauncher,  // leave */* mime type to support all services
-            // with different mime types and file extensions
-            getPicker(requireActivity(), "*/*"),
-            TAG,
-            context
-        )
+        // leave */* mime type to support all services
+        // with different mime types and file extensions
+        launchSafe(requestImportFileLauncher, getPicker(requireActivity(), "*/*"), TAG, context)
     }
 
     private fun requestImportFileResult(result: ActivityResult) {
-        if (result.data == null) {
-            return
-        }
+        if (result.data == null) return
 
         if (result.resultCode == Activity.RESULT_OK && result.data!!.data != null) {
             show(this,
@@ -182,8 +171,7 @@ class SubscriptionsImportFragment : BaseFragment() {
     private fun setupServiceVariables() {
         if (currentServiceId != NO_SERVICE_ID) {
             try {
-                val extractor = NewPipe.getService(currentServiceId)
-                    .subscriptionExtractor
+                val extractor = NewPipe.getService(currentServiceId).subscriptionExtractor
                 supportedSources = extractor.supportedSources
                 relatedUrl = extractor.relatedUrl
                 instructionsString = getImportInstructions(currentServiceId)

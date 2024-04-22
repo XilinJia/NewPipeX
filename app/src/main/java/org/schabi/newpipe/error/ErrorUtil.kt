@@ -142,10 +142,10 @@ class ErrorUtil {
 
         private fun showSnackbar(context: Context, rootView: View?, errorInfo: ErrorInfo) {
 //            Log.d("ErrorUtil", "${errorInfo}}")
-//            if (errorInfo.stackTraces.isNotEmpty()) Log.d("ErrorUtil", "Trace[0]: ${errorInfo.stackTraces[0]}")
-            for (i in errorInfo.stackTraces) {
-                Log.d("ErrorUtil", "Trace: ${i.substringBefore('\n')}")
-            }
+            if (errorInfo.stackTraces.isNotEmpty()) Log.d("ErrorUtil", "Trace[0]: ${errorInfo.stackTraces[0]}")
+//            for (i in errorInfo.stackTraces) {
+//                Log.d("ErrorUtil", "Trace: ${i.substringBefore('\n')}")
+//            }
             if (rootView == null) {
                 // fallback to showing a notification if no root view is available
                 createNotification(context, errorInfo)

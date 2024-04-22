@@ -33,29 +33,21 @@ object PermissionHelper {
         return checkWriteStoragePermissions(activity, requestCode)
     }
 
-    fun checkReadStoragePermissions(activity: Activity?,
-                                    requestCode: Int
-    ): Boolean {
-        if (ContextCompat.checkSelfPermission(activity!!, Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity,
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE),
-                requestCode)
+    fun checkReadStoragePermissions(activity: Activity?, requestCode: Int): Boolean {
+        if (Build.VERSION.SDK_INT>= Build.VERSION_CODES.TIRAMISU) return true
 
+        if (ContextCompat.checkSelfPermission(activity!!, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE), requestCode)
             return false
         }
         return true
     }
 
 
-    fun checkWriteStoragePermissions(activity: Activity?,
-                                     requestCode: Int
-    ): Boolean {
+    fun checkWriteStoragePermissions(activity: Activity?, requestCode: Int): Boolean {
+        if (Build.VERSION.SDK_INT>= Build.VERSION_CODES.TIRAMISU) return true
         // Here, thisActivity is the current activity
-        if (ContextCompat.checkSelfPermission(activity!!,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(activity!!, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             // Should we show an explanation?
             /*if (ActivityCompat.shouldShowRequestPermissionRationale(activity,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -67,8 +59,7 @@ object PermissionHelper {
 
             // No explanation needed, we can request the permission.
 
-            ActivityCompat.requestPermissions(activity,
-                arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), requestCode)
+            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), requestCode)
 
             // PERMISSION_WRITE_STORAGE is an
             // app-defined int constant. The callback method gets the
@@ -80,15 +71,10 @@ object PermissionHelper {
     }
 
     @JvmStatic
-    fun checkPostNotificationsPermission(activity: Activity?,
-                                         requestCode: Int
-    ): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                && ContextCompat.checkSelfPermission(activity!!,
-                    Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(activity,
-                arrayOf(Manifest.permission.POST_NOTIFICATIONS), requestCode)
+    fun checkPostNotificationsPermission(activity: Activity?, requestCode: Int): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(activity!!, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.POST_NOTIFICATIONS), requestCode)
             return false
         }
         return true
@@ -139,8 +125,7 @@ object PermissionHelper {
      */
     @JvmStatic
     fun isPopupEnabledElseAsk(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
-                || checkSystemAlertWindowPermission(context)) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || checkSystemAlertWindowPermission(context)) {
             return true
         } else {
             Toast.makeText(context, R.string.msg_popup_permission, Toast.LENGTH_LONG).show()

@@ -46,7 +46,7 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
 
     override fun initViews(rootView: View, savedInstanceState: Bundle?) {
         super.initViews(rootView, savedInstanceState)
-        setTitle(name!!)
+        setTitle(name?:"")
         showListFooter(hasMoreItems())
     }
 
@@ -59,11 +59,8 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
         super.onResume()
         // Check if it was loading when the fragment was stopped/paused,
         if (wasLoading.getAndSet(false)) {
-            if (hasMoreItems() && !infoListAdapter!!.itemsList.isEmpty()) {
-                loadMoreItems()
-            } else {
-                doInitialLoadLogic()
-            }
+            if (hasMoreItems() && infoListAdapter!!.itemsList.isNotEmpty()) loadMoreItems()
+            else doInitialLoadLogic()
         }
     }
 
@@ -96,11 +93,8 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
         if (DEBUG) {
             Log.d(TAG, "doInitialLoadLogic() called")
         }
-        if (currentInfo == null) {
-            startLoading(false)
-        } else {
-            handleResult(currentInfo!!)
-        }
+        if (currentInfo == null) startLoading(false)
+        else handleResult(currentInfo!!)
     }
 
     /**
@@ -126,7 +120,7 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
             .subscribe({ result: L ->
                 isLoading.set(false)
                 currentInfo = result
-                currentNextPage = result!!.nextPage
+                currentNextPage = result.nextPage
                 handleResult(result)
             }, { throwable: Throwable? ->
                 showError(ErrorInfo(throwable!!, errorUserAction, "Start loading: $url", serviceId))
@@ -156,8 +150,7 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
                 isLoading.set(false)
                 handleNextItems(infoItemsPage)
             }, { throwable: Throwable ->
-                dynamicallyShowErrorPanelOrSnackbar(ErrorInfo(throwable,
-                    errorUserAction, "Loading more items: $url", serviceId))
+                dynamicallyShowErrorPanelOrSnackbar(ErrorInfo(throwable, errorUserAction, "Loading more items: $url", serviceId))
             })
     }
 
@@ -231,11 +224,8 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
         // show "no streams" for SoundCloud; otherwise "no videos"
         // showing "no live streams" is handled in KioskFragment
         if (emptyStateView != null) {
-            if (currentInfo!!.service === ServiceList.SoundCloud) {
-                setEmptyStateMessage(R.string.no_streams)
-            } else {
-                setEmptyStateMessage(R.string.no_videos)
-            }
+            if (currentInfo!!.service === ServiceList.SoundCloud) setEmptyStateMessage(R.string.no_streams)
+            else setEmptyStateMessage(R.string.no_videos)
         }
         super.showEmptyState()
     }

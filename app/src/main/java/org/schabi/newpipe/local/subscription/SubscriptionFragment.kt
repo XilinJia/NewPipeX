@@ -17,10 +17,12 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult
+import androidx.annotation.OptIn
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
+import androidx.media3.common.util.UnstableApi
 import androidx.recyclerview.widget.GridLayoutManager
 import com.xwray.groupie.Group
 import com.xwray.groupie.GroupAdapter
@@ -70,7 +72,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.*
 
-class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
+@UnstableApi class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     private var _binding: FragmentSubscriptionBinding? = null
     private val binding get() = _binding!!
 
@@ -110,11 +112,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         subscriptionManager = SubscriptionManager(requireContext())
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         fm = requireActivity().supportFragmentManager
         return inflater.inflate(R.layout.fragment_subscription, container, false)
     }
@@ -140,10 +138,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     // ////////////////////////////////////////////////////////////////////////
 
     @SuppressLint("UseRequireInsteadOfGet")
-    override fun onCreateOptionsMenu(
-        menu: Menu,
-        inflater: MenuInflater,
-    ) {
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
 
         activity!!.supportActionBar?.setDisplayShowTitleEnabled(true)
@@ -178,56 +173,35 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
             .setIcon(R.drawable.ic_save)
     }
 
-    private fun addMenuItemToSubmenu(
-        subMenu: SubMenu,
-        @StringRes title: Int,
-        onClick: Runnable,
-    ): MenuItem {
+    private fun addMenuItemToSubmenu(subMenu: SubMenu, @StringRes title: Int, onClick: Runnable): MenuItem {
         return setClickListenerToMenuItem(subMenu.add(title), onClick)
     }
 
-    private fun addMenuItemToSubmenu(
-        subMenu: SubMenu,
-        title: String,
-        onClick: Runnable,
-    ): MenuItem {
+    private fun addMenuItemToSubmenu(subMenu: SubMenu, title: String, onClick: Runnable): MenuItem {
         return setClickListenerToMenuItem(subMenu.add(title), onClick)
     }
 
-    private fun setClickListenerToMenuItem(
-        menuItem: MenuItem,
-        onClick: Runnable,
-    ): MenuItem {
-        menuItem.setOnMenuItemClickListener {
-            onClick.run()
-            true
-        }
+    private fun setClickListenerToMenuItem(menuItem: MenuItem, onClick: Runnable): MenuItem {
+        menuItem.setOnMenuItemClickListener { onClick.run(); true }
         return menuItem
     }
 
-    private fun onImportFromServiceSelected(serviceId: Int) {
+    @OptIn(UnstableApi::class) private fun onImportFromServiceSelected(serviceId: Int) {
         val fragmentManager = fm
         NavigationHelper.openSubscriptionsImportFragment(fragmentManager, serviceId)
     }
 
     private fun onImportPreviousSelected() {
-        NoFileManagerSafeGuard.launchSafe(
-            requestImportLauncher,
-            StoredFileHelper.getPicker(requireContext(), JSON_MIME_TYPE),
-            TAG,
-            requireContext(),
-        )
+        NoFileManagerSafeGuard.launchSafe(requestImportLauncher, StoredFileHelper.getPicker(requireContext(), JSON_MIME_TYPE), TAG, requireContext())
     }
 
     private fun onExportSelected() {
         val date = SimpleDateFormat("yyyyMMddHHmm", Locale.ENGLISH).format(Date())
         val exportName = "newpipe_subscriptions_$date.json"
 
-        NoFileManagerSafeGuard.launchSafe(
-            requestExportLauncher,
+        NoFileManagerSafeGuard.launchSafe(requestExportLauncher,
             StoredFileHelper.getNewPicker(requireActivity(), exportName, JSON_MIME_TYPE, null),
-            TAG,
-            requireContext(),
+            TAG, requireContext(),
         )
     }
 
@@ -238,17 +212,15 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     @SuppressLint("UseRequireInsteadOfGet")
     private fun requestExportResult(result: ActivityResult) {
         if (result.data != null && result.resultCode == Activity.RESULT_OK) {
-            activity!!.startService(
-                Intent(activity, SubscriptionsExportService::class.java)
-                    .putExtra(SubscriptionsExportService.KEY_FILE_PATH, result.data?.data),
+            activity!!.startService(Intent(activity, SubscriptionsExportService::class.java)
+                .putExtra(SubscriptionsExportService.KEY_FILE_PATH, result.data?.data),
             )
         }
     }
 
     private fun requestImportResult(result: ActivityResult) {
         if (result.data != null && result.resultCode == Activity.RESULT_OK) {
-            ImportConfirmationDialog.show(
-                this,
+            ImportConfirmationDialog.show(this,
                 Intent(activity, SubscriptionsImportService::class.java)
                     .putExtra(KEY_MODE, PREVIOUS_EXPORT_MODE)
                     .putExtra(KEY_VALUE, result.data?.data),
@@ -289,45 +261,29 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
 
             carouselAdapter.setOnItemClickListener { item, _ ->
                 when (item) {
-                    is FeedGroupCardItem ->
-                        NavigationHelper.openFeedFragment(fm, item.groupId, item.name)
-                    is FeedGroupCardGridItem ->
-                        NavigationHelper.openFeedFragment(fm, item.groupId, item.name)
-                    is FeedGroupAddNewItem ->
-                        FeedGroupDialog.newInstance().show(fm, null)
-                    is FeedGroupAddNewGridItem ->
-                        FeedGroupDialog.newInstance().show(fm, null)
+                    is FeedGroupCardItem -> NavigationHelper.openFeedFragment(fm, item.groupId, item.name)
+                    is FeedGroupCardGridItem -> NavigationHelper.openFeedFragment(fm, item.groupId, item.name)
+                    is FeedGroupAddNewItem -> FeedGroupDialog.newInstance().show(fm, null)
+                    is FeedGroupAddNewGridItem -> FeedGroupDialog.newInstance().show(fm, null)
                 }
             }
             carouselAdapter.setOnItemLongClickListener { item, _ ->
-                if ((item is FeedGroupCardItem && item.groupId == GROUP_ALL_ID) ||
-                    (item is FeedGroupCardGridItem && item.groupId == GROUP_ALL_ID)
-                ) {
+                if ((item is FeedGroupCardItem && item.groupId == GROUP_ALL_ID) || (item is FeedGroupCardGridItem && item.groupId == GROUP_ALL_ID)) {
                     return@setOnItemLongClickListener false
                 }
 
                 when (item) {
-                    is FeedGroupCardItem ->
-                        FeedGroupDialog.newInstance(item.groupId).show(fm, null)
-                    is FeedGroupCardGridItem ->
-                        FeedGroupDialog.newInstance(item.groupId).show(fm, null)
+                    is FeedGroupCardItem -> FeedGroupDialog.newInstance(item.groupId).show(fm, null)
+                    is FeedGroupCardGridItem -> FeedGroupDialog.newInstance(item.groupId).show(fm, null)
                 }
                 return@setOnItemLongClickListener true
             }
 
             feedGroupsCarousel =
-                FeedGroupCarouselItem(
-                    carouselAdapter = carouselAdapter,
-                    listViewMode = viewModel.getListViewMode(),
-                )
+                FeedGroupCarouselItem(carouselAdapter = carouselAdapter, listViewMode = viewModel.getListViewMode())
 
             feedGroupsSortMenuItem =
-                GroupsHeader(
-                    title = getString(R.string.feed_groups_header_title),
-                    onSortClicked = ::openReorderDialog,
-                    onToggleListViewModeClicked = ::toggleListViewMode,
-                    listViewMode = viewModel.getListViewMode(),
-                )
+                GroupsHeader(title = getString(R.string.feed_groups_header_title), onSortClicked = ::openReorderDialog, onToggleListViewModeClicked = ::toggleListViewMode, listViewMode = viewModel.getListViewMode())
 
             add(Section(feedGroupsSortMenuItem, listOf(feedGroupsCarousel)))
             groupAdapter.clear()
@@ -337,12 +293,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         subscriptionsSection.setPlaceholder(ImportSubscriptionsHintPlaceholderItem())
         subscriptionsSection.setHideWhenEmpty(true)
 
-        groupAdapter.add(
-            Section(
-                Header(getString(R.string.tab_subscriptions)),
-                listOf(subscriptionsSection),
-            ),
-        )
+        groupAdapter.add(Section(Header(getString(R.string.tab_subscriptions)), listOf(subscriptionsSection)))
     }
 
     private fun toggleListViewMode() {
@@ -350,23 +301,13 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     }
 
     private fun showLongTapDialog(selectedItem: ChannelInfoItem) {
-        val commands =
-            arrayOf(
-                getString(R.string.share),
-                getString(R.string.open_in_browser),
-                getString(R.string.unsubscribe),
-            )
+        val commands = arrayOf(getString(R.string.share), getString(R.string.open_in_browser), getString(R.string.unsubscribe))
 
         val actions =
             DialogInterface.OnClickListener { _, i ->
                 when (i) {
                     0 ->
-                        ShareUtils.shareText(
-                            requireContext(),
-                            selectedItem.name,
-                            selectedItem.url,
-                            selectedItem.thumbnails,
-                        )
+                        ShareUtils.shareText(requireContext(), selectedItem.name, selectedItem.url, selectedItem.thumbnails)
                     1 -> ShareUtils.openUrlInBrowser(requireContext(), selectedItem.url)
                     2 -> deleteChannel(selectedItem)
                 }
@@ -398,13 +339,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     private val listenerChannelItem =
         object : OnClickGesture<ChannelInfoItem> {
             override fun selected(selectedItem: ChannelInfoItem) =
-                NavigationHelper.openChannelFragment(
-                    fm,
-                    selectedItem.serviceId,
-                    selectedItem.url,
-                    selectedItem.name,
-                )
-
+                NavigationHelper.openChannelFragment(fm, selectedItem.serviceId, selectedItem.url, selectedItem.name)
             override fun held(selectedItem: ChannelInfoItem) = showLongTapDialog(selectedItem)
         }
 
@@ -417,11 +352,8 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
                     if (it is ChannelItem) {
                         it.gesturesListener = listenerChannelItem
                         it.itemVersion =
-                            if (SubscriptionViewModel.shouldUseGridForSubscription(requireContext())) {
-                                ChannelItem.ItemVersion.GRID
-                            } else {
-                                ChannelItem.ItemVersion.MINI
-                            }
+                            if (SubscriptionViewModel.shouldUseGridForSubscription(requireContext())) ChannelItem.ItemVersion.GRID
+                            else ChannelItem.ItemVersion.MINI
                     }
                 }
 
@@ -493,6 +425,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
     }
 
     companion object {
-        const val JSON_MIME_TYPE = "application/json"
+//        const val JSON_MIME_TYPE = "application/json"
+        const val JSON_MIME_TYPE = "*/*"    // TODO: some file pickers don't recognize this
     }
 }

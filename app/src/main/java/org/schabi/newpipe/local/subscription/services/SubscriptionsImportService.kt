@@ -63,9 +63,7 @@ class SubscriptionsImportService : BaseImportExportService() {
     private var inputStreamType: String? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent == null || subscription != null) {
-            return START_NOT_STICKY
-        }
+        if (intent == null || subscription != null) return START_NOT_STICKY
 
         currentMode = intent.getIntExtra(KEY_MODE, -1)
         currentServiceId = intent.getIntExtra(KEY_SERVICE_ID, NO_SERVICE_ID)
@@ -75,9 +73,7 @@ class SubscriptionsImportService : BaseImportExportService() {
         } else {
             val uri = IntentCompat.getParcelableExtra(intent, KEY_VALUE, Uri::class.java)
             if (uri == null) {
-                stopAndReportError(IllegalStateException(
-                    "Importing from input stream, but file path is null"),
-                    "Importing subscriptions")
+                stopAndReportError(IllegalStateException("Importing from input stream, but file path is null"), "Importing subscriptions")
                 return START_NOT_STICKY
             }
 
@@ -103,12 +99,8 @@ class SubscriptionsImportService : BaseImportExportService() {
         }
 
         if (currentMode == -1 || currentMode == CHANNEL_URL_MODE && channelUrl == null) {
-            val errorDescription = ("Some important field is null or in illegal state: "
-                    + "currentMode=[" + currentMode + "], "
-                    + "channelUrl=[" + channelUrl + "], "
-                    + "inputStream=[" + inputStream + "]")
-            stopAndReportError(IllegalStateException(errorDescription),
-                "Importing subscriptions")
+            val errorDescription = ("Some important field is null or in illegal state: currentMode=[$currentMode], channelUrl=[$channelUrl], inputStream=[$inputStream]")
+            stopAndReportError(IllegalStateException(errorDescription), "Importing subscriptions")
             return START_NOT_STICKY
         }
 
@@ -124,9 +116,7 @@ class SubscriptionsImportService : BaseImportExportService() {
 
     override fun disposeAll() {
         super.disposeAll()
-        if (subscription != null) {
-            subscription!!.cancel()
-        }
+        subscription?.cancel()
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -142,8 +132,7 @@ class SubscriptionsImportService : BaseImportExportService() {
             PREVIOUS_EXPORT_MODE -> flowable = importFromPreviousExport()
         }
         if (flowable == null) {
-            val message = ("Flowable given by \"importFrom\" is null "
-                    + "(current mode: " + currentMode + ")")
+            val message = ("Flowable given by \"importFrom\" is null (current mode: $currentMode)")
             stopAndReportError(IllegalStateException(message), "Importing subscriptions")
             return
         }
@@ -151,37 +140,28 @@ class SubscriptionsImportService : BaseImportExportService() {
         flowable.doOnNext(Consumer { subscriptionItems: List<SubscriptionItem?> ->
             eventListener.onSizeReceived(subscriptionItems.size)
         })
-            .flatMap(Function<List<SubscriptionItem?>, Publisher<out SubscriptionItem>> { source: List<SubscriptionItem?> ->
+            .flatMap { source: List<SubscriptionItem?> ->
                 Flowable.fromIterable(source.filterNotNull())
-            })
+            }
 
             .parallel(PARALLEL_EXTRACTIONS)
             .runOn(Schedulers.io())
             .map(
                 Function { subscriptionItem: SubscriptionItem ->
                     try {
-                        val channelInfo = getChannelInfo(subscriptionItem.serviceId,
-                            subscriptionItem.url, true)
-                            .blockingGet()
+                        val channelInfo = getChannelInfo(subscriptionItem.serviceId, subscriptionItem.url, true).blockingGet()
                         return@Function Notification.createOnNext<Pair<ChannelInfo, List<ChannelTabInfo>>>(Pair<ChannelInfo, List<ChannelTabInfo>>(
                             channelInfo,
-                            listOf<ChannelTabInfo>(
-                                getChannelTab(
-                                    subscriptionItem.serviceId,
-                                    channelInfo.tabs[0], true).blockingGet()
-                            )))
+                            listOf<ChannelTabInfo>(getChannelTab(subscriptionItem.serviceId, channelInfo.tabs[0], true).blockingGet())))
                     } catch (e: Throwable) {
                         return@Function Notification.createOnError<Pair<ChannelInfo, List<ChannelTabInfo>>>(e)
                     }
                 })
             .sequential()
-
             .observeOn(Schedulers.io())
             .doOnNext(notificationsConsumer)
-
             .buffer(BUFFER_COUNT_BEFORE_INSERT)
             .map(upsertBatch())
-
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(subscriber)
@@ -196,8 +176,7 @@ class SubscriptionsImportService : BaseImportExportService() {
 
             override fun onNext(successfulInserted: List<SubscriptionEntity>) {
                 if (MainActivity.DEBUG) {
-                    Log.d(TAG, "startImport() " + successfulInserted.size
-                            + " items successfully inserted into the database")
+                    Log.d(TAG, "startImport() ${successfulInserted.size} items successfully inserted into the database")
                 }
             }
 
@@ -208,7 +187,7 @@ class SubscriptionsImportService : BaseImportExportService() {
 
             override fun onComplete() {
                 LocalBroadcastManager.getInstance(this@SubscriptionsImportService)
-                    .sendBroadcast(Intent(IMPORT_COMPLETE_ACTION))
+                    .sendBroadcast(Intent(IMPORT_COMPLETE_ACTION).setPackage(getPackageName()))
                 showToast(R.string.import_complete_toast)
                 stopService()
             }
@@ -216,28 +195,33 @@ class SubscriptionsImportService : BaseImportExportService() {
 
     private val notificationsConsumer: Consumer<Notification<Pair<ChannelInfo, List<ChannelTabInfo>>>>
         get() = Consumer { notification: Notification<Pair<ChannelInfo, List<ChannelTabInfo>>> ->
-            if (notification.isOnNext) {
-                val name = notification.value!!.first.name
-                eventListener.onItemCompleted(if (!TextUtils.isEmpty(name)) name else "")
-            } else if (notification.isOnError) {
-                val error = notification.error
-                val cause = error!!.cause
-                if (error is IOException) {
-                    throw error
-                } else if (cause is IOException) {
-                    throw cause
-                } else if (error.isNetworkRelated) {
-                    throw IOException(error)
+            when {
+                notification.isOnNext -> {
+                    val name = notification.value!!.first.name
+                    eventListener.onItemCompleted(if (!TextUtils.isEmpty(name)) name else "")
                 }
-
-                eventListener.onItemCompleted("")
+                notification.isOnError -> {
+                    val error = notification.error
+                    val cause = error!!.cause
+                    when {
+                        error is IOException -> {
+                            throw error
+                        }
+                        cause is IOException -> {
+                            throw cause
+                        }
+                        error.isNetworkRelated -> {
+                            throw IOException(error)
+                        }
+                        else -> eventListener.onItemCompleted("")
+                    }
+                }
             }
         }
 
     private fun upsertBatch(): Function<List<Notification<Pair<ChannelInfo, List<ChannelTabInfo>>>>, List<SubscriptionEntity>> {
         return Function { notificationList: List<Notification<Pair<ChannelInfo, List<ChannelTabInfo>>>> ->
-            val infoList: MutableList<Pair<ChannelInfo, List<ChannelTabInfo>>> =
-                ArrayList(notificationList.size)
+            val infoList: MutableList<Pair<ChannelInfo, List<ChannelTabInfo>>> = ArrayList(notificationList.size)
             for (n in notificationList) {
                 if (n.isOnNext) {
                     infoList.add(n.value!!)
@@ -285,8 +269,7 @@ class SubscriptionsImportService : BaseImportExportService() {
          * A [local broadcast][LocalBroadcastManager] will be made with this action
          * when the import is successfully completed.
          */
-        const val IMPORT_COMPLETE_ACTION: String = (App.PACKAGE_NAME + ".local.subscription"
-                + ".services.SubscriptionsImportService.IMPORT_COMPLETE")
+        const val IMPORT_COMPLETE_ACTION: String = ("${App.PACKAGE_NAME}.local.subscription.services.SubscriptionsImportService.IMPORT_COMPLETE")
 
         /**
          * How many extractions running in parallel.

@@ -1,4 +1,4 @@
-/*
+ /*
  * Created by Christian Schabesberger on 02.08.16.
  * <p>
  * Copyright (C) Christian Schabesberger 2016 <chris.schabesberger@mailbox.org>
@@ -37,6 +37,7 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener
 import androidx.fragment.app.FragmentManager
+import androidx.media3.common.util.UnstableApi
 import androidx.preference.PreferenceManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
@@ -93,7 +94,7 @@ import org.schabi.newpipe.util.ThemeHelper.setDayNightMode
 import org.schabi.newpipe.util.ThemeHelper.setTheme
 import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
 
-class MainActivity : AppCompatActivity() {
+ @UnstableApi class MainActivity : AppCompatActivity() {
     private var mainBinding: ActivityMainBinding? = null
     private var drawerHeaderBinding: DrawerHeaderBinding? = null
     private var drawerLayoutBinding: DrawerLayoutBinding? = null

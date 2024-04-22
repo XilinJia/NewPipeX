@@ -27,7 +27,6 @@ object NoFileManagerSafeGuard {
                 context.getString(R.string.downloads_storage_use_saf_title))
         }
 
-
         AlertDialog.Builder(context)
             .setTitle(R.string.no_app_to_open_intent)
             .setMessage(message)
@@ -49,12 +48,7 @@ object NoFileManagerSafeGuard {
      * @param <I> see [ActivityResultLauncher.launch]
     </I> */
     @JvmStatic
-    fun <I> launchSafe(
-            activityResultLauncher: ActivityResultLauncher<I>,
-            input: I,
-            tag: String?,
-            context: Context?
-    ) {
+    fun <I> launchSafe(activityResultLauncher: ActivityResultLauncher<I>, input: I, tag: String?, context: Context?) {
         try {
             activityResultLauncher.launch(input)
         } catch (aex: ActivityNotFoundException) {

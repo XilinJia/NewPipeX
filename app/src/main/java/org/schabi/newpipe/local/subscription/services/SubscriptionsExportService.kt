@@ -45,15 +45,11 @@ class SubscriptionsExportService : BaseImportExportService() {
     private var outputStream: OutputStream? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent == null || subscription != null) {
-            return START_NOT_STICKY
-        }
+        if (intent == null || subscription != null) return START_NOT_STICKY
 
         val path = IntentCompat.getParcelableExtra(intent, KEY_FILE_PATH, Uri::class.java)
         if (path == null) {
-            stopAndReportError(IllegalStateException(
-                "Exporting to a file, but the path is null"),
-                "Exporting subscriptions")
+            stopAndReportError(IllegalStateException("Exporting to a file, but the path is null"), "Exporting subscriptions")
             return START_NOT_STICKY
         }
 
@@ -78,9 +74,7 @@ class SubscriptionsExportService : BaseImportExportService() {
 
     override fun disposeAll() {
         super.disposeAll()
-        if (subscription != null) {
-            subscription!!.cancel()
-        }
+        subscription?.cancel()
     }
 
     private fun startExport() {
@@ -88,11 +82,9 @@ class SubscriptionsExportService : BaseImportExportService() {
 
         subscriptionManager!!.subscriptionTable().getAll().take(1)
             .map<List<SubscriptionItem>> { subscriptionEntities: List<SubscriptionEntity> ->
-                val result: MutableList<SubscriptionItem> =
-                    ArrayList(subscriptionEntities.size)
+                val result: MutableList<SubscriptionItem> = ArrayList(subscriptionEntities.size)
                 for (entity in subscriptionEntities) {
-                    result.add(SubscriptionItem(entity.serviceId, entity.url,
-                        entity.name))
+                    result.add(SubscriptionItem(entity.serviceId, entity.url, entity.name))
                 }
                 result
             }
@@ -122,7 +114,7 @@ class SubscriptionsExportService : BaseImportExportService() {
 
             override fun onComplete() {
                 LocalBroadcastManager.getInstance(this@SubscriptionsExportService)
-                    .sendBroadcast(Intent(EXPORT_COMPLETE_ACTION))
+                    .sendBroadcast(Intent(EXPORT_COMPLETE_ACTION).setPackage(getPackageName()))
                 showToast(R.string.export_complete_toast)
                 stopService()
             }
@@ -130,7 +122,7 @@ class SubscriptionsExportService : BaseImportExportService() {
 
     private fun exportToFile(): Function<List<SubscriptionItem>, StoredFileHelper> {
         return Function { subscriptionItems: List<SubscriptionItem>? ->
-            writeTo(subscriptionItems!!, outputStream, eventListener)
+            if (subscriptionItems != null) writeTo(subscriptionItems, outputStream, eventListener)
             outFile!!
         }
     }
@@ -146,7 +138,6 @@ class SubscriptionsExportService : BaseImportExportService() {
          * A [local broadcast][LocalBroadcastManager] will be made with this action
          * when the export is successfully completed.
          */
-        const val EXPORT_COMPLETE_ACTION: String = (App.PACKAGE_NAME + ".local.subscription"
-                + ".services.SubscriptionsExportService.EXPORT_COMPLETE")
+        const val EXPORT_COMPLETE_ACTION: String = ("${App.PACKAGE_NAME}.local.subscription.services.SubscriptionsExportService.EXPORT_COMPLETE")
     }
 }

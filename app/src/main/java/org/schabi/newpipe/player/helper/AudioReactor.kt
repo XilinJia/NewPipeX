@@ -122,11 +122,9 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
     }
 
     private fun notifyAudioSessionUpdate(active: Boolean, audioSessionId: Int) {
-        if (!PlayerHelper.isUsingDSP) {
-            return
-        }
-        val intent = Intent(if (active
-        ) AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION
+        if (!PlayerHelper.isUsingDSP) return
+
+        val intent = Intent(if (active) AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION
         else AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION)
         intent.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, audioSessionId)
         intent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)

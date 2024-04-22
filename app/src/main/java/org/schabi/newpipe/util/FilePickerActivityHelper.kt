@@ -23,34 +23,23 @@ class FilePickerActivityHelper : FilePickerActivity() {
     private var currentFragment: CustomFilePickerFragment? = null
 
     public override fun onCreate(savedInstanceState: Bundle?) {
-        if (ThemeHelper.isLightThemeSelected(this)) {
-            this.setTheme(R.style.FilePickerThemeLight)
-        } else {
-            this.setTheme(R.style.FilePickerThemeDark)
-        }
+        if (ThemeHelper.isLightThemeSelected(this)) this.setTheme(R.style.FilePickerThemeLight)
+        else this.setTheme(R.style.FilePickerThemeDark)
+
         super.onCreate(savedInstanceState)
     }
 
     override fun onBackPressed() {
         // If at top most level, normal behaviour
-        if (currentFragment!!.isBackTop()) {
-            super.onBackPressed()
-        } else {
-            // Else go up
-            currentFragment!!.goUp()
-        }
+        if (currentFragment!!.isBackTop()) super.onBackPressed()
+        else currentFragment!!.goUp()    // Else go up
     }
 
-    override fun getFragment(startPath: String?,
-                             mode: Int,
-                             allowMultiple: Boolean,
-                             allowCreateDir: Boolean,
-                             allowExistingFile: Boolean,
-                             singleClick: Boolean
-    ): AbstractFilePickerFragment<File> {
+    override fun getFragment(startPath: String?, mode: Int, allowMultiple: Boolean, allowCreateDir: Boolean, allowExistingFile: Boolean, singleClick: Boolean)
+    : AbstractFilePickerFragment<File> {
+
         val fragment = CustomFilePickerFragment()
-        fragment.setArgs(startPath ?: Environment.getExternalStorageDirectory().path,
-            mode, allowMultiple, allowCreateDir, allowExistingFile, singleClick)
+        fragment.setArgs(startPath ?: Environment.getExternalStorageDirectory().path, mode, allowMultiple, allowCreateDir, allowExistingFile, singleClick)
         currentFragment = fragment
         return currentFragment!!
     }
@@ -59,33 +48,21 @@ class FilePickerActivityHelper : FilePickerActivity() {
     // Internal
     ////////////////////////////////////////////////////////////////////////// */
     class CustomFilePickerFragment : FilePickerFragment() {
-        override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                                  savedInstanceState: Bundle?
-        ): View? {
-            return super.onCreateView(inflater, container, savedInstanceState)
-        }
 
-        override fun onCreateViewHolder(parent: ViewGroup,
-                                        viewType: Int
-        ): RecyclerView.ViewHolder {
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val viewHolder = super.onCreateViewHolder(parent, viewType)
 
             val view = viewHolder.itemView.findViewById<View>(android.R.id.text1)
-            if (view is TextView) {
-                view.setTextSize(TypedValue.COMPLEX_UNIT_PX,
-                    resources.getDimension(R.dimen.file_picker_items_text_size))
-            }
+            if (view is TextView) view.setTextSize(TypedValue.COMPLEX_UNIT_PX, resources.getDimension(R.dimen.file_picker_items_text_size))
 
             return viewHolder
         }
 
         override fun onClickOk(view: View) {
             if (mode == MODE_NEW_FILE && newFileName.isEmpty()) {
-                if (mToast != null) {
-                    mToast.cancel()
-                }
-                mToast = Toast.makeText(activity, R.string.file_name_empty_error,
-                    Toast.LENGTH_SHORT)
+                if (mToast != null) mToast.cancel()
+
+                mToast = Toast.makeText(activity, R.string.file_name_empty_error, Toast.LENGTH_SHORT)
                 mToast.show()
                 return
             }
@@ -94,34 +71,26 @@ class FilePickerActivityHelper : FilePickerActivity() {
         }
 
         override fun isItemVisible(file: File): Boolean {
-            if (file.isDirectory && file.isHidden) {
-                return true
-            }
+            if (file.isDirectory && file.isHidden) return true
+
             return super.isItemVisible(file)
         }
 
         val backTop: File
             get() {
-                if (arguments == null) {
-                    return Environment.getExternalStorageDirectory()
-                }
+                if (arguments == null) return Environment.getExternalStorageDirectory()
 
-                val path = arguments!!.getString(KEY_START_PATH, "/")
-                if (path.contains(Environment.getExternalStorageDirectory().path)) {
-                    return Environment.getExternalStorageDirectory()
-                }
+                val path = requireArguments().getString(KEY_START_PATH, "/")
+                if (path.contains(Environment.getExternalStorageDirectory().path)) return Environment.getExternalStorageDirectory()
 
                 return getPath(path)
             }
 
         fun isBackTop(): Boolean {
-            return compareFiles(mCurrentPath,
-                backTop) == 0 || compareFiles(mCurrentPath, File("/")) == 0
+            return compareFiles(mCurrentPath, backTop) == 0 || compareFiles(mCurrentPath, File("/")) == 0
         }
 
-        override fun onLoadFinished(loader: Loader<SortedList<File>>,
-                                    data: SortedList<File>
-        ) {
+        override fun onLoadFinished(loader: Loader<SortedList<File>>, data: SortedList<File>) {
             super.onLoadFinished(loader, data)
             layoutManager.scrollToPosition(0)
         }
@@ -130,9 +99,8 @@ class FilePickerActivityHelper : FilePickerActivity() {
     companion object {
         @JvmStatic
         fun isOwnFileUri(context: Context, uri: Uri): Boolean {
-            if (uri.authority == null) {
-                return false
-            }
+            if (uri.authority == null) return false
+
             return uri.authority!!.startsWith(context.packageName)
         }
     }

@@ -23,7 +23,6 @@ import org.schabi.newpipe.ExitActivity.Companion.exitAndRemoveFromRecentApps
 * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
 */
 class PanicResponderActivity : Activity() {
-    @SuppressLint("NewApi")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val intent = intent

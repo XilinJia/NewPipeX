@@ -88,11 +88,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     }
 
     @JvmStatic
-    fun <T> getPlayerIntent(context: Context,
-                            targetClazz: Class<T>,
-                            playQueue: PlayQueue?,
-                            resumePlayback: Boolean,
-                            playWhenReady: Boolean): Intent {
+    fun <T> getPlayerIntent(context: Context, targetClazz: Class<T>, playQueue: PlayQueue?, resumePlayback: Boolean, playWhenReady: Boolean): Intent {
         return getPlayerIntent(context, targetClazz, playQueue, resumePlayback)
             .putExtra(Player.PLAY_WHEN_READY, playWhenReady)
     }
@@ -105,14 +101,12 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         //   slightly different behaviour than the normal play action: the latter resumes playback,
         //   the former doesn't. (note that enqueue can be triggered when nothing is playing only
         //   by long pressing the video detail fragment, playlist or channel controls
-        return getPlayerIntent(context, targetClazz, playQueue, false)
-            .putExtra(Player.ENQUEUE, true)
+        return getPlayerIntent(context, targetClazz, playQueue, false).putExtra(Player.ENQUEUE, true)
     }
 
     fun <T> getPlayerEnqueueNextIntent(context: Context, targetClazz: Class<T>, playQueue: PlayQueue?): Intent {
         // see comment in `getPlayerEnqueueIntent` as to why `resumePlayback` is false
-        return getPlayerIntent(context, targetClazz, playQueue, false)
-            .putExtra(Player.ENQUEUE_NEXT, true)
+        return getPlayerIntent(context, targetClazz, playQueue, false).putExtra(Player.ENQUEUE_NEXT, true)
     }
 
     /* PLAY */
@@ -120,8 +114,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     fun playOnMainPlayer(activity: AppCompatActivity, playQueue: PlayQueue) {
         val item = playQueue.item
         if (item != null) {
-            openVideoDetailFragment(activity, activity.supportFragmentManager,
-                item.serviceId, item.url, item.title, playQueue, false)
+            openVideoDetailFragment(activity, activity.supportFragmentManager, item.serviceId, item.url, item.title, playQueue, false)
         }
     }
 
@@ -244,23 +237,20 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         }
 
         val mimeType = when (deliveryMethod) {
-            DeliveryMethod.PROGRESSIVE_HTTP -> if (stream.format == null) {
-                when (stream) {
-                    is AudioStream -> {
-                        "audio/*"
+            DeliveryMethod.PROGRESSIVE_HTTP ->
+                if (stream.format == null) {
+                    when (stream) {
+                        is AudioStream -> "audio/*"
+                        is VideoStream -> "video/*"
+                        else -> {
+                            // This should never be reached, because subtitles are not opened in
+                            // external players
+                            return
+                        }
                     }
-                    is VideoStream -> {
-                        "video/*"
-                    }
-                    else -> {
-                        // This should never be reached, because subtitles are not opened in
-                        // external players
-                        return
-                    }
+                } else {
+                    stream.format!!.getMimeType()
                 }
-            } else {
-                stream.format!!.getMimeType()
-            }
             DeliveryMethod.HLS -> "application/x-mpegURL"
             DeliveryMethod.DASH -> "application/dash+xml"
             DeliveryMethod.SS -> "application/vnd.ms-sstr+xml"
@@ -283,12 +273,8 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
             if (context is Activity) {
                 AlertDialog.Builder(context)
                     .setMessage(R.string.no_player_found)
-                    .setPositiveButton(R.string.install) { dialog: DialogInterface?, which: Int ->
-                        installApp(context, context.getString(R.string.vlc_package))
-                    }
-                    .setNegativeButton(R.string.cancel) { dialog: DialogInterface?, which: Int ->
-                        Log.i("NavigationHelper", "You unlocked a secret unicorn.")
-                    }
+                    .setPositiveButton(R.string.install) { dialog: DialogInterface?, which: Int -> installApp(context, context.getString(R.string.vlc_package)) }
+                    .setNegativeButton(R.string.cancel) { dialog: DialogInterface?, which: Int -> Log.i("NavigationHelper", "You unlocked a secret unicorn.") }
                     .show()
             } else {
                 Toast.makeText(context, R.string.no_player_found_toast, Toast.LENGTH_LONG).show()
@@ -302,8 +288,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @SuppressLint("CommitTransaction")
     private fun defaultTransaction(fragmentManager: FragmentManager): FragmentTransaction {
         return fragmentManager.beginTransaction()
-            .setCustomAnimations(R.animator.custom_fade_in, R.animator.custom_fade_out,
-                R.animator.custom_fade_in, R.animator.custom_fade_out)
+            .setCustomAnimations(R.animator.custom_fade_in, R.animator.custom_fade_out, R.animator.custom_fade_in, R.animator.custom_fade_out)
     }
 
     @JvmStatic
@@ -345,12 +330,12 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     }
 
     fun expandMainPlayer(context: Context) {
-        context.sendBroadcast(Intent(VideoDetailFragment.ACTION_SHOW_MAIN_PLAYER))
+        context.sendBroadcast(Intent(VideoDetailFragment.ACTION_SHOW_MAIN_PLAYER).setPackage(context.getPackageName()))
     }
 
     @JvmStatic
     fun sendPlayerStartedEvent(context: Context) {
-        context.sendBroadcast(Intent(VideoDetailFragment.ACTION_PLAYER_STARTED))
+        context.sendBroadcast(Intent(VideoDetailFragment.ACTION_PLAYER_STARTED).setPackage(context.getPackageName()))
     }
 
     @JvmStatic
@@ -368,23 +353,15 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         val playerType = PlayerHolder.instance?.type
         Log.d(TAG, "openVideoDetailFragment: $playerType")
         autoPlay = when {
-            playerType == null -> {
-                // no player open
-                PlayerHelper.isAutoplayAllowedByUser(context)
-            }
-            switchingPlayers -> {
-                // switching player to main player
-                // keep play/pause state
-                PlayerHolder.instance?.isPlaying ?: false
-            }
-            playerType == PlayerType.MAIN -> {
-                // opening new stream while already playing in main player
-                PlayerHelper.isAutoplayAllowedByUser(context)
-            }
-            else -> {
-                // opening new stream while already playing in another player
-                false
-            }
+            // no player open
+            playerType == null -> PlayerHelper.isAutoplayAllowedByUser(context)
+            // switching player to main player
+            // keep play/pause state
+            switchingPlayers -> PlayerHolder.instance?.isPlaying ?: false
+            // opening new stream while already playing in main player
+            playerType == PlayerType.MAIN -> PlayerHelper.isAutoplayAllowedByUser(context)
+            // opening new stream while already playing in another player
+            else -> false
         }
 
         val onVideoDetailFragmentReady: RunnableWithVideoDetailFragment = object: RunnableWithVideoDetailFragment {
@@ -397,8 +374,8 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
                     // Situation when user switches from players to main player. All needed data is
                     // here, we can start watching (assuming newQueue equals playQueue).
                     // Starting directly in fullscreen if the previous player type was popup.
-                    detailFragment.openVideoPlayer(playerType == PlayerType.POPUP
-                            || PlayerHelper.isStartMainPlayerFullscreenEnabled(context))
+                    detailFragment.openVideoPlayer(
+                        playerType == PlayerType.POPUP || PlayerHelper.isStartMainPlayerFullscreenEnabled(context))
                 } else {
                     detailFragment.selectAndLoadVideo(serviceId, url, title, playQueue)
                 }
@@ -431,9 +408,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun openChannelFragment(fragment: Fragment, item: StreamInfoItem, uploaderUrl: String?) {
         // For some reason `getParentFragmentManager()` doesn't work, but this does.
-        openChannelFragment(
-            fragment.requireActivity().supportFragmentManager,
-            item.serviceId, uploaderUrl, item.uploaderName)
+        openChannelFragment(fragment.requireActivity().supportFragmentManager, item.serviceId, uploaderUrl, item.uploaderName)
     }
 
     /**
@@ -539,12 +514,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     }
 
     @JvmStatic
-    fun openVideoDetail(context: Context,
-                        serviceId: Int,
-                        url: String?,
-                        title: String,
-                        playQueue: PlayQueue?,
-                        switchingPlayers: Boolean) {
+    fun openVideoDetail(context: Context, serviceId: Int, url: String?, title: String, playQueue: PlayQueue?, switchingPlayers: Boolean) {
         val intent = getStreamIntent(context, serviceId, url, title)
             .putExtra(VideoDetailFragment.KEY_SWITCHING_PLAYERS, switchingPlayers)
 
@@ -645,11 +615,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @Throws(ExtractionException::class)
     fun getIntentByLink(context: Context, service: StreamingService, url: String): Intent {
         val linkType = service.getLinkTypeByUrl(url)
-
-        if (linkType == LinkType.NONE) {
-            throw ExtractionException("Url not known to service. service=$service url=$url")
-        }
-
+        if (linkType == LinkType.NONE) throw ExtractionException("Url not known to service. service=$service url=$url")
         return getOpenIntent(context, url, service.serviceId, linkType)
     }
 

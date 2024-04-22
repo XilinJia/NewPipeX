@@ -59,9 +59,7 @@ class FocusAwareSeekBar : AppCompatSeekBar {
         return super.onKeyDown(keyCode, event)
     }
 
-    override fun onFocusChanged(gainFocus: Boolean, direction: Int,
-                                previouslyFocusedRect: Rect?
-    ) {
+    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
 
         if (!isInTouchMode && !gainFocus) {

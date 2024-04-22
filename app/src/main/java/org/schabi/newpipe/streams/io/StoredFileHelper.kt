@@ -63,23 +63,17 @@ class StoredFileHelper : Serializable {
         this.srcType = mime
     }
 
-    constructor(parent: Uri?, filename: String?, mime: String?,
-                tag: String?
-    ) {
+    constructor(parent: Uri?, filename: String?, mime: String?, tag: String?) {
         this.source = null // this instance will be "invalid" see invalidate()/isInvalid() methods
 
         this.srcName = filename
         this.srcType = mime ?: DEFAULT_MIME
-        if (parent != null) {
-            this.sourceTree = parent.toString()
-        }
+        this.sourceTree = parent?.toString()
 
         this.tag = tag
     }
 
-    internal constructor(context: Context?, tree: DocumentFile?,
-                         filename: String?, mime: String?, safe: Boolean
-    ) {
+    internal constructor(context: Context?, tree: DocumentFile?, filename: String?, mime: String?, safe: Boolean) {
         this.docTree = tree
         this.context = context
 
@@ -88,9 +82,7 @@ class StoredFileHelper : Serializable {
         if (safe) {
             // no conflicts (the filename is not in use)
             res = docTree!!.createFile(mime!!, filename!!)
-            if (res == null) {
-                throw IOException("Cannot create the file")
-            }
+            if (res == null) throw IOException("Cannot create the file")
         } else {
             res = createSAF(context, mime, filename)
         }
@@ -117,14 +109,11 @@ class StoredFileHelper : Serializable {
         srcType = mime
     }
 
-    constructor(context: Context?, parent: Uri?,
-                path: Uri, tag: String?
-    ) {
+    constructor(context: Context?, parent: Uri?, path: Uri, tag: String?) {
         this.tag = tag
         this.source = path.toString()
 
-        if (path.scheme == null
-                || path.scheme.equals(ContentResolver.SCHEME_FILE, ignoreCase = true)) {
+        if (path.scheme == null || path.scheme.equals(ContentResolver.SCHEME_FILE, ignoreCase = true)) {
             this.ioPath = Paths.get(URI.create(this.source))
         } else {
             val file = DocumentFile.fromSingleUri(context!!, path) ?: throw IOException("SAF not available")
@@ -141,9 +130,7 @@ class StoredFileHelper : Serializable {
         }
 
         if (parent != null) {
-            if (ContentResolver.SCHEME_FILE != parent.scheme) {
-                this.docTree = DocumentFile.fromTreeUri(context!!, parent)
-            }
+            if (ContentResolver.SCHEME_FILE != parent.scheme) this.docTree = DocumentFile.fromTreeUri(context!!, parent)
 
             this.sourceTree = parent.toString()
         }
@@ -158,11 +145,8 @@ class StoredFileHelper : Serializable {
         get() {
             assertValid()
 
-            return if (docFile == null) {
-                FileStream(ioPath!!.toFile())
-            } else {
-                FileStreamSAF(context!!.contentResolver, docFile!!.uri)
-            }
+            return if (docFile == null) FileStream(ioPath!!.toFile())
+            else FileStreamSAF(context!!.contentResolver, docFile!!.uri)
         }
 
     val isDirect: Boolean
@@ -173,7 +157,6 @@ class StoredFileHelper : Serializable {
          */
         get() {
             assertValid()
-
             return docFile == null
         }
 
@@ -183,14 +166,12 @@ class StoredFileHelper : Serializable {
     val uri: Uri
         get() {
             assertValid()
-
             return if (docFile == null) Uri.fromFile(ioPath!!.toFile()) else docFile!!.uri
         }
 
     val parentUri: Uri?
         get() {
             assertValid()
-
             return if (sourceTree == null) null else Uri.parse(sourceTree)
         }
 
@@ -204,9 +185,8 @@ class StoredFileHelper : Serializable {
     }
 
     fun delete(): Boolean {
-        if (source == null) {
-            return true
-        }
+        if (source == null) return true
+
         if (docFile == null) {
             try {
                 return Files.deleteIfExists(ioPath)
@@ -219,8 +199,7 @@ class StoredFileHelper : Serializable {
         val res = docFile!!.delete()
 
         try {
-            val flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            val flags = (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
             context!!.contentResolver.releasePersistableUriPermission(docFile!!.uri, flags)
         } catch (ex: Exception) {
             // nothing to do
@@ -245,29 +224,30 @@ class StoredFileHelper : Serializable {
     }
 
     fun canWrite(): Boolean {
-        if (source == null) {
-            return false
-        }
+        if (source == null) return false
+
         return if (docFile == null) Files.isWritable(ioPath) else docFile!!.canWrite()
     }
 
     val name: String?
         get() {
-            if (source == null) {
-                return srcName
-            } else if (docFile == null) {
-                return ioPath!!.fileName.toString()
+            when {
+                source == null -> {
+                    return srcName
+                }
+                docFile == null -> {
+                    return ioPath!!.fileName.toString()
+                }
+                else -> {
+                    val name = docFile!!.name
+                    return name ?: srcName
+                }
             }
-
-            val name = docFile!!.name
-            return name ?: srcName
         }
 
     val type: String?
         get() {
-            if (source == null || docFile == null) {
-                return srcType
-            }
+            if (source == null || docFile == null) return srcType
 
             val type = docFile!!.type
             return type ?: srcType
@@ -276,52 +256,48 @@ class StoredFileHelper : Serializable {
     fun existsAsFile(): Boolean {
         if (source == null || (docFile == null && ioPath == null)) {
             if (DEBUG) {
-                Log.d(TAG, "existsAsFile called but something is null: source = ["
-                        + (if (source == null) "null => storage is invalid" else source)
-                        + "], docFile = [" + docFile + "], ioPath = [" + ioPath + "]")
+                Log.d(TAG, "existsAsFile called but something is null: source = [${if (source == null) "null => storage is invalid" else source}], docFile = [$docFile], ioPath = [$ioPath]")
             }
             return false
         }
 
         // WARNING: DocumentFile.exists() and DocumentFile.isFile() methods are slow
         // docFile.isVirtual() means it is non-physical?
-        return if (docFile == null
-        ) Files.isRegularFile(ioPath)
-        else (docFile!!.exists() && docFile!!.isFile)
+        return if (docFile == null) Files.isRegularFile(ioPath) else (docFile!!.exists() && docFile!!.isFile)
     }
 
     fun create(): Boolean {
         assertValid()
         val result: Boolean
 
-        if (docFile == null) {
-            try {
-                Files.createFile(ioPath)
-                result = true
-            } catch (e: IOException) {
-                Log.e(TAG, "Exception while creating $ioPath", e)
-                return false
-            }
-        } else if (docTree == null) {
-            result = false
-        } else {
-            if (!docTree!!.canRead() || !docTree!!.canWrite()) {
-                return false
-            }
-            try {
-                docFile = createSAF(context, srcType, srcName)
-                if (docFile!!.name == null) {
+        when {
+            docFile == null -> {
+                try {
+                    Files.createFile(ioPath)
+                    result = true
+                } catch (e: IOException) {
+                    Log.e(TAG, "Exception while creating $ioPath", e)
                     return false
                 }
-                result = true
-            } catch (e: IOException) {
-                return false
+            }
+            docTree == null -> {
+                result = false
+            }
+            else -> {
+                if (!docTree!!.canRead() || !docTree!!.canWrite()) return false
+
+                try {
+                    docFile = createSAF(context, srcType, srcName)
+                    if (docFile?.name == null) return false
+                    result = true
+                } catch (e: IOException) {
+                    return false
+                }
             }
         }
 
         if (result) {
-            source = (if (docFile == null) Uri.fromFile(ioPath!!.toFile()) else docFile!!.uri)
-                .toString()
+            source = (if (docFile == null) Uri.fromFile(ioPath!!.toFile()) else docFile!!.uri).toString()
             srcName = name
             srcType = type
         }
@@ -330,9 +306,7 @@ class StoredFileHelper : Serializable {
     }
 
     fun invalidate() {
-        if (source == null) {
-            return
-        }
+        if (source == null) return
 
         srcName = name
         srcType = type
@@ -346,47 +320,30 @@ class StoredFileHelper : Serializable {
     }
 
     fun equals(storage: StoredFileHelper): Boolean {
-        if (this === storage) {
-            return true
-        }
+        if (this === storage) return true
 
         // note: do not compare tags, files can have the same parent folder
         //if (stringMismatch(this.tag, storage.tag)) return false;
-        if (stringMismatch(getLowerCase(this.sourceTree), getLowerCase(this.sourceTree))) {
-            return false
-        }
+        if (stringMismatch(getLowerCase(this.sourceTree), getLowerCase(this.sourceTree))) return false
 
         if (this.isInvalid || storage.isInvalid) {
-            if (this.srcName == null || (storage.srcName == null) || (this.srcType == null
-                            ) || (storage.srcType == null)) {
-                return false
-            }
-
-            return (srcName.equals(storage.srcName, ignoreCase = true)
-                    && srcType.equals(storage.srcType, ignoreCase = true))
+            if (this.srcName == null || (storage.srcName == null) || (this.srcType == null) || (storage.srcType == null)) return false
+            return (srcName.equals(storage.srcName, ignoreCase = true) && srcType.equals(storage.srcType, ignoreCase = true))
         }
 
-        if (this.isDirect != storage.isDirect) {
-            return false
-        }
+        if (this.isDirect != storage.isDirect) return false
+        if (this.isDirect) return this.ioPath == storage.ioPath
 
-        if (this.isDirect) {
-            return this.ioPath == storage.ioPath
-        }
-
-        return DocumentsContract.getDocumentId(docFile!!.uri)
-            .equals(DocumentsContract.getDocumentId(storage.docFile!!.uri), ignoreCase = true)
+        return DocumentsContract.getDocumentId(docFile!!.uri).equals(DocumentsContract.getDocumentId(storage.docFile!!.uri), ignoreCase = true)
     }
 
     override fun toString(): String {
         return if (source == null) {
             "[Invalid state] name=$srcName  type=$srcType  tag=$tag"
         } else {
-            ("sourceFile=" + source + "  treeSource=" + (if (sourceTree == null) "" else sourceTree)
-                    + "  tag=" + tag)
+            ("sourceFile=$source  treeSource=${if (sourceTree == null) "" else sourceTree}  tag=$tag")
         }
     }
-
 
     private fun assertValid() {
         checkNotNull(source) { "In invalid state" }
@@ -395,34 +352,24 @@ class StoredFileHelper : Serializable {
     @Throws(IOException::class)
     private fun takePermissionSAF() {
         try {
-            context!!.contentResolver.takePersistableUriPermission(docFile!!.uri,
-                StoredDirectoryHelper.PERMISSION_FLAGS)
+            context!!.contentResolver.takePersistableUriPermission(docFile!!.uri, StoredDirectoryHelper.PERMISSION_FLAGS)
         } catch (e: Exception) {
-            if (docFile!!.name == null) {
-                throw IOException(e)
-            }
+            if (docFile?.name == null) throw IOException(e)
         }
     }
 
     @Throws(IOException::class)
-    private fun createSAF(ctx: Context?, mime: String?,
-                          filename: String?
-    ): DocumentFile {
+    private fun createSAF(ctx: Context?, mime: String?, filename: String?): DocumentFile {
         var res = findFileSAFHelper(ctx, docTree!!, filename!!)
 
         if (res != null && res.exists() && res.isDirectory) {
-            if (!res.delete()) {
-                throw IOException("Directory with the same name found but cannot delete")
-            }
+            if (!res.delete()) throw IOException("Directory with the same name found but cannot delete")
             res = null
         }
 
         if (res == null) {
-            res =
-                docTree!!.createFile((if (srcType == null) DEFAULT_MIME else mime)!!, filename)
-            if (res == null) {
-                throw IOException("Cannot create the file")
-            }
+            res = docTree!!.createFile((if (srcType == null) DEFAULT_MIME else mime)!!, filename)
+            if (res == null) throw IOException("Cannot create the file")
         }
 
         return res
@@ -433,12 +380,8 @@ class StoredFileHelper : Serializable {
     }
 
     private fun stringMismatch(str1: String?, str2: String?): Boolean {
-        if (str1 == null && str2 == null) {
-            return false
-        }
-        if ((str1 == null) != (str2 == null)) {
-            return true
-        }
+        if (str1 == null && str2 == null) return false
+        if ((str1 == null) != (str2 == null)) return true
 
         return str1 != str2
     }
@@ -452,40 +395,29 @@ class StoredFileHelper : Serializable {
 
         @JvmStatic
         @Throws(IOException::class)
-        fun deserialize(storage: StoredFileHelper,
-                        context: Context?
-        ): StoredFileHelper {
+        fun deserialize(storage: StoredFileHelper, context: Context?): StoredFileHelper {
             val treeUri = if (storage.sourceTree == null) null else Uri.parse(storage.sourceTree)
 
-            if (storage.isInvalid) {
-                return StoredFileHelper(treeUri, storage.srcName, storage.srcType, storage.tag)
-            }
+            if (storage.isInvalid) return StoredFileHelper(treeUri, storage.srcName, storage.srcType, storage.tag)
 
-            val instance = StoredFileHelper(context, treeUri,
-                Uri.parse(storage.source), storage.tag)
+            val instance = StoredFileHelper(context, treeUri, Uri.parse(storage.source), storage.tag)
 
             // under SAF, if the target document is deleted, conserve the filename and mime
-            if (instance.srcName == null) {
-                instance.srcName = storage.srcName
-            }
-            if (instance.srcType == null) {
-                instance.srcType = storage.srcType
-            }
+            if (instance.srcName == null) instance.srcName = storage.srcName
+            if (instance.srcType == null) instance.srcType = storage.srcType
 
             return instance
         }
 
         @JvmStatic
-        fun getPicker(ctx: Context,
-                      mimeType: String
-        ): Intent {
+        fun getPicker(ctx: Context, mimeType: String): Intent {
+            Log.d(TAG, "getPicker mimeType: $mimeType")
             return if (NewPipeSettings.useStorageAccessFramework(ctx)) {
                 Intent(Intent.ACTION_OPEN_DOCUMENT)
                     .putExtra("android.content.extra.SHOW_ADVANCED", true)
                     .setType(mimeType)
                     .addCategory(Intent.CATEGORY_OPENABLE)
-                    .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                            or StoredDirectoryHelper.PERMISSION_FLAGS)
+                    .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or StoredDirectoryHelper.PERMISSION_FLAGS)
             } else {
                 Intent(ctx, FilePickerActivityHelper::class.java)
                     .putExtra(AbstractFilePickerActivity.EXTRA_ALLOW_MULTIPLE, false)
@@ -496,27 +428,19 @@ class StoredFileHelper : Serializable {
         }
 
         @JvmStatic
-        fun getPicker(ctx: Context,
-                      mimeType: String,
-                      initialPath: Uri?
-        ): Intent {
+        fun getPicker(ctx: Context, mimeType: String, initialPath: Uri?): Intent {
             return applyInitialPathToPickerIntent(ctx, getPicker(ctx, mimeType), initialPath, null)
         }
 
         @JvmStatic
-        fun getNewPicker(ctx: Context,
-                         filename: String?,
-                         mimeType: String,
-                         initialPath: Uri?
-        ): Intent {
+        fun getNewPicker(ctx: Context, filename: String?, mimeType: String, initialPath: Uri?): Intent {
             val i: Intent
             if (NewPipeSettings.useStorageAccessFramework(ctx)) {
                 i = Intent(Intent.ACTION_CREATE_DOCUMENT)
                     .putExtra("android.content.extra.SHOW_ADVANCED", true)
                     .setType(mimeType)
                     .addCategory(Intent.CATEGORY_OPENABLE)
-                    .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
-                            or StoredDirectoryHelper.PERMISSION_FLAGS)
+                    .addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or StoredDirectoryHelper.PERMISSION_FLAGS)
                 if (filename != null) {
                     i.putExtra(Intent.EXTRA_TITLE, filename)
                 }
@@ -530,15 +454,9 @@ class StoredFileHelper : Serializable {
             return applyInitialPathToPickerIntent(ctx, i, initialPath, filename)
         }
 
-        private fun applyInitialPathToPickerIntent(ctx: Context,
-                                                   intent: Intent,
-                                                   initialPath: Uri?,
-                                                   filename: String?
-        ): Intent {
+        private fun applyInitialPathToPickerIntent(ctx: Context, intent: Intent, initialPath: Uri?, filename: String?): Intent {
             if (NewPipeSettings.useStorageAccessFramework(ctx)) {
-                if (initialPath == null) {
-                    return intent // nothing to do, no initial path provided
-                }
+                if (initialPath == null) return intent // nothing to do, no initial path provided
 
                 return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialPath)
@@ -546,9 +464,7 @@ class StoredFileHelper : Serializable {
                     intent // can't set initial path on API < 26
                 }
             } else {
-                if (initialPath == null && filename == null) {
-                    return intent // nothing to do, no initial path and no file name provided
-                }
+                if (initialPath == null && filename == null) return intent // nothing to do, no initial path and no file name provided
 
                 var file: File?
                 file = if (initialPath == null) {

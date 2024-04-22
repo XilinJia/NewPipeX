@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import android.view.LayoutInflater
+import androidx.core.content.ContextCompat
 import androidx.core.math.MathUtils
 import androidx.media3.common.*
 import androidx.media3.common.Player.DiscontinuityReason
@@ -445,7 +446,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
 
         if (!exoPlayerIsNull()) {
             exoPlayer?.removeListener(this)
-            exoPlayer?.stop()
+//            exoPlayer?.stop()     // TODO: test
 //            exoPlayer?.release()  // to be release in mediasession
         }
         if (isProgressLoopRunning) {
@@ -594,7 +595,6 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     private fun registerBroadcastReceiver() {
         // Try to unregister current first
         unregisterBroadcastReceiver()
-        //        context.registerReceiver(broadcastReceiver, intentFilter);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
         } else {

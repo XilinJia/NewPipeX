@@ -231,7 +231,6 @@ class FeedLoadService : Service() {
                     }
                 }
             }
-//        registerReceiver(broadcastReceiver, IntentFilter(ACTION_CANCEL))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(broadcastReceiver, IntentFilter(ACTION_CANCEL), RECEIVER_NOT_EXPORTED)
         } else {

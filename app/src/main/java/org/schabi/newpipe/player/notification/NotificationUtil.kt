@@ -68,13 +68,11 @@ import kotlin.math.min
             if (DEBUG) {
                 Log.d(TAG, "updateThumbnail() called with thumbnail = [" + Integer.toHexString(
                     Optional.ofNullable(player.thumbnail).map { o: Bitmap? -> Objects.hashCode(o) }
-                        .orElse(0))
-                        + "], title = [" + player.videoTitle + "]")
+                        .orElse(0)) + "], title = [" + player.videoTitle + "]")
             }
 
             setLargeIcon(notificationBuilder!!)
-            if (ActivityCompat.checkSelfPermission(player.context,
-                        Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(player.context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
                 // here to request the missing permissions, and then overriding
@@ -154,32 +152,28 @@ import kotlin.math.min
 
     @SuppressLint("RestrictedApi")
     fun shouldUpdateBufferingSlot(): Boolean {
-        if (notificationBuilder == null) {
+        when {
             // if there is no notification active, there is no point in updating it
-            return false
-        } else if (notificationBuilder!!.mActions.size < 3) {
+            notificationBuilder == null -> return false
             // this should never happen, but let's make sure notification actions are populated
-            return true
+            notificationBuilder!!.mActions.size < 3 -> return true
+            // only second and third slot could contain PLAY_PAUSE_BUFFERING, update them only if they
+            // are not already in the buffering state (the only one with a null action intent)
+            else -> return ((notificationSlots[1] == NotificationConstants.PLAY_PAUSE_BUFFERING
+                    && notificationBuilder!!.mActions[1].actionIntent != null)
+                    || (notificationSlots[2] == NotificationConstants.PLAY_PAUSE_BUFFERING
+                    && notificationBuilder!!.mActions[2].actionIntent != null))
         }
-
-        // only second and third slot could contain PLAY_PAUSE_BUFFERING, update them only if they
-        // are not already in the buffering state (the only one with a null action intent)
-        return ((notificationSlots[1] == NotificationConstants.PLAY_PAUSE_BUFFERING
-                && notificationBuilder!!.mActions[1].actionIntent != null)
-                || (notificationSlots[2] == NotificationConstants.PLAY_PAUSE_BUFFERING
-                && notificationBuilder!!.mActions[2].actionIntent != null))
     }
 
 
     fun createNotificationAndStartForeground() {
-        if (notificationBuilder == null) {
-            notificationBuilder = createNotification()
-        }
+        if (notificationBuilder == null) notificationBuilder = createNotification()
+
         updateNotification()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            player.service.startForeground(NOTIFICATION_ID, notificationBuilder!!.build(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            player.service.startForeground(NOTIFICATION_ID, notificationBuilder!!.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         } else {
             player.service.startForeground(NOTIFICATION_ID, notificationBuilder!!.build())
         }
@@ -187,9 +181,7 @@ import kotlin.math.min
 
     fun cancelNotificationAndStopForeground() {
         ServiceCompat.stopForeground(player.service, ServiceCompat.STOP_FOREGROUND_REMOVE)
-
         notificationManager?.cancel(NOTIFICATION_ID)
-
         notificationManager = null
         notificationBuilder = null
     }
@@ -213,13 +205,10 @@ import kotlin.math.min
 
         var nonNothingIndex = 0
         for (i in 0..4) {
-            notificationSlots[i] = player.prefs.getInt(player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]),
-                NotificationConstants.SLOT_DEFAULTS[i])
+            notificationSlots[i] = player.prefs.getInt(player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]), NotificationConstants.SLOT_DEFAULTS[i])
 
             if (notificationSlots[i] != NotificationConstants.NOTHING) {
-                if (settingsCompactSlots.contains(i)) {
-                    adjustedCompactSlots.add(nonNothingIndex)
-                }
+                if (settingsCompactSlots.contains(i)) adjustedCompactSlots.add(nonNothingIndex)
                 nonNothingIndex += 1
             }
         }
@@ -235,13 +224,10 @@ import kotlin.math.min
         }
     }
 
-    private fun addAction(builder: NotificationCompat.Builder?,
-                          @NotificationConstants.Action slot: Int
-    ) {
+    private fun addAction(builder: NotificationCompat.Builder?, @NotificationConstants.Action slot: Int) {
         val data = NotificationActionData.fromNotificationActionEnum(player, slot) ?: return
 
-        val intent = PendingIntentCompat.getBroadcast(player.context,
-            NOTIFICATION_ID, Intent(data.action()), PendingIntent.FLAG_UPDATE_CURRENT, false)
+        val intent = PendingIntentCompat.getBroadcast(player.context, NOTIFICATION_ID, Intent(data.action()), PendingIntent.FLAG_UPDATE_CURRENT, false)
         builder!!.addAction(NotificationCompat.Action(data.icon(), data.name(), intent))
     }
 

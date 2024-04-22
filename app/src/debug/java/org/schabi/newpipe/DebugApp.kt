@@ -12,17 +12,9 @@ class DebugApp : App() {
         super.onCreate()
         initStetho()
 
-        LeakCanary.config =
-            LeakCanary.config.copy(
-                dumpHeap =
-                    PreferenceManager
-                        .getDefaultSharedPreferences(this).getBoolean(
-                            getString(
-                                R.string.allow_heap_dumping_key,
-                            ),
-                            false,
-                        ),
-            )
+        LeakCanary.config = LeakCanary.config.copy(
+            dumpHeap = PreferenceManager.getDefaultSharedPreferences(this).getBoolean(getString(R.string.allow_heap_dumping_key), false),
+        )
     }
 
 //    override fun getDownloader(): Downloader {
@@ -38,8 +30,7 @@ class DebugApp : App() {
     override val downloader: Downloader?
         get() {
             val downloader = DownloaderImpl.init(
-                OkHttpClient.Builder()
-                    .addNetworkInterceptor(StethoInterceptor()),
+                OkHttpClient.Builder().addNetworkInterceptor(StethoInterceptor()),
             )
             setCookiesToDownloader(downloader)
             return downloader

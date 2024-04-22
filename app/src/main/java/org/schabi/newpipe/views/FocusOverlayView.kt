@@ -153,7 +153,7 @@ class FocusOverlayView(context: Context) : Drawable(), OnGlobalFocusChangeListen
      * The easiest way to avoid the unneeded frame is to skip highlighting of rect that is
      * equal to the overlayView bounds
      * */
-    private fun shouldClearFocusRect(focusedView: View?, focusedRect: Rect): Boolean {
+    private fun shouldClearFocusRect(focusedView: View?, focusedRect: Rect?): Boolean {
         return focusedView == null || focusedRect == bounds
     }
 

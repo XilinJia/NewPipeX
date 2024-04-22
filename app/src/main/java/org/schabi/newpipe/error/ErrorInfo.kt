@@ -1,5 +1,6 @@
 package org.schabi.newpipe.error
 
+import android.os.Parcel
 import android.os.Parcelable
 import androidx.annotation.OptIn
 import androidx.annotation.StringRes

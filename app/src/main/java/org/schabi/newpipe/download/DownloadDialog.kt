@@ -1104,8 +1104,7 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
             recoveryInfo = listOf(MissionRecoveryInfo(selectedStream), MissionRecoveryInfo(secondaryStream))
         }
 
-        startMission(requireContext(), urls, storage, kind, threads,
-            currentInfo!!.url, psName, psArgs, nearLength, ArrayList(recoveryInfo))
+        startMission(requireContext(), urls, storage, kind, threads, currentInfo!!.url, psName, psArgs, nearLength, ArrayList(recoveryInfo))
 
         Toast.makeText(context, getString(R.string.download_has_started), Toast.LENGTH_SHORT).show()
 

@@ -27,18 +27,11 @@ import androidx.drawerlayout.widget.DrawerLayout
 class FocusAwareDrawerLayout : DrawerLayout {
     constructor(context: Context) : super(context)
 
-    constructor(context: Context,
-                attrs: AttributeSet?
-    ) : super(context, attrs)
+    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
 
-    constructor(context: Context,
-                attrs: AttributeSet?,
-                defStyle: Int
-    ) : super(context, attrs, defStyle)
+    constructor(context: Context, attrs: AttributeSet?, defStyle: Int) : super(context, attrs, defStyle)
 
-    override fun onRequestFocusInDescendants(direction: Int,
-                                             previouslyFocusedRect: Rect
-    ): Boolean {
+    override fun onRequestFocusInDescendants(direction: Int, previouslyFocusedRect: Rect?): Boolean {
         // SDK implementation of this method picks whatever visible View takes the focus first
         // without regard to addFocusables. If the open drawer is temporarily empty, the focus
         // escapes outside of it, which can be confusing
@@ -48,36 +41,28 @@ class FocusAwareDrawerLayout : DrawerLayout {
         for (i in 0 until childCount) {
             val child = getChildAt(i)
 
-            val lp =
-                child.layoutParams as LayoutParams
+            val lp = child.layoutParams as LayoutParams
 
             if (lp.gravity != 0 && isDrawerVisible(child)) {
                 hasOpenPanels = true
 
-                if (child.requestFocus(direction, previouslyFocusedRect)) {
-                    return true
-                }
+                if (child.requestFocus(direction, previouslyFocusedRect)) return true
             }
         }
 
-        if (hasOpenPanels) {
-            return false
-        }
+        if (hasOpenPanels) return false
 
         return super.onRequestFocusInDescendants(direction, previouslyFocusedRect)
     }
 
-    override fun addFocusables(views: ArrayList<View>, direction: Int,
-                               focusableMode: Int
-    ) {
+    override fun addFocusables(views: ArrayList<View>, direction: Int, focusableMode: Int) {
         var hasOpenPanels = false
         var content: View? = null
 
         for (i in 0 until childCount) {
             val child = getChildAt(i)
 
-            val lp =
-                child.layoutParams as LayoutParams
+            val lp = child.layoutParams as LayoutParams
 
             if (lp.gravity == 0) {
                 content = child
@@ -89,9 +74,7 @@ class FocusAwareDrawerLayout : DrawerLayout {
             }
         }
 
-        if (content != null && !hasOpenPanels) {
-            content.addFocusables(views, direction, focusableMode)
-        }
+        if (!hasOpenPanels) content?.addFocusables(views, direction, focusableMode)
     }
 
     // this override isn't strictly necessary, but it is helpful when DrawerLayout isn't

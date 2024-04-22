@@ -66,3 +66,9 @@ BufferQueueProducer     org.schabi.newpipex.debug.main       W  [SurfaceView[org
 BufferQueueProducer     org.schabi.newpipex.debug.main       W  [SurfaceTexture-1-6492-0](id:195c00000002,api:3,p:6492,c:6492) detachBuffer: slot 50 is not owned by the producer (state = FREE)
 BufferQueueProducer     org.schabi.newpipex.debug.main       W  [MediaCodec.release](id:195c00000003,api:3,p:6492,c:6492) detachBuffer: slot 42 is not owned by the producer (state = FREE)
 ```
+## 0.26.6
+
+* fixed crash bug when opening a channel
+* changed file picker mime type from "application/json" to "\*/\*" for importing subscriptions as some pickers don't recognize "application/json" causing json files not enabled
+* fixed the issue of bottomsheet not expanding on Android 14 - Google requires an explicit broadcast. 
+* corrected sending and receiving broadcast messages for Android 14

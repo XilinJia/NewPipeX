@@ -3,6 +3,7 @@ package org.schabi.newpipe.info_list.dialog
 import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
+import androidx.media3.common.util.UnstableApi
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.stream.model.StreamEntity
@@ -44,74 +45,53 @@ import java.util.function.Consumer
  * method.
  *
  */
-enum class StreamDialogDefaultEntry(@field:StringRes @param:StringRes val resource: Int,
-                                    val action: StreamDialogEntryAction
-) {
-    SHOW_CHANNEL_DETAILS(R.string.show_channel_details,
-        StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-            fetchUploaderUrlIfSparse(
-                fragment!!.requireContext(), item!!.serviceId, item.url,
-                item.uploaderUrl, Consumer { url: String? ->
-                    openChannelFragment(
-                        fragment, item, url)
-                })
-        }
-    ),
+@UnstableApi enum class StreamDialogDefaultEntry(@field:StringRes @param:StringRes val resource: Int, val action: StreamDialogEntryAction) {
+    SHOW_CHANNEL_DETAILS(R.string.show_channel_details, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
+        fetchUploaderUrlIfSparse(fragment!!.requireContext(), item!!.serviceId, item.url, item.uploaderUrl, Consumer { url: String? ->
+            openChannelFragment(fragment, item, url)
+        })
+    }),
 
     /**
      * Enqueues the stream automatically to the current PlayerType.
      */
     ENQUEUE(R.string.enqueue_stream, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        fetchItemInfoIfSparse(
-            fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
-                enqueueOnPlayer(
-                    fragment.requireContext(), singlePlayQueue)
-            })
-    }
-    ),
+        fetchItemInfoIfSparse(fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
+            enqueueOnPlayer(fragment.requireContext(), singlePlayQueue)
+        })
+    }),
 
     /**
      * Enqueues the stream automatically to the current PlayerType
      * after the currently playing stream.
      */
     ENQUEUE_NEXT(R.string.enqueue_next_stream, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        fetchItemInfoIfSparse(
-            fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
-                enqueueNextOnPlayer(
-                    fragment.requireContext(), singlePlayQueue)
-            })
-    }
-    ),
+        fetchItemInfoIfSparse(fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
+            enqueueNextOnPlayer(fragment.requireContext(), singlePlayQueue)
+        })
+    }),
 
     START_HERE_ON_BACKGROUND(R.string.start_here_on_background,
         StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-            fetchItemInfoIfSparse(
-                fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
-                    playOnBackgroundPlayer(
-                        fragment.requireContext(), singlePlayQueue, true)
-                })
+            fetchItemInfoIfSparse(fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
+                playOnBackgroundPlayer(fragment.requireContext(), singlePlayQueue, true)
+            })
         }),
 
     START_HERE_ON_POPUP(R.string.start_here_on_popup,
         StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-            fetchItemInfoIfSparse(
-                fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
-                    playOnPopupPlayer(
-                        fragment.requireContext(), singlePlayQueue, true)
-                })
+            fetchItemInfoIfSparse(fragment!!.requireContext(), item!!, Consumer { singlePlayQueue: SinglePlayQueue? ->
+                playOnPopupPlayer(fragment.requireContext(), singlePlayQueue, true)
+            })
         }),
 
     SET_AS_PLAYLIST_THUMBNAIL(R.string.set_as_playlist_thumbnail,
         StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-            throw UnsupportedOperationException(
-                "This needs to be implemented manually "
-                        + "by using InfoItemDialog.Builder.setAction()")
+            throw UnsupportedOperationException("This needs to be implemented manually by using InfoItemDialog.Builder.setAction()")
         }),
 
     DELETE(R.string.delete, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        throw UnsupportedOperationException(
-            "This needs to be implemented manually "
-                    + "by using InfoItemDialog.Builder.setAction()")
+        throw UnsupportedOperationException("This needs to be implemented manually by using InfoItemDialog.Builder.setAction()")
     }),
 
     /**
@@ -119,30 +99,18 @@ enum class StreamDialogDefaultEntry(@field:StringRes @param:StringRes val resour
      * or create a new playlist if there are no local playlists.
      */
     APPEND_PLAYLIST(R.string.add_to_playlist, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        PlaylistDialog.createCorrespondingDialog(
-            fragment!!.context,
-            kotlin.collections.listOf(StreamEntity(item!!))
-        ) { dialog ->
-            dialog.show(
-                fragment.parentFragmentManager,
-                "StreamDialogEntry@"
-                        + (if (dialog is PlaylistAppendDialog) "append" else "create")
-                        + "_playlist"
-            )
+        PlaylistDialog.createCorrespondingDialog(fragment!!.context, listOf(StreamEntity(item!!))) { dialog ->
+            dialog.show(fragment.parentFragmentManager, "StreamDialogEntry@${if (dialog is PlaylistAppendDialog) "append" else "create"}_playlist")
         }
-    }
-    ),
+    }),
 
     PLAY_WITH_KODI(R.string.play_with_kodi_title,
         StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-            playWithKore(
-                fragment!!.requireContext(), Uri.parse(item!!.url))
+            playWithKore(fragment!!.requireContext(), Uri.parse(item!!.url))
         }),
 
     SHARE(R.string.share, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        shareText(
-            fragment!!.requireContext(), item!!.name, item.url,
-            item.thumbnails)
+        shareText(fragment!!.requireContext(), item!!.name, item.url, item.thumbnails)
     }),
 
     /**
@@ -150,34 +118,22 @@ enum class StreamDialogDefaultEntry(@field:StringRes @param:StringRes val resour
      * If the user quits the current fragment, it will not open a DownloadDialog.
      */
     DOWNLOAD(R.string.download, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        fetchStreamInfoAndSaveToDatabase(
-            fragment!!.requireContext(), item!!.serviceId,
-            item.url, Consumer { info: StreamInfo? ->
-                if (fragment.context != null) {
-                    val downloadDialog =
-                        DownloadDialog(fragment.requireContext(), info!!)
-                    downloadDialog.show(fragment.childFragmentManager,
-                        "downloadDialog")
-                }
-            })
-    }
-    ),
+        fetchStreamInfoAndSaveToDatabase(fragment!!.requireContext(), item!!.serviceId, item.url, Consumer { info: StreamInfo? ->
+            if (fragment.context != null) {
+                val downloadDialog = DownloadDialog(fragment.requireContext(), info!!)
+                downloadDialog.show(fragment.childFragmentManager, "downloadDialog")
+            }
+        })
+    }),
 
     OPEN_IN_BROWSER(R.string.open_in_browser, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        openUrlInBrowser(
-            fragment!!.requireContext(), item!!.url)
+        openUrlInBrowser(fragment!!.requireContext(), item!!.url)
     }),
 
 
     MARK_AS_WATCHED(R.string.mark_as_watched, StreamDialogEntryAction { fragment: Fragment?, item: StreamInfoItem? ->
-        HistoryRecordManager(
-            fragment!!.requireContext())
-            .markAsWatched(item!!)
-            .onErrorComplete()
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe()
-    }
-    );
+        HistoryRecordManager(fragment!!.requireContext()).markAsWatched(item!!).onErrorComplete().observeOn(AndroidSchedulers.mainThread()).subscribe()
+    });
 
 
     fun toStreamDialogEntry(): StreamDialogEntry {

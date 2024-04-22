@@ -1,18 +1,17 @@
 package org.schabi.newpipe
 
-import android.content.Context
-import androidx.preference.PreferenceManager
-import okhttp3.MediaType
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.OkHttpClient
 //import okhttp3.OkHttpClient
 //import okhttp3.OkHttpClient.Builder.readTimeout
-import okhttp3.Request.Builder
 //import okhttp3.Request.Builder.build
 //import okhttp3.Request.Builder.header
 //import okhttp3.Request.Builder.method
 //import okhttp3.Request.Builder.removeHeader
 //import okhttp3.Request.Builder.url
+import android.content.Context
+import androidx.preference.PreferenceManager
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request.Builder
 import okhttp3.RequestBody
 import org.schabi.newpipe.error.ReCaptchaActivity
 import org.schabi.newpipe.extractor.downloader.Downloader
@@ -39,9 +38,7 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
         // Recaptcha cookie is always added TODO: not sure if this is necessary
         return Stream.of(youtubeCookie, getCookie(ReCaptchaActivity.RECAPTCHA_COOKIES_KEY))
             .filter { obj: String? -> Objects.nonNull(obj) }
-            .flatMap { cookies: String? ->
-                Arrays.stream(cookies!!.split("; *".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
-            }
+            .flatMap { cookies: String? -> Arrays.stream(cookies!!.split("; *".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()) }
             .distinct()
             .collect(Collectors.joining("; "))
     }
@@ -101,7 +98,7 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
 
         var requestBody: RequestBody? = null
         if (dataToSend != null) {
-            requestBody = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), dataToSend!!)
+            requestBody = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), dataToSend)
         }
 
         val requestBuilder: Builder = Builder()
@@ -131,16 +128,11 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
 
         if (response.code == 429) {
             response.close()
-
             throw ReCaptchaException("reCaptcha Challenge requested", url)
         }
 
         val body = response.body
-        var responseBodyToReturn: String? = null
-
-        if (body != null) {
-            responseBodyToReturn = body.string()
-        }
+        val responseBodyToReturn: String? = body?.string()
 
         val latestUrl = response.request.url.toString()
         return Response(response.code, response.message, response.headers.toMultimap(), responseBodyToReturn, latestUrl)
@@ -162,8 +154,8 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
          * @param builder if null, default builder will be used
          * @return a new instance of [DownloaderImpl]
          */
-        fun init(builder: okhttp3.OkHttpClient.Builder?): DownloaderImpl? {
-            instance = DownloaderImpl(if (builder != null) builder else okhttp3.OkHttpClient.Builder())
+        fun init(builder: OkHttpClient.Builder?): DownloaderImpl? {
+            instance = DownloaderImpl(builder ?: OkHttpClient.Builder())
             return instance
         }
     }

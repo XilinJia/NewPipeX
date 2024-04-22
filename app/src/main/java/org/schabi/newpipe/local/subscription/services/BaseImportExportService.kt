@@ -22,7 +22,6 @@ import android.Manifest
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.text.TextUtils
@@ -45,7 +44,6 @@ import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.extractor.subscription.SubscriptionExtractor.InvalidSourceException
 import org.schabi.newpipe.ktx.isNetworkRelated
 import org.schabi.newpipe.local.subscription.SubscriptionManager
-import us.shandian.giga.service.DownloadManagerService
 import java.io.FileNotFoundException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -110,7 +108,7 @@ abstract class BaseImportExportService : Service() {
         notificationManager = NotificationManagerCompat.from(this)
         notificationBuilder = createNotification()
 //        startForeground(notificationId, notificationBuilder!!.build())
-        val intent = Intent(this, SubscriptionsExportService::class.java)
+        val intent = Intent(this, SubscriptionsImportService::class.java)
         startService(intent)
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 //            val serviceType = ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
@@ -144,8 +142,7 @@ abstract class BaseImportExportService : Service() {
             notificationBuilder!!.setContentText(text)
         }
 
-        if (ActivityCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -164,8 +161,7 @@ abstract class BaseImportExportService : Service() {
 
     protected fun stopAndReportError(throwable: Throwable?, request: String?) {
         stopService()
-        createNotification(this, ErrorInfo(
-            throwable!!, UserAction.SUBSCRIPTION_IMPORT_EXPORT, request!!))
+        createNotification(this, ErrorInfo(throwable!!, UserAction.SUBSCRIPTION_IMPORT_EXPORT, request!!))
     }
 
     protected fun postErrorResult(title: String?, text: String?) {
@@ -184,8 +180,7 @@ abstract class BaseImportExportService : Service() {
             .setContentTitle(title)
             .setStyle(NotificationCompat.BigTextStyle().bigText(textOrEmpty))
             .setContentText(textOrEmpty)
-        if (ActivityCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding

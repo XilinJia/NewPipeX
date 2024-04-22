@@ -6,8 +6,6 @@ import android.app.Activity
 import android.content.*
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.content.pm.ActivityInfo
-import android.content.pm.ServiceInfo
-import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
 import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.Rect
@@ -36,10 +34,10 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
-import androidx.preference.PreferenceManager
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
+import androidx.preference.PreferenceManager
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.BottomSheetCallback
@@ -80,7 +78,6 @@ import org.schabi.newpipe.local.dialog.PlaylistDialog
 import org.schabi.newpipe.local.history.HistoryRecordManager
 import org.schabi.newpipe.local.playlist.LocalPlaylistFragment
 import org.schabi.newpipe.player.Player
-import org.schabi.newpipe.player.Player.Companion.PLAYER_TYPE
 import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerType
 import org.schabi.newpipe.player.event.OnKeyDownListener
@@ -92,7 +89,6 @@ import org.schabi.newpipe.player.playqueue.SinglePlayQueue
 import org.schabi.newpipe.player.playqueue.events.PlayQueueEvent
 import org.schabi.newpipe.player.ui.MainPlayerUi
 import org.schabi.newpipe.player.ui.VideoPlayerUi
-import org.schabi.newpipe.util.*
 import org.schabi.newpipe.util.DependentPreferenceHelper.getResumePlaybackEnabled
 import org.schabi.newpipe.util.DeviceUtils.getWindowHeight
 import org.schabi.newpipe.util.DeviceUtils.isDesktopMode
@@ -108,6 +104,7 @@ import org.schabi.newpipe.util.ListHelper.getDefaultResolutionIndex
 import org.schabi.newpipe.util.ListHelper.getFilteredAudioStreams
 import org.schabi.newpipe.util.ListHelper.getSortedStreamVideosList
 import org.schabi.newpipe.util.ListHelper.getUrlAndNonTorrentStreams
+import org.schabi.newpipe.util.Localization
 import org.schabi.newpipe.util.Localization.audioTrackName
 import org.schabi.newpipe.util.Localization.getDurationString
 import org.schabi.newpipe.util.Localization.listeningCount
@@ -115,6 +112,7 @@ import org.schabi.newpipe.util.Localization.localizeViewCount
 import org.schabi.newpipe.util.Localization.localizeWatchingCount
 import org.schabi.newpipe.util.Localization.shortCount
 import org.schabi.newpipe.util.Localization.shortSubscriberCount
+import org.schabi.newpipe.util.NO_SERVICE_ID
 import org.schabi.newpipe.util.NavigationHelper.enqueueOnPlayer
 import org.schabi.newpipe.util.NavigationHelper.getPlayerIntent
 import org.schabi.newpipe.util.NavigationHelper.openChannelFragment
@@ -124,6 +122,7 @@ import org.schabi.newpipe.util.NavigationHelper.openVideoDetailFragment
 import org.schabi.newpipe.util.NavigationHelper.playOnBackgroundPlayer
 import org.schabi.newpipe.util.NavigationHelper.playOnExternalPlayer
 import org.schabi.newpipe.util.NavigationHelper.playOnPopupPlayer
+import org.schabi.newpipe.util.PermissionHelper
 import org.schabi.newpipe.util.PermissionHelper.checkStoragePermissions
 import org.schabi.newpipe.util.PermissionHelper.isPopupEnabledElseAsk
 import org.schabi.newpipe.util.PlayButtonHelper.shouldShowHoldToAppendTip
@@ -160,23 +159,22 @@ import kotlin.math.min
     private var tabSettingsChanged = false
     private var lastAppBarVerticalOffset = Int.MAX_VALUE // prevents useless updates
 
-    private val preferenceChangeListener =
-        OnSharedPreferenceChangeListener { sharedPreferences: SharedPreferences, key: String? ->
-            when (key) {
-                getString(R.string.show_comments_key) -> {
-                    showComments = sharedPreferences.getBoolean(key, true)
-                    tabSettingsChanged = true
-                }
-                getString(R.string.show_next_video_key) -> {
-                    showRelatedItems = sharedPreferences.getBoolean(key, true)
-                    tabSettingsChanged = true
-                }
-                getString(R.string.show_description_key) -> {
-                    showDescription = sharedPreferences.getBoolean(key, true)
-                    tabSettingsChanged = true
-                }
+    private val preferenceChangeListener = OnSharedPreferenceChangeListener { sharedPreferences: SharedPreferences, key: String? ->
+        when (key) {
+            getString(R.string.show_comments_key) -> {
+                showComments = sharedPreferences.getBoolean(key, true)
+                tabSettingsChanged = true
+            }
+            getString(R.string.show_next_video_key) -> {
+                showRelatedItems = sharedPreferences.getBoolean(key, true)
+                tabSettingsChanged = true
+            }
+            getString(R.string.show_description_key) -> {
+                showDescription = sharedPreferences.getBoolean(key, true)
+                tabSettingsChanged = true
             }
         }
+    }
 
     @JvmField
     @State
@@ -227,9 +225,7 @@ import kotlin.math.min
     /*//////////////////////////////////////////////////////////////////////////
     // Service management
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onServiceConnected(connectedPlayer: Player?,
-                                    connectedPlayerService: PlayerService?,
-                                    playAfterConnect: Boolean) {
+    override fun onServiceConnected(connectedPlayer: Player?, connectedPlayerService: PlayerService?, playAfterConnect: Boolean) {
         player = connectedPlayer
         playerService = connectedPlayerService
 
@@ -267,7 +263,6 @@ import kotlin.math.min
         restoreDefaultBrightness()
     }
 
-
     /*//////////////////////////////////////////////////////////////////////////
     // Fragment's Lifecycle
     ////////////////////////////////////////////////////////////////////////// */
@@ -294,7 +289,7 @@ import kotlin.math.min
             Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION), false, settingsContentObserver!!)
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding_ = FragmentVideoDetailBinding.inflate(inflater, container, false)
         Log.d(TAG, "onCreateView")
         return binding.root
@@ -317,7 +312,7 @@ import kotlin.math.min
             Log.d(TAG, "onResume() called")
         }
 
-        requireActivity().sendBroadcast(Intent(ACTION_VIDEO_FRAGMENT_RESUMED))
+        requireContext().sendBroadcast(Intent(ACTION_VIDEO_FRAGMENT_RESUMED).setPackage(requireContext().getPackageName()))
 
         updateOverlayPlayQueueButtonVisibility()
 
@@ -339,7 +334,7 @@ import kotlin.math.min
         super.onStop()
 
         if (!requireActivity().isChangingConfigurations) {
-            requireActivity().sendBroadcast(Intent(ACTION_VIDEO_FRAGMENT_STOPPED))
+            requireActivity().sendBroadcast(Intent(ACTION_VIDEO_FRAGMENT_STOPPED).setPackage(App.PACKAGE_NAME))
         }
     }
 
@@ -356,7 +351,7 @@ import kotlin.math.min
 
         PreferenceManager.getDefaultSharedPreferences(requireActivity())
             .unregisterOnSharedPreferenceChangeListener(preferenceChangeListener)
-        requireActivity().unregisterReceiver(broadcastReceiver)
+        requireContext().unregisterReceiver(broadcastReceiver)
         requireActivity().contentResolver.unregisterContentObserver(settingsContentObserver!!)
 
         positionSubscriber?.dispose()
@@ -382,11 +377,12 @@ import kotlin.math.min
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         when (requestCode) {
-            ReCaptchaActivity.RECAPTCHA_REQUEST -> if (resultCode == Activity.RESULT_OK) {
-                openVideoDetailFragment(requireContext(), fM!!, serviceId, url, title, null, false)
-            } else {
-                Log.e(TAG, "ReCaptcha failed")
-            }
+            ReCaptchaActivity.RECAPTCHA_REQUEST ->
+                if (resultCode == Activity.RESULT_OK) {
+                    openVideoDetailFragment(requireContext(), fM!!, serviceId, url, title, null, false)
+                } else {
+                    Log.e(TAG, "ReCaptcha failed")
+                }
             else -> Log.e(TAG, "Request code from activity not supported [$requestCode]")
         }
     }
@@ -398,9 +394,7 @@ import kotlin.math.min
         binding.detailTitleRootLayout.setOnClickListener { v: View? -> toggleTitleAndSecondaryControls() }
         binding.detailUploaderRootLayout.setOnClickListener(makeOnClickListener { info: StreamInfo ->
             if (info.subChannelUrl.isEmpty()) {
-                if (info.uploaderUrl.isNotEmpty()) {
-                    openChannel(info.uploaderUrl, info.uploaderName)
-                }
+                if (info.uploaderUrl.isNotEmpty()) openChannel(info.uploaderUrl, info.uploaderName)
 
                 if (DEBUG) {
                     Log.i(TAG, "Can't open sub-channel because we got no channel URL")
@@ -412,9 +406,7 @@ import kotlin.math.min
         binding.detailThumbnailRootLayout.setOnClickListener { v: View? ->
             autoPlayEnabled = true // forcefully start playing
             // FIXME Workaround #7427
-            if (isPlayerAvailable) {
-                player!!.setRecovery()
-            }
+            player?.setRecovery()
             openVideoPlayerAutoFullscreen()
         }
 
@@ -422,16 +414,10 @@ import kotlin.math.min
         binding.detailControlsPopup.setOnClickListener { v: View? -> openPopupPlayer(false) }
         binding.detailControlsPlaylistAppend.setOnClickListener(makeOnClickListener { info: StreamInfo? ->
             if (fM != null && currentInfo != null) {
-                val fragment = parentFragmentManager.findFragmentById(R.id.fragment_holder)
-
                 // commit previous pending changes to database
-                when (fragment) {
-                    is LocalPlaylistFragment -> {
-                        fragment.commitChanges()
-                    }
-                    is MainFragment -> {
-                        fragment.commitPlaylistTabs()
-                    }
+                when (val fragment = parentFragmentManager.findFragmentById(R.id.fragment_holder)) {
+                    is LocalPlaylistFragment -> fragment.commitChanges()
+                    is MainFragment -> fragment.commitPlaylistTabs()
                 }
 
                 disposables.add(PlaylistDialog.createCorrespondingDialog(requireContext(), listOf(StreamEntity(info!!))) { dialog ->
@@ -484,9 +470,7 @@ import kotlin.math.min
 
     private fun makeOnClickListener(consumer: Consumer<StreamInfo>): View.OnClickListener {
         return View.OnClickListener { v: View? ->
-            if (!isLoading.get() && currentInfo != null) {
-                consumer.accept(currentInfo!!)
-            }
+            if (!isLoading.get() && currentInfo != null) consumer.accept(currentInfo!!)
         }
     }
 
@@ -560,8 +544,7 @@ import kotlin.math.min
 
         binding.detailThumbnailRootLayout.requestFocus()
 
-        binding.detailControlsPlayWithKodi.visibility =
-            if (shouldShowPlayWithKodi(requireContext(), serviceId)) View.VISIBLE else View.GONE
+        binding.detailControlsPlayWithKodi.visibility = if (shouldShowPlayWithKodi(requireContext(), serviceId)) View.VISIBLE else View.GONE
         binding.detailControlsCrashThePlayer.visibility =
             if (DEBUG && PreferenceManager.getDefaultSharedPreferences(requireContext())
                         .getBoolean(getString(R.string.show_crash_the_player_key), false)) View.VISIBLE else View.GONE
@@ -624,9 +607,7 @@ import kotlin.math.min
         }
 
         // If we have something in history of played items we replay it here
-        if (isPlayerAvailable && player!!.playQueue != null && player!!.videoPlayerSelected() && player!!.playQueue!!.previous()) {
-            return true // no code here, as previous() was used in the if
-        }
+        if (player?.playQueue != null && player!!.videoPlayerSelected() && player!!.playQueue!!.previous()) return true // no code here, as previous() was used in the if
 
         // That means that we are on the start of the stack,
         if (stack.size <= 1) {
@@ -654,7 +635,7 @@ import kotlin.math.min
 
         val playQueueItem = item.playQueue.item
         // Update title, url, uploader from the last item in the stack (it's current now)
-        val isPlayerStopped = !isPlayerAvailable || player!!.isStopped
+        val isPlayerStopped = player?.isStopped ?: true
         if (playQueueItem != null && isPlayerStopped) {
             updateOverlayData(playQueueItem.title, playQueueItem.uploader, playQueueItem.thumbnails)
         }
@@ -674,10 +655,9 @@ import kotlin.math.min
     }
 
     fun selectAndLoadVideo(newServiceId: Int, newUrl: String?, newTitle: String, newQueue: PlayQueue?) {
-        if (isPlayerAvailable && newQueue != null && playQueue?.item?.url != newUrl) {
-            // Preloading can be disabled since playback is surely being replaced.
-            player!!.disablePreloadingOfCurrentTrack()
-        }
+        // Preloading can be disabled since playback is surely being replaced.
+        if (newQueue != null && playQueue?.item?.url != newUrl) player?.disablePreloadingOfCurrentTrack()
+
         setInitialData(newServiceId, newUrl, newTitle, newQueue)
         startLoading(false, true)
     }
@@ -881,7 +861,7 @@ import kotlin.math.min
                         binding.tabLayout.visibility = View.VISIBLE
                     } else {
                         // view pager is not visible enough
-                        binding.tabLayout.visibility = View.GONE
+//                        binding.tabLayout.visibility = View.GONE
                     }
                 }
             }
@@ -911,12 +891,8 @@ import kotlin.math.min
     private fun toggleFullscreenIfInFullscreenMode() {
         // If a user watched video inside fullscreen mode and than chose another player
         // return to non-fullscreen mode
-        if (isPlayerAvailable) {
-            player!!.UIs().get(MainPlayerUi::class.java).ifPresent { playerUi: MainPlayerUi ->
-                if (playerUi.isFullscreen) {
-                    playerUi.toggleFullscreen()
-                }
-            }
+        player?.UIs()?.get(MainPlayerUi::class.java)?.ifPresent { playerUi: MainPlayerUi ->
+            if (playerUi.isFullscreen) playerUi.toggleFullscreen()
         }
     }
 
@@ -927,16 +903,11 @@ import kotlin.math.min
 
         toggleFullscreenIfInFullscreenMode()
 
-        if (isPlayerAvailable) {
-            // FIXME Workaround #7427
-            player!!.setRecovery()
-        }
+        // FIXME Workaround #7427
+        player?.setRecovery()
 
-        if (useExternalAudioPlayer) {
-            showExternalAudioPlaybackDialog()
-        } else {
-            openNormalBackgroundPlayer(append)
-        }
+        if (useExternalAudioPlayer) showExternalAudioPlaybackDialog()
+        else openNormalBackgroundPlayer(append)
     }
 
     private fun openPopupPlayer(append: Boolean) {
@@ -1175,11 +1146,9 @@ import kotlin.math.min
     private fun setHeightThumbnail(newHeight: Int, metrics: DisplayMetrics) {
         binding.detailThumbnailImageView.layoutParams = FrameLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, newHeight)
         binding.detailThumbnailImageView.minimumHeight = newHeight
-        if (isPlayerAvailable) {
+        player?.UIs()?.get(VideoPlayerUi::class.java)?.ifPresent { ui: VideoPlayerUi ->
             val maxHeight = (metrics.heightPixels * MAX_PLAYER_HEIGHT).toInt()
-            player!!.UIs().get(VideoPlayerUi::class.java).ifPresent { ui: VideoPlayerUi ->
-                ui.binding.surfaceView.setHeights(newHeight, if (ui.isFullscreen) newHeight else maxHeight)
-            }
+            ui.binding.surfaceView.setHeights(newHeight, if (ui.isFullscreen) newHeight else maxHeight)
         }
     }
 
@@ -1225,9 +1194,7 @@ import kotlin.math.min
             override fun onReceive(context: Context, intent: Intent) {
                 Log.d(TAG, "onReceive ${intent.action}")
                 when (intent.action) {
-                    ACTION_SHOW_MAIN_PLAYER -> {
-                        bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_EXPANDED)
-                    }
+                    ACTION_SHOW_MAIN_PLAYER -> bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_EXPANDED)
 //                    ACTION_HIDE_MAIN_PLAYER -> bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_HIDDEN)
                     ACTION_HIDE_MAIN_PLAYER -> bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_COLLAPSED)
                     ACTION_PLAYER_STARTED -> {
@@ -1247,14 +1214,12 @@ import kotlin.math.min
         intentFilter.addAction(ACTION_SHOW_MAIN_PLAYER)
         intentFilter.addAction(ACTION_HIDE_MAIN_PLAYER)
         intentFilter.addAction(ACTION_PLAYER_STARTED)
-        //        activity.registerReceiver(broadcastReceiver, intentFilter);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireActivity().registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
+            requireContext().registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            requireActivity().registerReceiver(broadcastReceiver, intentFilter)
+            requireContext().registerReceiver(broadcastReceiver, intentFilter)
         }
     }
-
 
     /*//////////////////////////////////////////////////////////////////////////
     // Orientation listener
@@ -1407,9 +1372,7 @@ import kotlin.math.min
             // Bandcamp fan pages are not yet supported and thus a ContentNotAvailableException is
             // thrown. This is not an error and thus should not be shown to the user.
             for (throwable in info.errors) {
-                if (throwable is ContentNotSupportedException && "Fan pages are not supported" == throwable.message) {
-                    info.errors.remove(throwable)
-                }
+                if (throwable is ContentNotSupportedException && "Fan pages are not supported" == throwable.message) info.errors.remove(throwable)
             }
 
             if (info.errors.isNotEmpty()) {
@@ -1846,7 +1809,7 @@ import kotlin.math.min
     }
 
     private fun replaceQueueIfUserConfirms(onAllow: Runnable) {
-        val activeQueue = if (isPlayerAvailable) player!!.playQueue else null
+        val activeQueue = player?.playQueue
 
         // Player will have STATE_IDLE when a user pressed back button
         if ((PlayerHelper.isClearingQueueConfirmationRequired(requireActivity())
@@ -2072,21 +2035,16 @@ import kotlin.math.min
 
                         // Re-enable clicks
                         setOverlayElementsClickable(true)
-                        if (isPlayerAvailable) {
-                            player!!.UIs().get(MainPlayerUi::class.java).ifPresent { obj: MainPlayerUi -> obj.closeItemsList() }
-                        }
+                        player?.UIs()?.get(MainPlayerUi::class.java)?.ifPresent { obj: MainPlayerUi -> obj.closeItemsList() }
+
                         setOverlayLook(binding.appBarLayout, behavior, 0f)
                     }
                     BottomSheetBehavior.STATE_DRAGGING, BottomSheetBehavior.STATE_SETTLING -> {
                         if (isFullscreen) {
                             showSystemUi()
                         }
-                        if (isPlayerAvailable) {
-                            player!!.UIs().get(MainPlayerUi::class.java).ifPresent { ui: MainPlayerUi ->
-                                if (ui.isControlsVisible) {
-                                    ui.hideControls(0, 0)
-                                }
-                            }
+                        player?.UIs()?.get(MainPlayerUi::class.java)?.ifPresent { ui: MainPlayerUi ->
+                            if (ui.isControlsVisible) ui.hideControls(0, 0)
                         }
                     }
                     BottomSheetBehavior.STATE_HALF_EXPANDED -> {}
