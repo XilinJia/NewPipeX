@@ -1,5 +1,6 @@
 package org.schabi.newpipe.player.playqueue
 
+import androidx.media3.common.util.UnstableApi
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.BackpressureStrategy
 import io.reactivex.rxjava3.core.Flowable
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * message bus, it must be initialized.
  *
  */
-abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQueueItem>?) : Serializable {
+@UnstableApi abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQueueItem>?) : Serializable {
     private val queueIndex: AtomicInteger
     private val history: MutableList<PlayQueueItem> = ArrayList()
 
@@ -51,9 +52,7 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
     init {
         streams = if (startWith != null) ArrayList(startWith) else ArrayList()
 
-        if (streams.size > index) {
-            history.add(streams[index])
-        }
+        if (streams.size > index) history.add(streams[index])
 
         queueIndex = AtomicInteger(index)
     }
@@ -131,23 +130,15 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
 
             val newIndex = when {
                 index < 0 -> 0
-                index < streams.size -> {
-                    // Regular assignment for index in bounds
-                    index
-                }
-                streams.isEmpty() -> {
-                    // Out of bounds from here on
-                    // Need to check if stream is empty to prevent arithmetic error and negative index
-                    0
-                }
-                isComplete -> {
-                    // Circular indexing
-                    index % streams.size
-                }
-                else -> {
-                    // Index of last element
-                    streams.size - 1
-                }
+                // Regular assignment for index in bounds
+                index < streams.size -> index
+                // Out of bounds from here on
+                // Need to check if stream is empty to prevent arithmetic error and negative index
+                streams.isEmpty() -> 0
+                // Circular indexing
+                isComplete -> index % streams.size
+                // Index of last element
+                else -> streams.size - 1
             }
 
             queueIndex.set(newIndex)
@@ -162,6 +153,7 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
         exactly so I won't touch it
          */
             broadcast(SelectEvent(oldIndex, newIndex))
+            field = index
         }
 
     val item: PlayQueueItem?
@@ -269,10 +261,8 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
             backup!!.addAll(itemList)
             itemList.shuffle()
         }
-        if (!streams.isEmpty() && streams[streams.size - 1].isAutoQueued
-                && !itemList[0].isAutoQueued) {
-            streams.removeAt(streams.size - 1)
-        }
+        if (streams.isNotEmpty() && streams[streams.size - 1].isAutoQueued && !itemList[0].isAutoQueued) streams.removeAt(streams.size - 1)
+
         streams.addAll(itemList)
 
         broadcast(AppendEvent(itemList.size))
@@ -312,9 +302,7 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
     fun error() {
         val oldIndex = index
         queueIndex.incrementAndGet()
-        if (streams.size > queueIndex.get()) {
-            history.add(streams[queueIndex.get()])
-        }
+        if (streams.size > queueIndex.get()) history.add(streams[queueIndex.get()])
         broadcast(ErrorEvent(oldIndex, index))
     }
 
@@ -324,23 +312,15 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
         val size = size()
 
         when {
-            currentIndex > removeIndex -> {
-                queueIndex.decrementAndGet()
-            }
-            currentIndex >= size -> {
-                queueIndex.set(currentIndex % (size - 1))
-            }
-            currentIndex == removeIndex && currentIndex == size - 1 -> {
-                queueIndex.set(0)
-            }
+            currentIndex > removeIndex -> queueIndex.decrementAndGet()
+            currentIndex >= size -> queueIndex.set(currentIndex % (size - 1))
+            currentIndex == removeIndex && currentIndex == size - 1 -> queueIndex.set(0)
         }
 
         backup?.remove(getItem(removeIndex))
 
         history.remove(streams.removeAt(removeIndex))
-        if (streams.size > queueIndex.get()) {
-            history.add(streams[queueIndex.get()])
-        }
+        if (streams.size > queueIndex.get()) history.add(streams[queueIndex.get()])
     }
 
     /**
@@ -365,15 +345,9 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
 
         val current = index
         when {
-            source == current -> {
-                queueIndex.set(target)
-            }
-            current in (source + 1)..target -> {
-                queueIndex.decrementAndGet()
-            }
-            current in target..<source -> {
-                queueIndex.incrementAndGet()
-            }
+            source == current -> queueIndex.set(target)
+            current in (source + 1)..target -> queueIndex.decrementAndGet()
+            current in target..<source -> queueIndex.incrementAndGet()
         }
 
         val playQueueItem = streams.removeAt(source)
@@ -435,9 +409,8 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
         // Create a backup if it doesn't already exist
         // Note: The backup-list has to be created at all cost (even when size <= 2).
         // Otherwise it's not possible to enter shuffle-mode!
-        if (backup == null) {
-            backup = ArrayList(streams)
-        }
+        if (backup == null) backup = ArrayList(streams)
+
         // Can't shuffle a list that's empty or only has one element
         if (size() <= 2) return
 
@@ -481,14 +454,11 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
         backup = null
 
         val newIndex = streams.indexOf(current)
-        if (newIndex != -1) {
-            queueIndex.set(newIndex)
-        } else {
-            queueIndex.set(0)
-        }
-        if (streams.size > queueIndex.get()) {
-            history.add(streams[queueIndex.get()])
-        }
+        if (newIndex != -1) queueIndex.set(newIndex)
+        else queueIndex.set(0)
+
+        if (streams.size > queueIndex.get()) history.add(streams[queueIndex.get()])
+
 
         broadcast(ReorderEvent(originIndex, queueIndex.get()))
     }
@@ -527,17 +497,14 @@ abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQu
             val stream = streams[i]
             val otherStream = other.streams[i]
             // Check is based on serviceId and URL
-            if (stream.serviceId != otherStream.serviceId || stream.url != otherStream.url) {
-                return false
-            }
+            if (stream.serviceId != otherStream.serviceId || stream.url != otherStream.url) return false
         }
         return true
     }
 
     fun equalStreamsAndIndex(other: PlayQueue?): Boolean {
-        if (equalStreams(other)) {
-            return other!!.index == index //NOSONAR: other is not null
-        }
+        if (equalStreams(other)) return other!!.index == index //NOSONAR: other is not null
+
         return false
     }
 

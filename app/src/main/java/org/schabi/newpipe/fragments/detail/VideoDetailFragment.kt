@@ -311,8 +311,10 @@ import kotlin.math.min
         if (DEBUG) {
             Log.d(TAG, "onResume() called")
         }
+//        try to set size for SurfaceView
+//        player?.UIs()?.get(VideoPlayerUi::class.java)?.ifPresent { obj: VideoPlayerUi -> obj.binding.surfaceView.holder.setSizeFromLayout() }
 
-        requireContext().sendBroadcast(Intent(ACTION_VIDEO_FRAGMENT_RESUMED).setPackage(requireContext().getPackageName()))
+        requireContext().sendBroadcast(Intent(ACTION_VIDEO_FRAGMENT_RESUMED).setPackage(requireContext().packageName))
 
         updateOverlayPlayQueueButtonVisibility()
 
@@ -598,9 +600,8 @@ import kotlin.math.min
 
         // If we are in fullscreen mode just exit from it via first back press
         if (isFullscreen) {
-            if (!isTablet(requireActivity())) {
-                player!!.pause()
-            }
+            if (!isTablet(requireActivity())) player!!.pause()
+
             restoreDefaultOrientation()
             setAutoPlay(false)
             return true
@@ -636,9 +637,7 @@ import kotlin.math.min
         val playQueueItem = item.playQueue.item
         // Update title, url, uploader from the last item in the stack (it's current now)
         val isPlayerStopped = player?.isStopped ?: true
-        if (playQueueItem != null && isPlayerStopped) {
-            updateOverlayData(playQueueItem.title, playQueueItem.uploader, playQueueItem.thumbnails)
-        }
+        if (playQueueItem != null && isPlayerStopped) updateOverlayData(playQueueItem.title, playQueueItem.uploader, playQueueItem.thumbnails)
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -647,11 +646,8 @@ import kotlin.math.min
     override fun doInitialLoadLogic() {
         if (wasCleared()) return
 
-        if (currentInfo == null) {
-            prepareAndLoadInfo()
-        } else {
-            prepareAndHandleInfoIfNeededAfterDelay(currentInfo, false, 50)
-        }
+        if (currentInfo == null) prepareAndLoadInfo()
+        else prepareAndHandleInfoIfNeededAfterDelay(currentInfo, false, 50)
     }
 
     fun selectAndLoadVideo(newServiceId: Int, newUrl: String?, newTitle: String, newQueue: PlayQueue?) {
@@ -730,9 +726,7 @@ import kotlin.math.min
                         }
                     }
 
-                    if (isAutoplayEnabled) {
-                        openVideoPlayerAutoFullscreen()
-                    }
+                    if (isAutoplayEnabled) openVideoPlayerAutoFullscreen()
                 }
             }, { throwable: Throwable? ->
                 showError(ErrorInfo(throwable!!, UserAction.REQUESTED_STREAM, url ?: "no url", serviceId))
@@ -777,9 +771,7 @@ import kotlin.math.min
 
         if (pageAdapter.count >= 2) {
             val position = pageAdapter.getItemPositionByTitle(selectedTabTag!!)
-            if (position != -1) {
-                binding.viewPager.currentItem = position
-            }
+            if (position != -1) binding.viewPager.currentItem = position
             updateTabIconsAndContentDescriptions()
         }
         // the page adapter now contains tabs: show the tab layout
@@ -812,9 +804,7 @@ import kotlin.math.min
             }
         }
 
-        if (showDescription) {
-            pageAdapter.updateItem(DESCRIPTION_TAB_TAG, DescriptionFragment(info))
-        }
+        if (showDescription) pageAdapter.updateItem(DESCRIPTION_TAB_TAG, DescriptionFragment(info))
 
         binding.viewPager.visibility = View.VISIBLE
         // make sure the tab layout is visible
@@ -925,11 +915,9 @@ import kotlin.math.min
         toggleFullscreenIfInFullscreenMode()
 
         val queue = setupPlayQueueForIntent(append)
-        if (append) { //resumePlayback: false
-            enqueueOnPlayer(requireActivity(), queue, PlayerType.POPUP)
-        } else {
-            replaceQueueIfUserConfirms { playOnPopupPlayer(requireActivity(), queue, true) }
-        }
+        if (append) enqueueOnPlayer(requireActivity(), queue, PlayerType.POPUP) //resumePlayback: false
+        else replaceQueueIfUserConfirms { playOnPopupPlayer(requireActivity(), queue, true) }
+
     }
 
     /**
@@ -953,11 +941,9 @@ import kotlin.math.min
             onScreenRotationButtonClicked()
         }
 
-        if (PreferenceManager.getDefaultSharedPreferences(requireActivity()).getBoolean(this.getString(R.string.use_external_video_player_key), false)) {
+        if (PreferenceManager.getDefaultSharedPreferences(requireActivity()).getBoolean(this.getString(R.string.use_external_video_player_key), false))
             showExternalVideoPlaybackDialog()
-        } else {
-            replaceQueueIfUserConfirms { this.openMainPlayer() }
-        }
+        else replaceQueueIfUserConfirms { this.openMainPlayer() }
     }
 
     /**
@@ -976,16 +962,11 @@ import kotlin.math.min
         Log.d(TAG, "openNormalBackgroundPlayer called")
 
         // See UI changes while remote playQueue changes
-        if (!isPlayerAvailable) {
-            playerHolder.startService(false, this)
-        }
+        if (!isPlayerAvailable) playerHolder.startService(false, this)
 
         val queue = setupPlayQueueForIntent(append)
-        if (append) {
-            enqueueOnPlayer(requireActivity(), queue, PlayerType.AUDIO)
-        } else {
-            replaceQueueIfUserConfirms { playOnBackgroundPlayer(requireActivity(), queue, true) }
-        }
+        if (append) enqueueOnPlayer(requireActivity(), queue, PlayerType.AUDIO)
+        else replaceQueueIfUserConfirms { playOnBackgroundPlayer(requireActivity(), queue, true) }
     }
 
     private fun openMainPlayer() {
@@ -1031,9 +1012,7 @@ import kotlin.math.min
 
         var queue = playQueue
         // Size can be 0 because queue removes bad stream automatically when error occurs
-        if (queue == null || queue.isEmpty) {
-            queue = SinglePlayQueue(currentInfo)
-        }
+        if (queue == null || queue.isEmpty) queue = SinglePlayQueue(currentInfo)
 
         return queue
     }
@@ -1132,11 +1111,8 @@ import kotlin.math.min
         if (isFullscreen) {
             val height = (if (isInMultiWindow(act as AppCompatActivity)) requireView() else act.window.decorView).height
             // Height is zero when the view is not yet displayed like after orientation change
-            if (height != 0) {
-                setHeightThumbnail(height, metrics)
-            } else {
-                requireView().viewTreeObserver.addOnPreDrawListener(preDrawListener)
-            }
+            if (height != 0) setHeightThumbnail(height, metrics)
+            else requireView().viewTreeObserver.addOnPreDrawListener(preDrawListener)
         } else {
             val height = (if (isPortrait) metrics.widthPixels / (16.0f / 9.0f) else metrics.heightPixels / 2.0f).toInt()
             setHeightThumbnail(height, metrics)
@@ -1199,13 +1175,11 @@ import kotlin.math.min
                     ACTION_HIDE_MAIN_PLAYER -> bottomSheetBehavior!!.setState(BottomSheetBehavior.STATE_COLLAPSED)
                     ACTION_PLAYER_STARTED -> {
                         // If the state is not hidden we don't need to show the mini player
-                        if (bottomSheetBehavior!!.state == BottomSheetBehavior.STATE_HIDDEN) {
+                        if (bottomSheetBehavior!!.state == BottomSheetBehavior.STATE_HIDDEN)
                             bottomSheetBehavior!!.state = BottomSheetBehavior.STATE_COLLAPSED
-                        }
+
                         // Rebound to the service if it was closed via notification or mini player
-                        if (!playerHolder.isBound) {
-                            playerHolder.startService(false, this@VideoDetailFragment)
-                        }
+                        if (!playerHolder.isBound) playerHolder.startService(false, this@VideoDetailFragment)
                     }
                 }
             }
@@ -1225,17 +1199,13 @@ import kotlin.math.min
     // Orientation listener
     ////////////////////////////////////////////////////////////////////////// */
     private fun restoreDefaultOrientation() {
-        if (isPlayerAvailable && player!!.videoPlayerSelected()) {
-            toggleFullscreenIfInFullscreenMode()
-        }
+        if (isPlayerAvailable && player!!.videoPlayerSelected()) toggleFullscreenIfInFullscreenMode()
 
         // This will show systemUI and pause the player.
         // User can tap on Play button and video will be in fullscreen mode again
         // Note for tablet: trying to avoid orientation changes since it's not easy
         // to physically rotate the tablet every time
-        if (!isTablet(requireActivity())) {
-            requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
+        if (!isTablet(requireActivity())) requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -1245,9 +1215,7 @@ import kotlin.math.min
         super.showLoading()
 
         //if data is already cached, transition from VISIBLE -> INVISIBLE -> VISIBLE is not required
-        if (!isCached(serviceId, url!!, InfoItem.InfoType.STREAM)) {
-            binding.detailContentRootHiding.visibility = View.INVISIBLE
-        }
+        if (!isCached(serviceId, url!!, InfoItem.InfoType.STREAM)) binding.detailContentRootHiding.visibility = View.INVISIBLE
 
         binding.detailThumbnailPlayButton.animate(false, 50)
         binding.detailDurationView.animate(false, 100)
@@ -1263,11 +1231,8 @@ import kotlin.math.min
         binding.detailSecondaryControlPanel.visibility = View.GONE
 
         if (binding.relatedItemsLayout != null) {
-            if (showRelatedItems) {
-                binding.relatedItemsLayout!!.visibility = if (isFullscreen) View.GONE else View.INVISIBLE
-            } else {
-                binding.relatedItemsLayout!!.visibility = View.GONE
-            }
+            if (showRelatedItems) binding.relatedItemsLayout!!.visibility = if (isFullscreen) View.GONE else View.INVISIBLE
+            else binding.relatedItemsLayout!!.visibility = View.GONE
         }
 
         cancelTag(PICASSO_VIDEO_DETAILS_TAG)
@@ -1288,23 +1253,16 @@ import kotlin.math.min
 
         binding.detailSubChannelThumbnailView.visibility = View.GONE
 
-        if (!TextUtils.isEmpty(info.subChannelName)) {
-            displayBothUploaderAndSubChannel(info)
-        } else {
-            displayUploaderAsSubChannel(info)
-        }
+        if (!TextUtils.isEmpty(info.subChannelName)) displayBothUploaderAndSubChannel(info)
+        else displayUploaderAsSubChannel(info)
+
 
         if (info.viewCount >= 0) {
             when (info.streamType) {
-                StreamType.AUDIO_LIVE_STREAM -> {
-                    binding.detailViewCountView.text = listeningCount(requireActivity(), info.viewCount)
-                }
-                StreamType.LIVE_STREAM -> {
-                    binding.detailViewCountView.text = localizeWatchingCount(requireActivity(), info.viewCount)
-                }
-                else -> {
-                    binding.detailViewCountView.text = localizeViewCount(requireActivity(), info.viewCount)
-                }
+                StreamType.AUDIO_LIVE_STREAM -> binding.detailViewCountView.text = listeningCount(requireActivity(), info.viewCount)
+                StreamType.LIVE_STREAM -> binding.detailViewCountView.text = localizeWatchingCount(requireActivity(), info.viewCount)
+                else -> binding.detailViewCountView.text = localizeViewCount(requireActivity(), info.viewCount)
+
             }
             binding.detailViewCountView.visibility = View.VISIBLE
         } else {
@@ -1364,9 +1322,7 @@ import kotlin.math.min
         loadDetailsThumbnail(info.thumbnails).tag(PICASSO_VIDEO_DETAILS_TAG).into(binding.detailThumbnailImageView)
         showMetaInfoInTextView(info.metaInfo, binding.detailMetaInfoTextView, binding.detailMetaInfoSeparator, disposables)
 
-        if (!isPlayerAvailable || player!!.isStopped) {
-            updateOverlayData(info.name, info.uploaderName, info.thumbnails)
-        }
+        if (!isPlayerAvailable || player!!.isStopped) updateOverlayData(info.name, info.uploaderName, info.thumbnails)
 
         if (info.errors.isNotEmpty()) {
             // Bandcamp fan pages are not yet supported and thus a ContentNotAvailableException is
@@ -1375,19 +1331,15 @@ import kotlin.math.min
                 if (throwable is ContentNotSupportedException && "Fan pages are not supported" == throwable.message) info.errors.remove(throwable)
             }
 
-            if (info.errors.isNotEmpty()) {
-                showSnackBarError(ErrorInfo(info.errors, UserAction.REQUESTED_STREAM, info.url, info))
-            }
+            if (info.errors.isNotEmpty()) showSnackBarError(ErrorInfo(info.errors, UserAction.REQUESTED_STREAM, info.url, info))
         }
 
         binding.detailControlsDownload.visibility = if (isLiveStream(info.streamType)) View.GONE else View.VISIBLE
-        binding.detailControlsBackground.visibility =
-            if (info.audioStreams.isEmpty() && info.videoStreams.isEmpty()) View.GONE else View.VISIBLE
+        binding.detailControlsBackground.visibility = if (info.audioStreams.isEmpty() && info.videoStreams.isEmpty()) View.GONE else View.VISIBLE
 
         val noVideoStreams = info.videoStreams.isEmpty() && info.videoOnlyStreams.isEmpty()
         binding.detailControlsPopup.visibility = if (noVideoStreams) View.GONE else View.VISIBLE
-        binding.detailThumbnailPlayButton.setImageResource(
-            if (noVideoStreams) R.drawable.ic_headset_shadow else R.drawable.ic_play_arrow_shadow)
+        binding.detailThumbnailPlayButton.setImageResource(if (noVideoStreams) R.drawable.ic_headset_shadow else R.drawable.ic_play_arrow_shadow)
     }
 
     private fun displayUploaderAsSubChannel(info: StreamInfo) {
@@ -1413,13 +1365,10 @@ import kotlin.math.min
         binding.detailSubChannelTextView.isSelected = true
 
         val subText = StringBuilder()
-        if (!TextUtils.isEmpty(info.uploaderName)) {
-            subText.append(String.format(getString(R.string.video_detail_by), info.uploaderName))
-        }
+        if (!TextUtils.isEmpty(info.uploaderName)) subText.append(String.format(getString(R.string.video_detail_by), info.uploaderName))
+
         if (info.uploaderSubscriberCount > -1) {
-            if (subText.isNotEmpty()) {
-                subText.append(Localization.DOT_SEPARATOR)
-            }
+            if (subText.isNotEmpty()) subText.append(Localization.DOT_SEPARATOR)
             subText.append(shortSubscriberCount(requireActivity(), info.uploaderSubscriberCount))
         }
 
@@ -1431,11 +1380,9 @@ import kotlin.math.min
             binding.detailUploaderTextView.visibility = View.GONE
         }
 
-        loadAvatar(info.subChannelAvatars).tag(PICASSO_VIDEO_DETAILS_TAG)
-            .into(binding.detailSubChannelThumbnailView)
+        loadAvatar(info.subChannelAvatars).tag(PICASSO_VIDEO_DETAILS_TAG).into(binding.detailSubChannelThumbnailView)
         binding.detailSubChannelThumbnailView.visibility = View.VISIBLE
-        loadAvatar(info.uploaderAvatars).tag(PICASSO_VIDEO_DETAILS_TAG)
-            .into(binding.detailUploaderThumbnailView)
+        loadAvatar(info.uploaderAvatars).tag(PICASSO_VIDEO_DETAILS_TAG).into(binding.detailUploaderThumbnailView)
         binding.detailUploaderThumbnailView.visibility = View.VISIBLE
     }
 
@@ -1446,8 +1393,7 @@ import kotlin.math.min
             val downloadDialog = DownloadDialog(requireActivity(), currentInfo!!)
             downloadDialog.show(requireActivity().supportFragmentManager, "downloadDialog")
         } catch (e: Exception) {
-            showSnackbar(requireActivity(), ErrorInfo(e, UserAction.DOWNLOAD_OPEN_DIALOG,
-                "Showing download dialog", currentInfo))
+            showSnackbar(requireActivity(), ErrorInfo(e, UserAction.DOWNLOAD_OPEN_DIALOG, "Showing download dialog", currentInfo))
         }
     }
 
@@ -1466,8 +1412,7 @@ import kotlin.math.min
             .subscribeOn(Schedulers.io())
             .onErrorComplete()
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({ state: StreamStateEntity ->
-                updatePlaybackProgress(state.progressMillis, info.duration * 1000)
+            .subscribe({ state: StreamStateEntity -> updatePlaybackProgress(state.progressMillis, info.duration * 1000)
             }, { e: Throwable? -> }, {
                 binding.positionView.visibility = View.GONE
                 binding.detailPositionView.visibility = View.GONE
@@ -1483,15 +1428,12 @@ import kotlin.math.min
         // Otherwise don't because it affects CPU
         val progressDifference = abs((binding.positionView.progress - progressSeconds).toDouble()).toInt()
         binding.positionView.max = durationSeconds
-        if (progressDifference > 2) {
-            binding.positionView.setProgressAnimated(progressSeconds)
-        } else {
-            binding.positionView.progress = progressSeconds
-        }
+        if (progressDifference > 2) binding.positionView.setProgressAnimated(progressSeconds)
+        else binding.positionView.progress = progressSeconds
+
         val position = getDurationString(progressSeconds.toLong())
-        if (position !== binding.detailPositionView.text) {
-            binding.detailPositionView.text = position
-        }
+        if (position !== binding.detailPositionView.text) binding.detailPositionView.text = position
+
         if (binding.positionView.visibility != View.VISIBLE) {
             binding.positionView.animate(true, 100)
             binding.detailPositionView.animate(true, 100)
@@ -1513,9 +1455,7 @@ import kotlin.math.min
 
         // Register broadcast receiver to listen to playQueue changes
         // and hide the overlayPlayQueueButton when the playQueue is empty / destroyed.
-        if (playQueue?.broadcastReceiver != null) {
-            playQueue!!.broadcastReceiver!!.subscribe { event: PlayQueueEvent? -> updateOverlayPlayQueueButtonVisibility() }
-        }
+        playQueue?.broadcastReceiver?.subscribe { event: PlayQueueEvent? -> updateOverlayPlayQueueButtonVisibility() }
 
         // This should be the only place where we push data to stack.
         // It will allow to have live instance of PlayQueue with actual information about
@@ -1552,10 +1492,7 @@ import kotlin.math.min
     override fun onProgressUpdate(currentProgress: Int, duration: Int, bufferPercent: Int) {
         // Progress updates every second even if media is paused. It's useless until playing
         if (!player!!.isPlaying || playQueue == null) return
-
-        if (player!!.playQueue?.item?.url == url) {
-            updatePlaybackProgress(currentProgress.toLong(), duration.toLong())
-        }
+        if (player!!.playQueue?.item?.url == url) updatePlaybackProgress(currentProgress.toLong(), duration.toLong())
     }
 
     override fun onMetadataUpdate(info: StreamInfo?, queue: PlayQueue?) {
@@ -1594,25 +1531,19 @@ import kotlin.math.min
 
     override fun onServiceStopped() {
         setOverlayPlayPauseImage(false)
-        if (currentInfo != null) {
-            updateOverlayData(currentInfo!!.name, currentInfo!!.uploaderName, currentInfo!!.thumbnails)
-        }
+        if (currentInfo != null) updateOverlayData(currentInfo!!.name, currentInfo!!.uploaderName, currentInfo!!.thumbnails)
         updateOverlayPlayQueueButtonVisibility()
     }
 
     override fun onFullscreenStateChanged(fullscreen: Boolean) {
         setupBrightness()
         if (!isPlayerAndPlayerServiceAvailable || player!!.UIs().get(MainPlayerUi::class.java).isEmpty
-                || this.root.map { obj: View -> obj.parent }.isEmpty) {
-            return
-        }
+                || this.root.map { obj: View -> obj.parent }.isEmpty) return
 
         if (fullscreen) {
             hideSystemUiIfNeeded()
             binding.overlayPlayPauseButton.requestFocus()
-        } else {
-            showSystemUi()
-        }
+        } else showSystemUi()
 
         binding.relatedItemsLayout?.visibility = if (fullscreen) View.GONE else View.VISIBLE
 
@@ -1707,9 +1638,7 @@ import kotlin.math.min
 
     // Listener implementation
     override fun hideSystemUiIfNeeded() {
-        if (isFullscreen && bottomSheetBehavior!!.state == BottomSheetBehavior.STATE_EXPANDED) {
-            hideSystemUi()
-        }
+        if (isFullscreen && bottomSheetBehavior!!.state == BottomSheetBehavior.STATE_EXPANDED) hideSystemUi()
     }
 
     private val isFullscreen: Boolean
@@ -1740,9 +1669,8 @@ import kotlin.math.min
         } else {
             // Do not restore if user has disabled brightness gesture
             if (PlayerHelper.getActionForRightGestureSide(requireActivity()) != getString(R.string.brightness_control_key)
-                    && PlayerHelper.getActionForLeftGestureSide(requireActivity()) != getString(R.string.brightness_control_key)) {
-                return
-            }
+                    && PlayerHelper.getActionForLeftGestureSide(requireActivity()) != getString(R.string.brightness_control_key)) return
+
             // Restore already saved brightness level
             val brightnessLevel = PlayerHelper.getScreenBrightness(requireActivity())
             if (brightnessLevel == lp.screenBrightness) return
@@ -1768,23 +1696,17 @@ import kotlin.math.min
             binding.detailControlsOpenInBrowser.setBackgroundColor(transparent)
             binding.detailControlsPlayWithKodi.setBackgroundColor(transparent)
         }
-        if (isDesktopMode(requireContext())) {
-            // Remove the "hover" overlay (since it is visible on all mouse events and interferes
-            // with the video content being played)
-            binding.detailThumbnailRootLayout.foreground = null
-        }
+        // Remove the "hover" overlay (since it is visible on all mouse events and interferes
+        // with the video content being played)
+        if (isDesktopMode(requireContext())) binding.detailThumbnailRootLayout.foreground = null
     }
 
     private fun checkLandscape() {
-        if ((!player!!.isPlaying && player!!.playQueue !== playQueue) || player!!.playQueue == null) {
-            setAutoPlay(true)
-        }
+        if ((!player!!.isPlaying && player!!.playQueue !== playQueue) || player!!.playQueue == null) setAutoPlay(true)
 
         player!!.UIs().get(MainPlayerUi::class.java).ifPresent { obj: MainPlayerUi -> obj.checkLandscape() }
         // Let's give a user time to look at video information page if video is not playing
-        if (PlayerHelper.globalScreenOrientationLocked(requireContext()) && !player!!.isPlaying) {
-            player!!.play()
-        }
+        if (PlayerHelper.globalScreenOrientationLocked(requireContext()) && !player!!.isPlaying) player!!.play()
     }
 
     /*
@@ -1812,12 +1734,9 @@ import kotlin.math.min
         val activeQueue = player?.playQueue
 
         // Player will have STATE_IDLE when a user pressed back button
-        if ((PlayerHelper.isClearingQueueConfirmationRequired(requireActivity())
-                        && playerIsNotStopped()) && activeQueue != null && !activeQueue.equalStreams(playQueue)) {
-            showClearingQueueConfirmation(onAllow)
-        } else {
-            onAllow.run()
-        }
+        if (PlayerHelper.isClearingQueueConfirmationRequired(requireActivity()) && playerIsNotStopped()
+                && activeQueue != null && !activeQueue.equalStreams(playQueue)) showClearingQueueConfirmation(onAllow)
+        else onAllow.run()
     }
 
     private fun showClearingQueueConfirmation(onAllow: Runnable) {
@@ -1836,18 +1755,11 @@ import kotlin.math.min
 
         val builder = AlertDialog.Builder(requireActivity())
         builder.setTitle(R.string.select_quality_external_players)
-        builder.setNeutralButton(R.string.open_in_browser) { dialog: DialogInterface?, i: Int ->
-            openUrlInBrowser(requireActivity(), url)
-        }
+        builder.setNeutralButton(R.string.open_in_browser) { dialog: DialogInterface?, i: Int -> openUrlInBrowser(requireActivity(), url) }
 
-        val videoStreamsForExternalPlayers =
-            getSortedStreamVideosList(
-                requireActivity(),
-                getUrlAndNonTorrentStreams(currentInfo!!.videoStreams),
-                getUrlAndNonTorrentStreams(currentInfo!!.videoOnlyStreams),
-                false,
-                false
-            )
+        val videoStreamsForExternalPlayers = getSortedStreamVideosList(requireActivity(),
+            getUrlAndNonTorrentStreams(currentInfo!!.videoStreams), getUrlAndNonTorrentStreams(currentInfo!!.videoOnlyStreams),
+            false, false)
 
         if (videoStreamsForExternalPlayers.isEmpty()) {
             builder.setMessage(R.string.no_video_streams_available_for_external_players)
@@ -1880,25 +1792,17 @@ import kotlin.math.min
         val audioTracks = getFilteredAudioStreams(requireActivity(), audioStreams)
 
         when {
-            audioTracks.isEmpty() -> {
-                Toast.makeText(activity, R.string.no_audio_streams_available_for_external_players, Toast.LENGTH_SHORT).show()
-            }
-            audioTracks.size == 1 -> {
-                startOnExternalPlayer(requireActivity(), currentInfo!!, audioTracks[0]!!)
-            }
+            audioTracks.isEmpty() -> Toast.makeText(activity, R.string.no_audio_streams_available_for_external_players, Toast.LENGTH_SHORT).show()
+            audioTracks.size == 1 -> startOnExternalPlayer(requireActivity(), currentInfo!!, audioTracks[0]!!)
             else -> {
                 val selectedAudioStream = getDefaultAudioFormat(requireActivity(), audioTracks)
                 val trackNames = audioTracks.stream()
-                    .map<String?> { audioStream: AudioStream? ->
-                        audioTrackName(requireActivity(), audioStream!!)
-                    }
+                    .map<String?> { audioStream: AudioStream? -> audioTrackName(requireActivity(), audioStream!!) }
                     .toArray<CharSequence> { size -> arrayOfNulls<String>(size) }
 
                 AlertDialog.Builder(requireActivity())
                     .setTitle(R.string.select_audio_track_external_players)
-                    .setNeutralButton(R.string.open_in_browser) { dialog: DialogInterface?, i: Int ->
-                        openUrlInBrowser(requireActivity(), url)
-                    }
+                    .setNeutralButton(R.string.open_in_browser) { dialog: DialogInterface?, i: Int -> openUrlInBrowser(requireActivity(), url) }
                     .setSingleChoiceItems(trackNames, selectedAudioStream, null)
                     .setNegativeButton(R.string.cancel, null)
                     .setPositiveButton(R.string.ok) { dialog: DialogInterface, i: Int ->
@@ -1946,17 +1850,13 @@ import kotlin.math.min
             // Only focus the mainFragment if the mainFragment (e.g. search-results)
             // or the toolbar (e.g. Textfield for search) don't have focus.
             // This was done to fix problems with the keyboard input, see also #7490
-            if (!mainFragment.hasFocus() && !toolbar.hasFocus()) {
-                mainFragment.requestFocus()
-            }
+            if (!mainFragment.hasFocus() && !toolbar.hasFocus()) mainFragment.requestFocus()
         } else {
             mainFragment.descendantFocusability = blockDescendants
             toolbar.descendantFocusability = blockDescendants
             (requireView() as ViewGroup).descendantFocusability = afterDescendants
             // Only focus the player if it not already has focus
-            if (!binding.root.hasFocus()) {
-                binding.detailThumbnailRootLayout.requestFocus()
-            }
+            if (!binding.root.hasFocus()) binding.detailThumbnailRootLayout.requestFocus()
         }
     }
 
@@ -2040,9 +1940,8 @@ import kotlin.math.min
                         setOverlayLook(binding.appBarLayout, behavior, 0f)
                     }
                     BottomSheetBehavior.STATE_DRAGGING, BottomSheetBehavior.STATE_SETTLING -> {
-                        if (isFullscreen) {
-                            showSystemUi()
-                        }
+                        if (isFullscreen) showSystemUi()
+
                         player?.UIs()?.get(MainPlayerUi::class.java)?.ifPresent { ui: MainPlayerUi ->
                             if (ui.isControlsVisible) ui.hideControls(0, 0)
                         }
@@ -2060,9 +1959,8 @@ import kotlin.math.min
 
         // User opened a new page and the player will hide itself
         requireActivity().supportFragmentManager.addOnBackStackChangedListener {
-            if (bottomSheetBehavior!!.state == BottomSheetBehavior.STATE_EXPANDED) {
+            if (bottomSheetBehavior!!.state == BottomSheetBehavior.STATE_EXPANDED)
                 bottomSheetBehavior!!.state = BottomSheetBehavior.STATE_COLLAPSED
-            }
         }
     }
 
@@ -2120,16 +2018,13 @@ import kotlin.math.min
 
     val root: Optional<View>
         get() = Optional.ofNullable(player)
-            .flatMap { player1: Player ->
-                player1.UIs().get(VideoPlayerUi::class.java)
-            }
+            .flatMap { player1: Player -> player1.UIs().get(VideoPlayerUi::class.java) }
             .map { playerUi: VideoPlayerUi -> playerUi.binding.root }
 
     private fun updateBottomSheetState(newState: Int) {
         bottomSheetState = newState
-        if (newState != BottomSheetBehavior.STATE_DRAGGING && newState != BottomSheetBehavior.STATE_SETTLING) {
+        if (newState != BottomSheetBehavior.STATE_DRAGGING && newState != BottomSheetBehavior.STATE_SETTLING)
             lastStableBottomSheetState = newState
-        }
     }
 
     companion object {

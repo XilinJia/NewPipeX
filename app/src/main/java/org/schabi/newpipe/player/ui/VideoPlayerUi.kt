@@ -55,6 +55,8 @@ import org.schabi.newpipe.player.gesture.BasePlayerGestureListener
 import org.schabi.newpipe.player.gesture.DisplayPortion
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.mediaitem.MediaItemTag
+import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
+import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi.Companion
 import org.schabi.newpipe.player.playback.SurfaceHolderCallback
 import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHelper
 import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHolder
@@ -176,9 +178,7 @@ import java.util.stream.Collectors
         binding.moreOptionsButton.setOnClickListener(makeOnClickListener { this.onMoreOptionsClicked() })
         binding.share.setOnClickListener(makeOnClickListener {
             val currentItem = player.currentItem
-            if (currentItem != null) {
-                shareText(context, currentItem.title, player.videoUrlAtCurrentTime, currentItem.thumbnails)
-            }
+            if (currentItem != null) shareText(context, currentItem.title, player.videoUrlAtCurrentTime, currentItem.thumbnails)
         })
         binding.share.setOnLongClickListener { v: View? ->
             copyToClipboard(context, player.videoUrlAtCurrentTime)
@@ -197,9 +197,7 @@ import java.util.stream.Collectors
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.itemsListPanel) { view: View, windowInsets: WindowInsetsCompat ->
             val cutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
-            if (cutout != Insets.NONE) {
-                view.setPadding(cutout.left, cutout.top, cutout.right, cutout.bottom)
-            }
+            if (cutout != Insets.NONE) view.setPadding(cutout.left, cutout.top, cutout.right, cutout.bottom)
             windowInsets
         }
 
@@ -278,31 +276,28 @@ import java.util.stream.Collectors
                         playerGestureListener!!.endMultiDoubleTap()
                         return FastSeekDirection.NONE
                     }
-                    if (portion == DisplayPortion.LEFT) {
-                        // Check if it's possible to rewind
-                        // Small puffer to eliminate infinite rewind seeking
-                        if (player.exoPlayer!!.currentPosition < 500L) {
-                            return FastSeekDirection.NONE
+                    when (portion) {
+                        DisplayPortion.LEFT -> {
+                            // Check if it's possible to rewind
+                            // Small puffer to eliminate infinite rewind seeking
+                            if (player.exoPlayer!!.currentPosition < 500L) return FastSeekDirection.NONE
+                            return FastSeekDirection.BACKWARD
                         }
-                        return FastSeekDirection.BACKWARD
-                    } else if (portion == DisplayPortion.RIGHT) {
-                        // Check if it's possible to fast-forward
-                        if (player.currentState == Player.STATE_COMPLETED || player.exoPlayer!!.currentPosition >= player.exoPlayer!!.duration) {
-                            return FastSeekDirection.NONE
+                        DisplayPortion.RIGHT -> {
+                            // Check if it's possible to fast-forward
+                            if (player.currentState == Player.STATE_COMPLETED || player.exoPlayer!!.currentPosition >= player.exoPlayer!!.duration)
+                                return FastSeekDirection.NONE
+                            return FastSeekDirection.FORWARD
                         }
-                        return FastSeekDirection.FORWARD
+                        /* portion == DisplayPortion.MIDDLE */
+                        else -> return FastSeekDirection.NONE
                     }
-                    /* portion == DisplayPortion.MIDDLE */
-                    return FastSeekDirection.NONE
                 }
 
                 override fun seek(forward: Boolean) {
                     playerGestureListener!!.keepInDoubleTapMode()
-                    if (forward) {
-                        player.fastForward()
-                    } else {
-                        player.fastRewind()
-                    }
+                    if (forward) player.fastForward()
+                    else player.fastRewind()
                 }
             })
         playerGestureListener!!.doubleTapControls(binding.fastSeekOverlay)
@@ -337,6 +332,7 @@ import java.util.stream.Collectors
     abstract fun removeViewFromParent()
 
     override fun destroyPlayer() {
+        Log.d(TAG, "destroyPlayer")
         super.destroyPlayer()
         clearVideoSurface()
     }
@@ -364,7 +360,6 @@ import java.util.stream.Collectors
         binding.playbackSpeed.minimumWidth = buttonsMinWidth
         binding.captionTextView.setPadding(buttonsPad, buttonsPad, buttonsPad, buttonsPad)
     }
-
 
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
@@ -409,16 +404,11 @@ import java.util.stream.Collectors
         }
 
         val endScreenHeight = calculateMaxEndScreenThumbnailHeight(thumbnail)
-        val endScreenBitmap = BitmapCompat.createScaledBitmap(thumbnail,
-            (thumbnail.width / (thumbnail.height / endScreenHeight)).toInt(),
+        val endScreenBitmap = BitmapCompat.createScaledBitmap(thumbnail, (thumbnail.width / (thumbnail.height / endScreenHeight)).toInt(),
             endScreenHeight.toInt(), null, true)
 
         if (MainActivity.DEBUG) {
-            Log.d(TAG, "Thumbnail - onThumbnailLoaded() called with: "
-                    + "currentThumbnail = [" + thumbnail + "], "
-                    + thumbnail.width + "x" + thumbnail.height
-                    + ", scaled end screen height = " + endScreenHeight
-                    + ", scaled end screen width = " + endScreenBitmap.width)
+            Log.d(TAG, "Thumbnail - onThumbnailLoaded() called with: currentThumbnail = [$thumbnail], ${thumbnail.width}x${thumbnail.height}, scaled end screen height = $endScreenHeight, scaled end screen width = ${endScreenBitmap.width}")
         }
 
         binding.endScreen.setImageBitmap(endScreenBitmap)
@@ -433,20 +423,15 @@ import java.util.stream.Collectors
     ////////////////////////////////////////////////////////////////////////// */
     //region Progress loop and updates
     override fun onUpdateProgress(currentProgress: Int, duration: Int, bufferPercent: Int) {
-        if (duration != binding.playbackSeekBar.max) {
-            setVideoDurationToControls(duration)
-        }
-        if (player.currentState != Player.STATE_PAUSED) {
-            updatePlayBackElementsCurrentDuration(currentProgress)
-        }
+        if (duration != binding.playbackSeekBar.max) setVideoDurationToControls(duration)
+
+        if (player.currentState != Player.STATE_PAUSED) updatePlayBackElementsCurrentDuration(currentProgress)
+
         if (player.isLoading || bufferPercent > 90) {
             binding.playbackSeekBar.secondaryProgress = (binding.playbackSeekBar.max * (bufferPercent.toFloat() / 100)).toInt()
         }
         if (MainActivity.DEBUG && bufferPercent % 20 == 0) { //Limit log
-            Log.d(TAG, "notifyProgressUpdateToListeners() called with: "
-                    + "isVisible = " + isControlsVisible + ", "
-                    + "currentProgress = [" + currentProgress + "], "
-                    + "duration = [" + duration + "], bufferPercent = [" + bufferPercent + "]")
+            Log.d(TAG, "notifyProgressUpdateToListeners() called with: isVisible = $isControlsVisible, currentProgress = [$currentProgress], duration = [$duration], bufferPercent = [$bufferPercent]")
         }
         binding.playbackLiveSync.isClickable = !player.isLiveEdge
     }
@@ -458,9 +443,8 @@ import java.util.stream.Collectors
      */
     private fun updatePlayBackElementsCurrentDuration(currentProgress: Int) {
         // Don't set seekbar progress while user is seeking
-        if (player.currentState != Player.STATE_PAUSED_SEEK) {
-            binding.playbackSeekBar.progress = currentProgress
-        }
+        if (player.currentState != Player.STATE_PAUSED_SEEK) binding.playbackSeekBar.progress = currentProgress
+
         binding.playbackCurrentTime.text = PlayerHelper.getTimeString(currentProgress)
     }
 
@@ -484,19 +468,15 @@ import java.util.stream.Collectors
         if (!fromUser) return
 
         if (MainActivity.DEBUG) {
-            Log.d(TAG, "onProgressChanged() called with: "
-                    + "seekBar = [" + seekBar + "], progress = [" + progress + "]")
+            Log.d(TAG, "onProgressChanged() called with: seekBar = [$seekBar], progress = [$progress]")
         }
 
         binding.currentDisplaySeek.text = PlayerHelper.getTimeString(progress)
 
         // Seekbar Preview Thumbnail
         SeekbarPreviewThumbnailHelper
-            .tryResizeAndSetSeekbarPreviewThumbnail(
-                player.context,
-                seekbarPreviewThumbnailHolder.getBitmapAt(progress).orElse(null),
-                binding.currentSeekbarPreviewThumbnail
-            ) { binding.subtitleView.width }
+            .tryResizeAndSetSeekbarPreviewThumbnail(player.context, seekbarPreviewThumbnailHolder.getBitmapAt(progress).orElse(null),
+                binding.currentSeekbarPreviewThumbnail) { binding.subtitleView.width }
 
         adjustSeekbarPreviewContainer()
     }
@@ -510,16 +490,13 @@ import java.util.stream.Collectors
 
             // Calculate the current left position of seekbar progress in px
             // More info: https://stackoverflow.com/q/20493577
-            val currentSeekbarLeft = (binding.playbackSeekBar.left
-                    + binding.playbackSeekBar.paddingLeft
-                    + binding.playbackSeekBar.thumb.bounds.left)
+            val currentSeekbarLeft = (binding.playbackSeekBar.left + binding.playbackSeekBar.paddingLeft + binding.playbackSeekBar.thumb.bounds.left)
 
             // Calculate the (unchecked) left position of the container
             val uncheckedContainerLeft = currentSeekbarLeft - (binding.seekbarPreviewContainer.width / 2)
 
             // Fix the position so it's within the boundaries
-            val checkedContainerLeft = MathUtils.clamp(uncheckedContainerLeft,
-                0, binding.playbackWindowRoot.width - binding.seekbarPreviewContainer.width)
+            val checkedContainerLeft = MathUtils.clamp(uncheckedContainerLeft, 0, binding.playbackWindowRoot.width - binding.seekbarPreviewContainer.width)
 
             // See also: https://stackoverflow.com/a/23249734
             val params = LinearLayout.LayoutParams(binding.seekbarPreviewContainer.layoutParams)
@@ -537,9 +514,7 @@ import java.util.stream.Collectors
         if (MainActivity.DEBUG) {
             Log.d(TAG, "onStartTrackingTouch() called with: seekBar = [$seekBar]")
         }
-        if (player.currentState != Player.STATE_PAUSED_SEEK) {
-            player.changeState(Player.STATE_PAUSED_SEEK)
-        }
+        if (player.currentState != Player.STATE_PAUSED_SEEK) player.changeState(Player.STATE_PAUSED_SEEK)
 
         showControls(0)
         binding.currentDisplaySeek.animate(true, DEFAULT_CONTROLS_DURATION, AnimationType.SCALE_AND_ALPHA)
@@ -553,24 +528,18 @@ import java.util.stream.Collectors
         }
 
         player.seekTo(seekBar.progress.toLong())
-        if (player.exoPlayer!!.duration == seekBar.progress.toLong()) {
-            player.exoPlayer!!.play()
-        }
+        if (player.exoPlayer!!.duration == seekBar.progress.toLong()) player.exoPlayer!!.play()
 
         binding.playbackCurrentTime.text = PlayerHelper.getTimeString(seekBar.progress)
         binding.currentDisplaySeek.animate(false, 200, AnimationType.SCALE_AND_ALPHA)
         binding.currentSeekbarPreviewThumbnail.animate(false, 200, AnimationType.SCALE_AND_ALPHA)
 
-        if (player.currentState == Player.STATE_PAUSED_SEEK) {
-            player.changeState(Player.STATE_BUFFERING)
-        }
-        if (!player.isProgressLoopRunning) {
-            player.startProgressLoop()
-        }
+        if (player.currentState == Player.STATE_PAUSED_SEEK) player.changeState(Player.STATE_BUFFERING)
+
+        if (!player.isProgressLoopRunning) player.startProgressLoop()
 
         showControlsThenHide()
     }
-
 
     val isControlsVisible: Boolean
         //endregion
@@ -605,8 +574,7 @@ import java.util.stream.Collectors
 
     fun hideControls(duration: Long, delay: Long) {
         if (MainActivity.DEBUG) {
-            Log.d(TAG, "hideControls() called with: duration = [" + duration
-                    + "], delay = [" + delay + "]")
+            Log.d(TAG, "hideControls() called with: duration = [$duration], delay = [$delay]")
         }
 
         showOrHideButtons()
@@ -718,13 +686,10 @@ import java.util.stream.Collectors
         binding.loadingPanel.visibility = View.GONE
 
         binding.currentDisplaySeek.animate(false, 200, AnimationType.SCALE_AND_ALPHA)
-
         binding.playPauseButton.animate(false, 80, AnimationType.SCALE_AND_ALPHA, 0) {
             updatePlayPauseButton(PlayButtonAction.PAUSE)
             animatePlayButtons(true, 200)
-            if (!isAnyListViewOpen) {
-                binding.playPauseButton.requestFocus()
-            }
+            if (!isAnyListViewOpen) binding.playPauseButton.requestFocus()
         }
 
         binding.root.keepScreenOn = true
@@ -749,9 +714,7 @@ import java.util.stream.Collectors
             binding.playPauseButton.animate(false, 80, AnimationType.SCALE_AND_ALPHA, 0) {
                 updatePlayPauseButton(PlayButtonAction.PLAY)
                 animatePlayButtons(true, 200)
-                if (!isAnyListViewOpen) {
-                    binding.playPauseButton.requestFocus()
-                }
+                if (!isAnyListViewOpen) binding.playPauseButton.requestFocus()
             }
         }
 
@@ -788,12 +751,8 @@ import java.util.stream.Collectors
 
         val playQueue = player.playQueue ?: return
 
-        if (!show || playQueue.index > 0) {
-            binding.playPreviousButton.animate(show, duration, AnimationType.SCALE_AND_ALPHA)
-        }
-        if (!show || playQueue.index + 1 < playQueue.streams.size) {
-            binding.playNextButton.animate(show, duration, AnimationType.SCALE_AND_ALPHA)
-        }
+        if (!show || playQueue.index > 0) binding.playPreviousButton.animate(show, duration, AnimationType.SCALE_AND_ALPHA)
+        if (!show || playQueue.index + 1 < playQueue.streams.size) binding.playNextButton.animate(show, duration, AnimationType.SCALE_AND_ALPHA)
     }
 
 
@@ -867,7 +826,6 @@ import java.util.stream.Collectors
         //TODO check if this causes black screen when switching to fullscreen
         binding.surfaceForeground.animate(false, DEFAULT_CONTROLS_DURATION)
     }
-
 
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
@@ -952,8 +910,8 @@ import java.util.stream.Collectors
 
         for (i in availableStreams.indices) {
             val videoStream = availableStreams[i]
-            qualityPopupMenu!!.menu.add(POPUP_MENU_ID_QUALITY, i, Menu.NONE, MediaFormat
-                .getNameById(videoStream.formatId) + " " + videoStream.getResolution())
+            qualityPopupMenu!!.menu.add(POPUP_MENU_ID_QUALITY, i, Menu.NONE,
+                MediaFormat.getNameById(videoStream.formatId) + " " + videoStream.getResolution())
         }
         qualityPopupMenu!!.setOnMenuItemClickListener(this)
         qualityPopupMenu!!.setOnDismissListener(this)
@@ -974,8 +932,7 @@ import java.util.stream.Collectors
 
         for (i in availableStreams.indices) {
             val audioStream = availableStreams[i]
-            audioTrackPopupMenu!!.menu.add(POPUP_MENU_ID_AUDIO_TRACK, i, Menu.NONE,
-                audioTrackName(context, audioStream))
+            audioTrackPopupMenu!!.menu.add(POPUP_MENU_ID_AUDIO_TRACK, i, Menu.NONE, audioTrackName(context, audioStream))
         }
 
         player.selectedAudioStream?.ifPresent { s: AudioStream? -> binding.audioTrackTextView.text = audioTrackName(context, s!!) }
@@ -1182,8 +1139,7 @@ import java.util.stream.Collectors
     override fun onTextTracksChanged(currentTracks: Tracks) {
         super.onTextTracksChanged(currentTracks)
 
-        val trackTypeTextSupported = (!currentTracks.containsType(C.TRACK_TYPE_TEXT)
-                || currentTracks.isTypeSupported(C.TRACK_TYPE_TEXT, false))
+        val trackTypeTextSupported = (!currentTracks.containsType(C.TRACK_TYPE_TEXT) || currentTracks.isTypeSupported(C.TRACK_TYPE_TEXT, false))
         if (player.trackSelector.currentMappedTrackInfo == null || !trackTypeTextSupported) {
             binding.captionTextView.visibility = View.GONE
             return
@@ -1210,11 +1166,10 @@ import java.util.stream.Collectors
 
         // Build UI
         buildCaptionMenu(availableLanguages)
-        if (player.trackSelector.parameters.getRendererDisabled(player.captionRendererIndex) || selectedTracks.isEmpty) {
+        if (player.trackSelector.parameters.getRendererDisabled(player.captionRendererIndex) || selectedTracks.isEmpty)
             binding.captionTextView.setText(R.string.caption_none)
-        } else {
-            binding.captionTextView.text = selectedTracks.get().language
-        }
+        else binding.captionTextView.text = selectedTracks.get().language
+
         binding.captionTextView.visibility = if (availableLanguages.isEmpty()) View.GONE else View.VISIBLE
     }
 
@@ -1231,7 +1186,6 @@ import java.util.stream.Collectors
     }
 
     protected abstract fun setupSubtitleView(captionScale: Float)
-
 
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
@@ -1260,11 +1214,8 @@ import java.util.stream.Collectors
                 AnimationType.ALPHA, 0) {
                 if (player.currentState == Player.STATE_PLAYING && !isSomePopupMenuVisible) {
                     // Hide controls in fullscreen immediately
-                    if (v === binding.playPauseButton || (v === binding.screenRotationButton && isFullscreen)) {
-                        hideControls(0, 0)
-                    } else {
-                        hideControls(DEFAULT_CONTROLS_DURATION, DEFAULT_CONTROLS_HIDE_TIME)
-                    }
+                    if (v === binding.playPauseButton || (v === binding.screenRotationButton && isFullscreen)) hideControls(0, 0)
+                    else hideControls(DEFAULT_CONTROLS_DURATION, DEFAULT_CONTROLS_HIDE_TIME)
                 }
             }
         }
@@ -1310,9 +1261,7 @@ import java.util.stream.Collectors
             // Fix for a ripple effect on background drawable.
             // When view returns from GONE state it takes more milliseconds than returning
             // from INVISIBLE state. And the delay makes ripple background end to fast
-            if (isMoreControlsVisible) {
-                binding.secondaryControls.visibility = View.INVISIBLE
-            }
+            if (isMoreControlsVisible) binding.secondaryControls.visibility = View.INVISIBLE
         }
         showControls(DEFAULT_CONTROLS_DURATION)
     }
@@ -1329,7 +1278,6 @@ import java.util.stream.Collectors
             openUrlInBrowser(player.context, streamInfo.originalUrl)
         }
     }
-
 
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
@@ -1367,10 +1315,12 @@ import java.util.stream.Collectors
      */
     fun setupVideoSurfaceIfNeeded() {
         if (!surfaceIsSetup && player.exoPlayer != null && binding.root.parent != null) {
+            Log.d(TAG, "setupVideoSurfaceIfNeeded")
             // make sure there is nothing left over from previous calls
             clearVideoSurface()
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { // >=API23
+                Log.d(TAG, "adding surface callback")
                 surfaceHolderCallback = SurfaceHolderCallback(context, player.exoPlayer!!)
                 binding.surfaceView.holder.addCallback(surfaceHolderCallback)
 

@@ -77,10 +77,8 @@ import java.lang.ref.WeakReference
         If the service is already started in foreground, requesting it to be started shouldn't
         do anything
          */
-        if (player != null) {
-            player!!.UIs().get(NotificationPlayerUi::class.java)
-                .ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
-        }
+        player?.UIs()?.get(NotificationPlayerUi::class.java)
+            ?.ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
 
         if (Intent.ACTION_MEDIA_BUTTON == intent?.action && player?.playQueue == null) {
             /*
@@ -93,11 +91,9 @@ import java.lang.ref.WeakReference
             return START_NOT_STICKY
         }
 
-        if (player != null) {
-            if (intent != null) player!!.handleIntent(intent)
-//            player!!.UIs().get(MediaSessionPlayerUi::class.java)
-//                .ifPresent { ui: MediaSessionPlayerUi -> ui.handleMediaButtonIntent(intent) }
-        }
+        if (intent != null) player?.handleIntent(intent)
+//        player?.UIs()?.get(MediaSessionPlayerUi::class.java)
+//            ?.ifPresent { ui: MediaSessionPlayerUi -> ui.handleMediaButtonIntent(intent) }
 
         return START_NOT_STICKY
     }
@@ -117,9 +113,8 @@ import java.lang.ref.WeakReference
 
     override fun onTaskRemoved(rootIntent: Intent) {
         super.onTaskRemoved(rootIntent)
-        if (player != null && !player!!.videoPlayerSelected()) {
-            return
-        }
+        if (player != null && !player!!.videoPlayerSelected()) return
+
         onDestroy()
         // Unload from memory completely
         Runtime.getRuntime().halt(0)

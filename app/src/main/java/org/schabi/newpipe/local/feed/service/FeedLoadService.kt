@@ -220,17 +220,11 @@ class FeedLoadService : Service() {
     private lateinit var broadcastReceiver: BroadcastReceiver
 
     private fun setupBroadcastReceiver() {
-        broadcastReceiver =
-            object : BroadcastReceiver() {
-                override fun onReceive(
-                        context: Context?,
-                        intent: Intent?,
-                ) {
-                    if (intent?.action == ACTION_CANCEL) {
-                        feedLoadManager.cancel()
-                    }
-                }
+        broadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == ACTION_CANCEL) feedLoadManager.cancel()
             }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(broadcastReceiver, IntentFilter(ACTION_CANCEL), RECEIVER_NOT_EXPORTED)
         } else {

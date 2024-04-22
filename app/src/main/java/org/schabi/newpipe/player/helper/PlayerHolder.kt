@@ -15,7 +15,6 @@ import org.schabi.newpipe.App.Companion.getApp
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.player.Player
-import org.schabi.newpipe.player.Player.Companion.PLAYER_TYPE
 import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerService.LocalBinder
 import org.schabi.newpipe.player.PlayerType

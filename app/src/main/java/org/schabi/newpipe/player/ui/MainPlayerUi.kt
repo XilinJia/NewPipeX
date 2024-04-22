@@ -44,6 +44,8 @@ import org.schabi.newpipe.player.gesture.MainPlayerGestureListener
 import org.schabi.newpipe.player.helper.PlaybackParameterDialog
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.helper.PlayerHelper.MinimizeMode
+import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
+import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi.Companion
 import org.schabi.newpipe.player.notification.NotificationConstants
 import org.schabi.newpipe.player.playqueue.*
 import org.schabi.newpipe.util.DeviceUtils.dpToPx
@@ -189,6 +191,7 @@ import kotlin.math.min
     }
 
     override fun destroyPlayer() {
+        Log.d(TAG, "destroyPlayer")
         super.destroyPlayer()
         playQueueAdapter?.unsetSelectedListener()
         playQueueAdapter?.dispose()
@@ -239,30 +242,30 @@ import kotlin.math.min
         setupElementsSize(resources.getDimensionPixelSize(R.dimen.player_main_buttons_min_width), resources.getDimensionPixelSize(R.dimen.player_main_top_padding), resources.getDimensionPixelSize(R.dimen.player_main_controls_padding), resources.getDimensionPixelSize(R.dimen.player_main_buttons_padding))
     }
 
-
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
     // Broadcast receiver
     ////////////////////////////////////////////////////////////////////////// */
     //region Broadcast receiver
     override fun onBroadcastReceived(intent: Intent?) {
+        Log.d(TAG, "onBroadcastReceived ${intent?.action}")
         super.onBroadcastReceived(intent)
-        when {
-            Intent.ACTION_CONFIGURATION_CHANGED == intent!!.action -> {
+        when (intent?.action) {
+            Intent.ACTION_CONFIGURATION_CHANGED -> {
                 // Close it because when changing orientation from portrait
                 // (in fullscreen mode) the size of queue layout can be larger than the screen size
                 closeItemsList()
             }
-            NotificationConstants.ACTION_PLAY_PAUSE == intent.action -> {
+            NotificationConstants.ACTION_PLAY_PAUSE -> {
                 // Ensure that we have audio-only stream playing when a user
                 // started to play from notification's play button from outside of the app
                 if (!fragmentIsVisible) onFragmentStopped()
             }
-            VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED == intent.action -> {
+            VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED -> {
                 fragmentIsVisible = false
                 onFragmentStopped()
             }
-            VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED == intent.action -> {
+            VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED -> {
                 // Restore video source when user returns to the fragment
                 fragmentIsVisible = true
                 player.useVideoSource(true)

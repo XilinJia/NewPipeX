@@ -32,24 +32,16 @@ import androidx.media3.exoplayer.video.PlaceholderSurface
         player.setVideoSurface(holder.surface)
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder,
-                                format: Int,
-                                width: Int,
-                                height: Int
-    ) {
-    }
+    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
-        if (placeholderSurface == null) {
-            placeholderSurface = PlaceholderSurface.newInstanceV17(context, false)
-        }
+        if (placeholderSurface == null) placeholderSurface = PlaceholderSurface.newInstanceV17(context, false)
+
         player.setVideoSurface(placeholderSurface)
     }
 
     fun release() {
-        if (placeholderSurface != null) {
-            placeholderSurface!!.release()
-            placeholderSurface = null
-        }
+        placeholderSurface?.release()
+        placeholderSurface = null
     }
 }

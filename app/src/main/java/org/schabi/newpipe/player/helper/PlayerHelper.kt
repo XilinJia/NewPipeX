@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.provider.Settings
+import android.util.Log
 import android.view.accessibility.CaptioningManager
 import androidx.annotation.IntDef
 import androidx.core.content.ContextCompat
@@ -177,6 +178,7 @@ import java.util.concurrent.TimeUnit
     @MinimizeMode
     fun getMinimizeOnExitAction(context: Context): Int {
         val action = getPreferences(context).getString(context.getString(R.string.minimize_on_exit_key), "")
+        Log.d("PlayerHelper", "getMinimizeOnExitAction: action: $action")
         return when (action) {
             context.getString(R.string.minimize_on_exit_popup_key) -> {
                 MinimizeMode.MINIMIZE_ON_EXIT_MODE_POPUP

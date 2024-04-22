@@ -72,3 +72,18 @@ BufferQueueProducer     org.schabi.newpipex.debug.main       W  [MediaCodec.rele
 * changed file picker mime type from "application/json" to "\*/\*" for importing subscriptions as some pickers don't recognize "application/json" causing json files not enabled
 * fixed the issue of bottomsheet not expanding on Android 14 - Google requires an explicit broadcast. 
 * corrected sending and receiving broadcast messages for Android 14
+
+## 0.26.7
+
+* fixed issue of sometimes no video when setting auto play
+* fixed issue (seen on my Android 9 devices, not on S21 Android 14) of no video when screen is turned back on
+
+both of the above appear related to setting video size to 0 at some point, in code inherited from Java.
+
+### Issues
+
+seen on my Android 9 device:  
+```
+androidx.media3.exoplayer.ExoPlaybackException: MediaCodecVideoRenderer error, index=0, format=Format(160, null, null, video/avc, avc1.4D400C, 111557, null, [256, 144, 30.0, ColorInfo(BT709, Limited range, SDR SMPTE 170M, false, 8bit Luma, 8bit Chroma)], [-1, -1]), format_supported=YES
+```
+There is already an open issue on [androidx.media3](https://github.com/androidx/media/issues/932)

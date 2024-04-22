@@ -142,7 +142,7 @@ class ErrorUtil {
 
         private fun showSnackbar(context: Context, rootView: View?, errorInfo: ErrorInfo) {
 //            Log.d("ErrorUtil", "${errorInfo}}")
-            if (errorInfo.stackTraces.isNotEmpty()) Log.d("ErrorUtil", "Trace[0]: ${errorInfo.stackTraces[0]}")
+            if (errorInfo.stackTraces.isNotEmpty()) Log.d("ErrorUtil", "Trace[0]: ${errorInfo.stackTraces[0].substringBefore('\n')}")
 //            for (i in errorInfo.stackTraces) {
 //                Log.d("ErrorUtil", "Trace: ${i.substringBefore('\n')}")
 //            }

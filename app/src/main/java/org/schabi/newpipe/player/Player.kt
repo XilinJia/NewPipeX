@@ -167,12 +167,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         val dataSource = PlayerDataSource(context, DefaultBandwidthMeter.Builder(context).build())
         loadController = LoadController()
 
-        renderFactory = if (prefs.getBoolean(context.getString(
-                        R.string.always_use_exoplayer_set_output_surface_workaround_key), false)) CustomRenderersFactory(context)
-        else DefaultRenderersFactory(context)
+        renderFactory = if (prefs.getBoolean(context.getString(R.string.always_use_exoplayer_set_output_surface_workaround_key), false))
+            CustomRenderersFactory(context) else DefaultRenderersFactory(context)
 
-        renderFactory.setEnableDecoderFallback(prefs.getBoolean(context.getString(
-                    R.string.use_exoplayer_decoder_fallback_key), false))
+        renderFactory.setEnableDecoderFallback(prefs.getBoolean(context.getString(R.string.use_exoplayer_decoder_fallback_key), false))
 
         videoResolver = VideoPlaybackResolver(context, dataSource, qualityResolver)
         audioResolver = AudioPlaybackResolver(context, dataSource)
@@ -291,9 +289,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                             && newQueue.item!!.recoveryPosition != PlayQueueItem.RECOVERY_UNSET -> {
                         // Player can have state = IDLE when playback is stopped or failed
                         // and we should retry in this case
-                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) {
-                            exoPlayer!!.prepare()
-                        }
+                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) exoPlayer!!.prepare()
+
                         exoPlayer!!.seekTo(playQueue!!.index, newQueue.item!!.recoveryPosition)
                         exoPlayer!!.playWhenReady = playWhenReady
                     }
@@ -301,9 +298,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                         // Do not re-init the same PlayQueue. Save time
                         // Player can have state = IDLE when playback is stopped or failed
                         // and we should retry in this case
-                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) {
-                            exoPlayer!!.prepare()
-                        }
+                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) exoPlayer!!.prepare()
+
                         exoPlayer!!.playWhenReady = playWhenReady
                     }
                     (intent.getBooleanExtra(RESUME_PLAYBACK, false) && getResumePlaybackEnabled(context) && !samePlayQueue
@@ -362,11 +358,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
 
         // try to reuse binding if possible
         val binding = UIs.get(VideoPlayerUi::class.java).map { obj: VideoPlayerUi -> obj.binding }.orElseGet {
-                if (playerType == PlayerType.AUDIO) {
-                    return@orElseGet null
-                } else {
-                    return@orElseGet PlayerBinding.inflate(LayoutInflater.from(context))
-                }
+                if (playerType == PlayerType.AUDIO) return@orElseGet null
+                else return@orElseGet PlayerBinding.inflate(LayoutInflater.from(context))
             }
 
         when (playerType) {
@@ -499,9 +492,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     fun reloadPlayQueueManager() {
         playQueueManager?.dispose()
 
-        if (playQueue != null) {
-            playQueueManager = MediaSourceManager(this, playQueue!!)
-        }
+        if (playQueue != null) playQueueManager = MediaSourceManager(this, playQueue!!)
     }
 
     // own playback listener
@@ -566,13 +557,13 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     private fun onBroadcastReceived(intent: Intent?) {
-        if (intent?.action == null) return
+//        if (intent?.action == null) return
 
         if (DEBUG) {
             Log.d(TAG, "onBroadcastReceived() called with: intent = [$intent]")
         }
 
-        when (intent.action) {
+        when (intent?.action) {
             AudioManager.ACTION_AUDIO_BECOMING_NOISY -> pause()
             NotificationConstants.ACTION_CLOSE -> service.stopService()
             NotificationConstants.ACTION_PLAY_PAUSE -> playPause()
@@ -1617,7 +1608,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
             Log.d(TAG, "onVideoSizeChanged() called with: width / height = [${videoSize.width} / ${videoSize.height} = ${(videoSize.width.toFloat()) / videoSize.height}], unappliedRotationDegrees = [${videoSize.unappliedRotationDegrees}], pixelWidthHeightRatio = [${videoSize.pixelWidthHeightRatio}]")
         }
 
-        UIs.call { playerUi: PlayerUi -> playerUi.onVideoSizeChanged(videoSize) }
+        if (videoSize.width > 0 && videoSize.height > 0) UIs.call { playerUi: PlayerUi -> playerUi.onVideoSizeChanged(videoSize) }
     }
 
 
@@ -1705,9 +1696,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
             // audio-only source type
             val sourceType = videoResolver.getStreamSourceType().orElse(SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
 
-            if (playQueueManagerReloadingNeeded(sourceType, info, videoRendererIndex)) {
-                reloadPlayQueueManager()
-            }
+            if (playQueueManagerReloadingNeeded(sourceType, info, videoRendererIndex)) reloadPlayQueueManager()
 
             setRecovery()
 

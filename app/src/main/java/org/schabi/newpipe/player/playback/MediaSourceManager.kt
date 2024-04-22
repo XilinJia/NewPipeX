@@ -3,6 +3,7 @@ package org.schabi.newpipe.player.playback
 import android.os.Handler
 import android.util.Log
 import androidx.collection.ArraySet
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.source.MediaSource
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Observable
@@ -33,11 +34,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
 
-class MediaSourceManager private constructor(listener: PlaybackListener,
-                                             playQueue: PlayQueue,
-                                             loadDebounceMillis: Long,
-                                             playbackNearEndGapMillis: Long,
-                                             progressUpdateIntervalMillis: Long) {
+@UnstableApi class MediaSourceManager private constructor(listener: PlaybackListener, playQueue: PlayQueue,
+                                             loadDebounceMillis: Long, playbackNearEndGapMillis: Long, progressUpdateIntervalMillis: Long) {
+
     private val TAG = "MediaSourceManager@" + hashCode()
 
     private val playbackListener: PlaybackListener
