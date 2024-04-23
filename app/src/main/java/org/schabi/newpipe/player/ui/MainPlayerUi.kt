@@ -303,7 +303,10 @@ import kotlin.math.min
     private fun onFragmentStopped() {
         if (player.isPlaying || player.isLoading) {
             when (PlayerHelper.getMinimizeOnExitAction(context)) {
-                MinimizeMode.MINIMIZE_ON_EXIT_MODE_BACKGROUND -> player.useVideoSource(false)
+                MinimizeMode.MINIMIZE_ON_EXIT_MODE_BACKGROUND -> {
+                    player.useVideoSource(false)
+//                    player.exoPlayer?.clearVideoSurface()
+                }
                 MinimizeMode.MINIMIZE_ON_EXIT_MODE_POPUP -> parentActivity.ifPresent { activity: AppCompatActivity? ->
                     player.setRecovery()
                     playOnPopupPlayer(activity!!, player.playQueue, true)

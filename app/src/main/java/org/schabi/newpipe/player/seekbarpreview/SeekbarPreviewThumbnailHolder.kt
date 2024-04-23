@@ -41,9 +41,7 @@ class SeekbarPreviewThumbnailHolder {
         executorService.shutdown()
     }
 
-    private fun resetFromAsync(seekbarPreviewType: Int, framesets: List<Frameset?>,
-                               updateRequestIdentifier: UUID
-    ) {
+    private fun resetFromAsync(seekbarPreviewType: Int, framesets: List<Frameset?>, updateRequestIdentifier: UUID) {
         Log.d(TAG, "Clearing seekbarPreviewData")
         synchronized(seekbarPreviewData) {
             seekbarPreviewData.clear()
@@ -60,14 +58,10 @@ class SeekbarPreviewThumbnailHolder {
             return
         }
 
-        Log.d(TAG, "Frameset quality info: "
-                + "[width=" + frameset.frameWidth
-                + ", heigh=" + frameset.frameHeight + "]")
+        Log.d(TAG, "Frameset quality info: [width=${frameset.frameWidth}, heigh=${frameset.frameHeight}]")
 
         // Abort method execution if we are not the latest request
-        if (!isRequestIdentifierCurrent(updateRequestIdentifier)) {
-            return
-        }
+        if (!isRequestIdentifierCurrent(updateRequestIdentifier)) return
 
         generateDataFrom(frameset, updateRequestIdentifier)
     }
@@ -110,20 +104,16 @@ class SeekbarPreviewThumbnailHolder {
             // foreach frame in the returned bitmap
             for (i in 0 until urlFrameCount) {
                 // Frames outside the video length are skipped
-                if (pos > frameset.totalCount) {
-                    break
-                }
+                if (pos > frameset.totalCount) break
 
                 // Get the bounds where the frame is found
                 val bounds = frameset.getFrameBoundsAt(currentPosMs.toLong())
                 generatedDataForUrl.put(currentPosMs, Supplier<Bitmap?> {
                     // It can happen, that the original bitmap could not be downloaded
                     // In such a case - we don't want a NullPointer - simply return null
-                    if (srcBitMap == null) {
-                        return@Supplier null
-                    }
-                    Bitmap.createBitmap(srcBitMap, bounds[1], bounds[2],
-                        frameset.frameWidth, frameset.frameHeight)
+                    if (srcBitMap == null) return@Supplier null
+
+                    Bitmap.createBitmap(srcBitMap, bounds[1], bounds[2], frameset.frameWidth, frameset.frameHeight)
                 })
 
                 currentPosMs += frameset.durationPerFrame
@@ -162,14 +152,12 @@ class SeekbarPreviewThumbnailHolder {
             val bitmap = loadSeekbarThumbnailPreview(url).get()
 
             if (sw != null) {
-                Log.d(TAG, "Download of bitmap for seekbarPreview from '" + url + "' took "
-                        + sw.stop())
+                Log.d(TAG, "Download of bitmap for seekbarPreview from '$url' took ${sw.stop()}")
             }
 
             return bitmap
         } catch (ex: Exception) {
-            Log.w(TAG, "Failed to get bitmap for seekbarPreview from url='" + url
-                    + "' in time", ex)
+            Log.w(TAG, "Failed to get bitmap for seekbarPreview from url='$url' in time", ex)
             return null
         }
     }

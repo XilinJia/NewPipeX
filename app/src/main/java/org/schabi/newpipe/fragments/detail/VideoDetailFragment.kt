@@ -2033,11 +2033,11 @@ import kotlin.math.min
         private const val MAX_OVERLAY_ALPHA = 0.9f
         private const val MAX_PLAYER_HEIGHT = 0.7f
 
-        const val ACTION_SHOW_MAIN_PLAYER: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_SHOW_MAIN_PLAYER"
-        const val ACTION_HIDE_MAIN_PLAYER: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_HIDE_MAIN_PLAYER"
-        const val ACTION_PLAYER_STARTED: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_PLAYER_STARTED"
-        const val ACTION_VIDEO_FRAGMENT_RESUMED: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED"
-        const val ACTION_VIDEO_FRAGMENT_STOPPED: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED"
+        val ACTION_SHOW_MAIN_PLAYER: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_SHOW_MAIN_PLAYER"
+        val ACTION_HIDE_MAIN_PLAYER: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_HIDE_MAIN_PLAYER"
+        val ACTION_PLAYER_STARTED: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_PLAYER_STARTED"
+        val ACTION_VIDEO_FRAGMENT_RESUMED: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED"
+        val ACTION_VIDEO_FRAGMENT_STOPPED: String = App.PACKAGE_NAME + ".VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED"
 
         private const val COMMENTS_TAB_TAG = "COMMENTS"
         private const val RELATED_TAB_TAG = "NEXT VIDEO"

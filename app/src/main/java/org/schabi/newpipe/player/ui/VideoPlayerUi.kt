@@ -1319,10 +1319,13 @@ import java.util.stream.Collectors
             // make sure there is nothing left over from previous calls
             clearVideoSurface()
 
+            // TODO: test
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { // >=API23
                 Log.d(TAG, "adding surface callback")
-                surfaceHolderCallback = SurfaceHolderCallback(context, player.exoPlayer!!)
-                binding.surfaceView.holder.addCallback(surfaceHolderCallback)
+                if (surfaceHolderCallback == null) {
+                    surfaceHolderCallback = SurfaceHolderCallback(context, player.exoPlayer!!)
+                    binding.surfaceView.holder.addCallback(surfaceHolderCallback)
+                }
 
                 // ensure player is using an unreleased surface, which the surfaceView might not be
                 // when starting playback on background or during player switching
@@ -1341,11 +1344,12 @@ import java.util.stream.Collectors
 
     private fun clearVideoSurface() {
         // >=API23
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && surfaceHolderCallback != null) {
-            binding.surfaceView.holder.removeCallback(surfaceHolderCallback)
-            surfaceHolderCallback!!.release()
-            surfaceHolderCallback = null
-        }
+//        TODO: test
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && surfaceHolderCallback != null) {
+//            binding.surfaceView.holder.removeCallback(surfaceHolderCallback)
+//            surfaceHolderCallback!!.release()
+//            surfaceHolderCallback = null
+//        }
         Optional.ofNullable(player.exoPlayer).ifPresent { obj: ExoPlayer -> obj.clearVideoSurface() }
         surfaceIsSetup = false
     }

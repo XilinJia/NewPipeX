@@ -87,3 +87,7 @@ seen on my Android 9 device:
 androidx.media3.exoplayer.ExoPlaybackException: MediaCodecVideoRenderer error, index=0, format=Format(160, null, null, video/avc, avc1.4D400C, 111557, null, [256, 144, 30.0, ColorInfo(BT709, Limited range, SDR SMPTE 170M, false, 8bit Luma, 8bit Chroma)], [-1, -1]), format_supported=YES
 ```
 There is already an open issue on [androidx.media3](https://github.com/androidx/media/issues/932)
+
+## 0.26.8
+
+* fixed the issue of  androidx.media3.exoplayer.ExoPlaybackException on Android 9
