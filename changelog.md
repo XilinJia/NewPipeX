@@ -95,3 +95,4 @@ There is already an open issue on [androidx.media3](https://github.com/androidx/
 ## 0.26.9
 
 * suppressed Log.d message in release app
+* changed kapt to ksp

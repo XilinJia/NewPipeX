@@ -259,8 +259,8 @@ class MediaSourceManager private constructor(listener: PlaybackListener, playQue
 
     private val edgeIntervalSignal: Observable<Long>
         /*//////////////////////////////////////////////////////////////////////////
-    // MediaSource Loading
-    ////////////////////////////////////////////////////////////////////////// */
+        // MediaSource Loading
+        ////////////////////////////////////////////////////////////////////////// */
         get() = Observable.interval(progressUpdateIntervalMillis, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
             .filter { ignored: Long? -> playbackListener.isApproachingPlaybackEdge(playbackNearEndGapMillis) }
 
