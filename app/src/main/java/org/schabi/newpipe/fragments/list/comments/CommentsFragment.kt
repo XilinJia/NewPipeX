@@ -16,6 +16,7 @@ import org.schabi.newpipe.info_list.ItemViewMode
 import org.schabi.newpipe.ktx.slideUp
 import org.schabi.newpipe.util.ExtractorHelper.getCommentsInfo
 import org.schabi.newpipe.util.ExtractorHelper.getMoreCommentItems
+import org.schabi.newpipe.util.Logd
 
 class CommentsFragment : BaseListInfoFragment<CommentsInfoItem, CommentsInfo>(UserAction.REQUESTED_COMMENTS) {
     private val disposables = CompositeDisposable()
@@ -31,10 +32,8 @@ class CommentsFragment : BaseListInfoFragment<CommentsInfoItem, CommentsInfo>(Us
     /*//////////////////////////////////////////////////////////////////////////
     // LifeCycle
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        Logd(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_comments, container, false)
     }
 

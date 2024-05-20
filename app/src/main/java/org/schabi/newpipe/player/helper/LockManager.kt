@@ -7,6 +7,7 @@ import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import android.util.Log
 import androidx.core.content.ContextCompat
+import org.schabi.newpipe.util.Logd
 
 class LockManager(context: Context) {
     private val TAG = "LockManager@" + hashCode()
@@ -19,7 +20,7 @@ class LockManager(context: Context) {
     private var wifiLock: WifiLock? = null
 
     fun acquireWifiAndCpu() {
-        Log.d(TAG, "acquireWifiAndCpu() called")
+        Logd(TAG, "acquireWifiAndCpu() called")
         if (wakeLock != null && wakeLock!!.isHeld && wifiLock != null && wifiLock!!.isHeld) {
             return
         }
@@ -36,7 +37,7 @@ class LockManager(context: Context) {
     }
 
     fun releaseWifiAndCpu() {
-        Log.d(TAG, "releaseWifiAndCpu() called")
+        Logd(TAG, "releaseWifiAndCpu() called")
         if (wakeLock != null && wakeLock!!.isHeld) {
             wakeLock!!.release()
         }

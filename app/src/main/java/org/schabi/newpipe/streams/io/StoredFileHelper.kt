@@ -17,6 +17,7 @@ import org.schabi.newpipe.streams.io.StoredDirectoryHelper.Companion.findFileSAF
 import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.util.FilePickerActivityHelper
 import org.schabi.newpipe.util.FilePickerActivityHelper.Companion.isOwnFileUri
+import org.schabi.newpipe.util.Logd
 import us.shandian.giga.io.FileStream
 import us.shandian.giga.io.FileStreamSAF
 import java.io.File
@@ -255,9 +256,7 @@ class StoredFileHelper : Serializable {
 
     fun existsAsFile(): Boolean {
         if (source == null || (docFile == null && ioPath == null)) {
-            if (DEBUG) {
-                Log.d(TAG, "existsAsFile called but something is null: source = [${if (source == null) "null => storage is invalid" else source}], docFile = [$docFile], ioPath = [$ioPath]")
-            }
+            Logd(TAG, "existsAsFile called but something is null: source = [${if (source == null) "null => storage is invalid" else source}], docFile = [$docFile], ioPath = [$ioPath]")
             return false
         }
 
@@ -411,7 +410,7 @@ class StoredFileHelper : Serializable {
 
         @JvmStatic
         fun getPicker(ctx: Context, mimeType: String): Intent {
-            Log.d(TAG, "getPicker mimeType: $mimeType")
+            Logd(TAG, "getPicker mimeType: $mimeType")
             return if (NewPipeSettings.useStorageAccessFramework(ctx)) {
                 Intent(Intent.ACTION_OPEN_DOCUMENT)
                     .putExtra("android.content.extra.SHOW_ADVANCED", true)

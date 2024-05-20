@@ -22,7 +22,7 @@ import icepick.State
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.DialogPlaybackParameterBinding
 import org.schabi.newpipe.ktx.animateRotation
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.helper.PlayerHelper.formatPitch
 import org.schabi.newpipe.player.helper.PlayerHelper.formatSpeed
 import org.schabi.newpipe.player.helper.PlayerSemitoneHelper.formatPitchSemitones
@@ -30,6 +30,7 @@ import org.schabi.newpipe.player.helper.PlayerSemitoneHelper.percentToSemitones
 import org.schabi.newpipe.player.helper.PlayerSemitoneHelper.semitonesToPercent
 import org.schabi.newpipe.player.ui.VideoPlayerUi
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.SimpleOnSeekBarChangeListener
 import org.schabi.newpipe.util.SliderStrategy
 import org.schabi.newpipe.util.SliderStrategy.Quadratic
@@ -316,12 +317,8 @@ class PlaybackParameterDialog : DialogFragment() {
 
             // If the values differ set the new pitch
             if (this.pitchPercent != newPitchPercent) {
-                if (Player.DEBUG) {
-                    Log.d(TAG, "Bringing pitchPercent to correct corresponding semitone: "
-                            + "currentPitchPercent = " + pitchPercent + ", "
-                            + "newPitchPercent = " + newPitchPercent
-                    )
-                }
+                Logd(TAG, "Bringing pitchPercent to correct corresponding semitone: currentPitchPercent = $pitchPercent, newPitchPercent = $newPitchPercent")
+
                 this.onPitchPercentSliderUpdated(newPitchPercent)
                 updateCallback()
             }
@@ -505,16 +502,8 @@ class PlaybackParameterDialog : DialogFragment() {
     // Helper
     ////////////////////////////////////////////////////////////////////////// */
     private fun updateCallback() {
-        if (callback == null) {
-            return
-        }
-        if (Player.DEBUG) {
-            Log.d(TAG, "Updating callback: "
-                    + "tempo = " + tempo + ", "
-                    + "pitchPercent = " + pitchPercent + ", "
-                    + "skipSilence = " + skipSilence
-            )
-        }
+        if (callback == null) return
+        Logd(TAG, "Updating callback: tempo = $tempo, pitchPercent = $pitchPercent, skipSilence = $skipSilence")
         callback!!.onPlaybackParameterChanged(tempo.toFloat(), pitchPercent.toFloat(), skipSilence)
     }
 

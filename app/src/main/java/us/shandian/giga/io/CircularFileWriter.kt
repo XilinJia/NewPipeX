@@ -2,6 +2,7 @@ package us.shandian.giga.io
 
 import android.util.Log
 import org.schabi.newpipe.streams.io.SharpStream
+import org.schabi.newpipe.util.Logd
 import java.io.File
 import java.io.IOException
 import java.util.*
@@ -100,7 +101,7 @@ class CircularFileWriter(target: SharpStream, temp: File, checker: OffsetChecker
             while (length > 0) {
                 var read = min(length, Long.MAX_VALUE).toInt()
                 read = aux!!.target.read(buffer, 0, min(read, buffer.size))
-                Log.d("CircularFileWriter", "writeOffset: $writeOffset read: $read")
+                Logd("CircularFileWriter", "writeOffset: $writeOffset read: $read")
                 if (read <= 0) break
 
                 aux!!.target.seek(writeOffset)

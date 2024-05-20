@@ -2,15 +2,16 @@ package org.schabi.newpipe.player.notification
 
 import android.content.Intent
 import android.graphics.Bitmap
+import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.extractor.stream.StreamInfo
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.helper.PlayerHelper.MinimizeMode
 import org.schabi.newpipe.player.notification.NotificationConstants.ACTION_RECREATE_NOTIFICATION
 import org.schabi.newpipe.player.ui.PlayerUi
 
-class NotificationPlayerUi(player: Player) : PlayerUi(player) {
-    private val notificationUtil = NotificationUtil(player)
+@UnstableApi class NotificationPlayerUi(playerManager: PlayerManager) : PlayerUi(playerManager) {
+    private val notificationUtil = NotificationUtil(playerManager)
 
     override fun destroy() {
         super.destroy()
@@ -34,21 +35,15 @@ class NotificationPlayerUi(player: Player) : PlayerUi(player) {
 
     override fun onBuffering() {
         super.onBuffering()
-        if (notificationUtil.shouldUpdateBufferingSlot()) {
-            notificationUtil.createNotificationIfNeededAndUpdate(false)
-        }
+        if (notificationUtil.shouldUpdateBufferingSlot()) notificationUtil.createNotificationIfNeededAndUpdate(false)
     }
 
     override fun onPaused() {
         super.onPaused()
-
         // Remove running notification when user does not want minimization to background or popup
-        if (PlayerHelper.getMinimizeOnExitAction(context) == MinimizeMode.MINIMIZE_ON_EXIT_MODE_NONE
-                && player.videoPlayerSelected()) {
+        if (PlayerHelper.getMinimizeOnExitAction(context) == MinimizeMode.MINIMIZE_ON_EXIT_MODE_NONE && playerManager.videoPlayerSelected())
             notificationUtil.cancelNotificationAndStopForeground()
-        } else {
-            notificationUtil.createNotificationIfNeededAndUpdate(false)
-        }
+        else notificationUtil.createNotificationIfNeededAndUpdate(false)
     }
 
     override fun onPausedSeek() {
@@ -73,9 +68,7 @@ class NotificationPlayerUi(player: Player) : PlayerUi(player) {
 
     override fun onBroadcastReceived(intent: Intent?) {
         super.onBroadcastReceived(intent)
-        if (ACTION_RECREATE_NOTIFICATION == intent!!.action) {
-            notificationUtil.createNotificationIfNeededAndUpdate(true)
-        }
+        if (ACTION_RECREATE_NOTIFICATION == intent!!.action) notificationUtil.createNotificationIfNeededAndUpdate(true)
     }
 
     override fun onMetadataChanged(info: StreamInfo) {

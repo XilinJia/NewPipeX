@@ -39,6 +39,7 @@ import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.util.Localization.deletedDownloadCount
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.getIntentByLink
 import org.schabi.newpipe.util.external_communication.ShareUtils.copyToClipboard
 import org.schabi.newpipe.util.external_communication.ShareUtils.openIntentInApp
@@ -287,8 +288,7 @@ class MissionAdapter(private val mContext: Context,
         if (checkInvalidFile(mission!!)) return
 
         val mimeType = resolveMimeType(mission)
-
-        if (BuildConfig.DEBUG) Log.v(TAG, "Mime: " + mimeType + " package: " + BuildConfig.APPLICATION_ID + ".provider")
+        Logd(TAG, "Mime: " + mimeType + " package: " + BuildConfig.APPLICATION_ID + ".provider")
 
         val intent = Intent(Intent.ACTION_VIEW)
         intent.setDataAndType(resolveShareableUri(mission), mimeType)
@@ -639,7 +639,7 @@ class MissionAdapter(private val mContext: Context,
 
     fun checkMasterButtonsVisibility() {
         val state = mIterator.hasValidPendingMissions()
-        Log.d(TAG, "checkMasterButtonsVisibility() running=" + state[0] + " paused=" + state[1])
+        Logd(TAG, "checkMasterButtonsVisibility() running=" + state[0] + " paused=" + state[1])
         setButtonVisible(mPauseButton, state[0])
         setButtonVisible(mStartButton, state[1])
     }

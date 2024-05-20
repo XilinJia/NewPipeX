@@ -13,6 +13,7 @@ import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.player.gesture.DisplayPortion
 import org.schabi.newpipe.player.gesture.DoubleTapListener
+import org.schabi.newpipe.util.Logd
 
 class PlayerFastSeekOverlay(context: Context, attrs: AttributeSet?) :
     ConstraintLayout(context, attrs), DoubleTapListener {
@@ -53,28 +54,15 @@ class PlayerFastSeekOverlay(context: Context, attrs: AttributeSet?) :
     private var initTap: Boolean = false
 
     override fun onDoubleTapStarted(portion: DisplayPortion) {
-        if (DEBUG) {
-            Log.d(TAG, "onDoubleTapStarted called with portion = [$portion]")
-        }
-
+        Logd(TAG, "onDoubleTapStarted called with portion = [$portion]")
         initTap = false
 
         secondsView.stopAnimation()
     }
 
     override fun onDoubleTapProgressDown(portion: DisplayPortion) {
-        val shouldForward: Boolean =
-            performListener?.getFastSeekDirection(portion)?.directionAsBoolean ?: return
-
-        if (DEBUG) {
-            Log.d(
-                TAG,
-                "onDoubleTapProgressDown called with " +
-                    "shouldForward = [$shouldForward], " +
-                    "wasForwarding = [$wasForwarding], " +
-                    "initTap = [$initTap], ",
-            )
-        }
+        val shouldForward: Boolean = performListener?.getFastSeekDirection(portion)?.directionAsBoolean ?: return
+        Logd(TAG, "onDoubleTapProgressDown called with shouldForward = [$shouldForward], wasForwarding = [$wasForwarding], initTap = [$initTap], ")
 
         /*
          * Check if a initial tap occurred or if direction was switched
@@ -88,9 +76,7 @@ class PlayerFastSeekOverlay(context: Context, attrs: AttributeSet?) :
 
             wasForwarding = shouldForward
 
-            if (!initTap) {
-                initTap = true
-            }
+            if (!initTap) initTap = true
         }
 
         performListener?.onDoubleTap()
@@ -100,9 +86,7 @@ class PlayerFastSeekOverlay(context: Context, attrs: AttributeSet?) :
     }
 
     override fun onDoubleTapFinished() {
-        if (DEBUG) {
-            Log.d(TAG, "onDoubleTapFinished called with initTap = [$initTap]")
-        }
+        Logd(TAG, "onDoubleTapFinished called with initTap = [$initTap]")
 
         if (initTap) performListener?.onDoubleTapEnd()
         initTap = false
@@ -147,6 +131,5 @@ class PlayerFastSeekOverlay(context: Context, attrs: AttributeSet?) :
 
     companion object {
         private const val TAG = "PlayerFastSeekOverlay"
-        private val DEBUG = MainActivity.DEBUG
     }
 }

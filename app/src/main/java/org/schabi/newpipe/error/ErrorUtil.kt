@@ -17,6 +17,7 @@ import androidx.core.app.PendingIntentCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
 import org.schabi.newpipe.R
+import org.schabi.newpipe.util.Logd
 import java.lang.Exception
 
 /**
@@ -141,10 +142,10 @@ class ErrorUtil {
         }
 
         private fun showSnackbar(context: Context, rootView: View?, errorInfo: ErrorInfo) {
-//            Log.d("ErrorUtil", "${errorInfo}}")
-            if (errorInfo.stackTraces.isNotEmpty()) Log.d("ErrorUtil", "Trace[0]: ${errorInfo.stackTraces[0].substringBefore('\n')}")
+//            Logd("ErrorUtil", "${errorInfo}}")
+            if (errorInfo.stackTraces.isNotEmpty()) Logd("ErrorUtil", "Trace[0]: ${errorInfo.stackTraces[0].substringBefore('\n')}")
 //            for (i in errorInfo.stackTraces) {
-//                Log.d("ErrorUtil", "Trace: ${i.substringBefore('\n')}")
+//                Logd("ErrorUtil", "Trace: ${i.substringBefore('\n')}")
 //            }
             if (rootView == null) {
                 // fallback to showing a notification if no root view is available

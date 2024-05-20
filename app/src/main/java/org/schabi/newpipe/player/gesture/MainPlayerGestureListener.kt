@@ -12,10 +12,11 @@ import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.ktx.AnimationType
 import org.schabi.newpipe.ktx.animate
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.helper.AudioReactor
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.ui.MainPlayerUi
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ThemeHelper.getAndroidDimenPx
 import kotlin.math.abs
 
@@ -54,24 +55,18 @@ class MainPlayerGestureListener(private val playerUi: MainPlayerUi)
     }
 
     override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-        if (DEBUG) {
-            Log.d(TAG, "onSingleTapConfirmed() called with: e = [$e]")
-        }
-
-        if (isDoubleTapping) {
-            return true
-        }
+        Logd(TAG, "onSingleTapConfirmed() called with: e = [$e]")
+        if (isDoubleTapping) return true
         super.onSingleTapConfirmed(e)
 
-        if (player.currentState != Player.STATE_BLOCKED) {
-            onSingleTap()
-        }
+        if (playerManager.currentState != PlayerManager.STATE_BLOCKED) onSingleTap()
+
         return true
     }
 
     private fun onScrollVolume(distanceY: Float) {
         val bar: ProgressBar = binding.volumeProgressBar
-        val audioReactor: AudioReactor = player.audioReactor ?: return
+        val audioReactor: AudioReactor = playerManager.audioReactor ?: return
 
         // If we just started sliding, change the progress bar to match the system volume
         if (!binding.volumeRelativeLayout.isVisible) {
@@ -86,14 +81,13 @@ class MainPlayerGestureListener(private val playerUi: MainPlayerUi)
         val currentProgressPercent: Float = bar.progress / bar.max.toFloat()
         val currentVolume = (audioReactor.maxVolume * currentProgressPercent).toInt()
         audioReactor.volume = currentVolume
-        if (DEBUG) {
-            Log.d(TAG, "onScroll().volumeControl, currentVolume = $currentVolume")
-        }
+
+        Logd(TAG, "onScroll().volumeControl, currentVolume = $currentVolume")
 
         // Update player center image
         binding.volumeImageView.setImageDrawable(
             AppCompatResources.getDrawable(
-                player.context,
+                playerManager.context,
                 when {
                     currentProgressPercent <= 0 -> R.drawable.ic_volume_off
                     currentProgressPercent < 0.25 -> R.drawable.ic_volume_mute
@@ -128,18 +122,18 @@ class MainPlayerGestureListener(private val playerUi: MainPlayerUi)
 
         // Save current brightness level
         PlayerHelper.setScreenBrightness(parent, currentProgressPercent)
-        if (DEBUG) {
-            Log.d(
+
+            Logd(
                 TAG,
                 "onScroll().brightnessControl, " +
                     "currentBrightness = " + currentProgressPercent,
             )
-        }
+
 
         // Update player center image
         binding.brightnessImageView.setImageDrawable(
             AppCompatResources.getDrawable(
-                player.context,
+                playerManager.context,
                 when {
                     currentProgressPercent < 0.25 -> R.drawable.ic_brightness_low
                     currentProgressPercent < 0.75 -> R.drawable.ic_brightness_medium
@@ -176,8 +170,8 @@ class MainPlayerGestureListener(private val playerUi: MainPlayerUi)
         }
 
         // Calculate heights of status and navigation bars
-        val statusBarHeight = getAndroidDimenPx(player.context, "status_bar_height")
-        val navigationBarHeight = getAndroidDimenPx(player.context, "navigation_bar_height")
+        val statusBarHeight = getAndroidDimenPx(playerManager.context, "status_bar_height")
+        val navigationBarHeight = getAndroidDimenPx(playerManager.context, "navigation_bar_height")
 
         // Do not handle this event if initially it started from status or navigation bars
         val isTouchingStatusBar = initialEvent.y < statusBarHeight
@@ -189,7 +183,7 @@ class MainPlayerGestureListener(private val playerUi: MainPlayerUi)
         val insideThreshold = abs(movingEvent.y - initialEvent.y) <= MOVEMENT_THRESHOLD
         if (
             !isMoving && (insideThreshold || abs(distanceX) > abs(distanceY)) ||
-            player.currentState == Player.STATE_COMPLETED
+            playerManager.currentState == PlayerManager.STATE_COMPLETED
         ) {
             return false
         }
@@ -198,17 +192,17 @@ class MainPlayerGestureListener(private val playerUi: MainPlayerUi)
 
         // -- Brightness and Volume control --
         if (getDisplayHalfPortion(initialEvent) == DisplayPortion.RIGHT_HALF) {
-            when (PlayerHelper.getActionForRightGestureSide(player.context)) {
-                player.context.getString(R.string.volume_control_key) ->
+            when (PlayerHelper.getActionForRightGestureSide(playerManager.context)) {
+                playerManager.context.getString(R.string.volume_control_key) ->
                     onScrollVolume(distanceY)
-                player.context.getString(R.string.brightness_control_key) ->
+                playerManager.context.getString(R.string.brightness_control_key) ->
                     onScrollBrightness(distanceY)
             }
         } else {
-            when (PlayerHelper.getActionForLeftGestureSide(player.context)) {
-                player.context.getString(R.string.volume_control_key) ->
+            when (PlayerHelper.getActionForLeftGestureSide(playerManager.context)) {
+                playerManager.context.getString(R.string.volume_control_key) ->
                     onScrollVolume(distanceY)
-                player.context.getString(R.string.brightness_control_key) ->
+                playerManager.context.getString(R.string.brightness_control_key) ->
                     onScrollBrightness(distanceY)
             }
         }

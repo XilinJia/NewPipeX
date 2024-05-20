@@ -11,6 +11,7 @@ import androidx.fragment.app.DialogFragment
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.DownloadLoadingDialogBinding
+import org.schabi.newpipe.util.Logd
 
 /**
  * This class contains a dialog which shows a loading indicator and has a customizable title.
@@ -32,23 +33,13 @@ class LoadingDialog
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (DEBUG) {
-            Log.d(TAG, "onCreate() called with: "
-                    + "savedInstanceState = [" + savedInstanceState + "]")
-        }
+        Logd(TAG, "onCreate() called with: savedInstanceState = [$savedInstanceState]")
+
         this.isCancelable = false
     }
 
-    override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
-    ): View? {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateView() called with: "
-                    + "inflater = [" + inflater + "], container = [" + container + "], "
-                    + "savedInstanceState = [" + savedInstanceState + "]")
-        }
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        Logd(TAG, "onCreateView() called with: inflater = [$inflater], container = [$container], savedInstanceState = [$savedInstanceState]")
         return inflater.inflate(R.layout.download_loading_dialog, container)
     }
 
@@ -59,9 +50,8 @@ class LoadingDialog
     }
 
     private fun initToolbar(toolbar: Toolbar) {
-        if (DEBUG) {
-            Log.d(TAG, "initToolbar() called with: toolbar = [$toolbar]")
-        }
+        Logd(TAG, "initToolbar() called with: toolbar = [$toolbar]")
+
         toolbar.title = requireContext().getString(title)
         toolbar.setNavigationOnClickListener { v: View? -> dismiss() }
     }
@@ -73,6 +63,5 @@ class LoadingDialog
 
     companion object {
         private const val TAG = "LoadingDialog"
-        private val DEBUG = MainActivity.DEBUG
     }
 }

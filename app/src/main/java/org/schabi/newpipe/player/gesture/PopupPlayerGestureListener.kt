@@ -9,14 +9,13 @@ import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.ktx.AnimationType
 import org.schabi.newpipe.ktx.animate
 import org.schabi.newpipe.player.ui.PopupPlayerUi
+import org.schabi.newpipe.util.Logd
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 
-class PopupPlayerGestureListener(
-    private val playerUi: PopupPlayerUi,
-) : BasePlayerGestureListener(playerUi) {
+class PopupPlayerGestureListener(private val playerUi: PopupPlayerUi) : BasePlayerGestureListener(playerUi) {
     private var isMoving = false
 
     private var initialPopupX: Int = -1
@@ -30,15 +29,11 @@ class PopupPlayerGestureListener(
     private var initSecPointerX = -1f
     private var initSecPointerY = -1f
 
-    override fun onTouch(
-        v: View,
-        event: MotionEvent,
-    ): Boolean {
+    override fun onTouch(v: View, event: MotionEvent): Boolean {
         super.onTouch(v, event)
         if (event.pointerCount == 2 && !isMoving && !isResizing) {
-            if (DEBUG) {
-                Log.d(TAG, "onTouch() 2 finger pointer detected, enabling resizing.")
-            }
+            Logd(TAG, "onTouch() 2 finger pointer detected, enabling resizing.")
+
             onPopupResizingStart()
 
             // record coordinates of fingers
@@ -56,23 +51,12 @@ class PopupPlayerGestureListener(
             isResizing = true
         }
         if (event.action == MotionEvent.ACTION_MOVE && !isMoving && isResizing) {
-            if (DEBUG) {
-                Log.d(
-                    TAG,
-                    "onTouch() ACTION_MOVE > v = [$v], e1.getRaw =" +
-                        "[${event.rawX}, ${event.rawY}]",
-                )
-            }
+            Logd(TAG, "onTouch() ACTION_MOVE > v = [$v], e1.getRaw =[${event.rawX}, ${event.rawY}]")
             return handleMultiDrag(event)
         }
         if (event.action == MotionEvent.ACTION_UP) {
-            if (DEBUG) {
-                Log.d(
-                    TAG,
-                    "onTouch() ACTION_UP > v = [$v], e1.getRaw =" +
-                        " [${event.rawX}, ${event.rawY}]",
-                )
-            }
+            Logd(TAG, "onTouch() ACTION_UP > v = [$v], e1.getRaw = [${event.rawX}, ${event.rawY}]")
+
             if (isMoving) {
                 isMoving = false
                 onScrollEnd(event)
@@ -87,7 +71,7 @@ class PopupPlayerGestureListener(
                 initSecPointerY = (-1).toFloat()
 
                 onPopupResizingEnd()
-                player.changeState(player.currentState)
+                playerManager.changeState(playerManager.currentState)
             }
             if (!playerUi.isPopupClosing) {
                 playerUi.savePopupPositionAndSizeToPrefs()
@@ -126,7 +110,7 @@ class PopupPlayerGestureListener(
             )
 
         // minimum threshold beyond which pinch gesture will work
-        val minimumMove = ViewConfiguration.get(player.context).scaledTouchSlop
+        val minimumMove = ViewConfiguration.get(playerManager.context).scaledTouchSlop
         if (max(firstPointerMove, secPointerMove) <= minimumMove) {
             return false
         }
@@ -151,9 +135,9 @@ class PopupPlayerGestureListener(
     }
 
     private fun onPopupResizingStart() {
-        if (DEBUG) {
-            Log.d(TAG, "onPopupResizingStart called")
-        }
+
+        Logd(TAG, "onPopupResizingStart called")
+
         binding.loadingPanel.visibility = View.GONE
         playerUi.hideControls(0, 0)
         binding.fastSeekOverlay.animate(false, 0)
@@ -161,9 +145,9 @@ class PopupPlayerGestureListener(
     }
 
     private fun onPopupResizingEnd() {
-        if (DEBUG) {
-            Log.d(TAG, "onPopupResizingEnd called")
-        }
+
+        Logd(TAG, "onPopupResizingEnd called")
+
     }
 
     override fun onLongPress(e: MotionEvent) {
@@ -173,12 +157,12 @@ class PopupPlayerGestureListener(
     }
 
     override fun onFling(
-        e1: MotionEvent?,
-        e2: MotionEvent,
-        velocityX: Float,
-        velocityY: Float,
+            e1: MotionEvent?,
+            e2: MotionEvent,
+            velocityX: Float,
+            velocityY: Float,
     ): Boolean {
-        return if (player.popupPlayerSelected()) {
+        return if (playerManager.popupPlayerSelected()) {
             val absVelocityX = abs(velocityX)
             val absVelocityY = abs(velocityY)
             if (absVelocityX.coerceAtLeast(absVelocityY) > TOSS_FLING_VELOCITY) {
@@ -211,14 +195,14 @@ class PopupPlayerGestureListener(
     }
 
     override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-        if (DEBUG) {
-            Log.d(TAG, "onSingleTapConfirmed() called with: e = [$e]")
-        }
+
+        Logd(TAG, "onSingleTapConfirmed() called with: e = [$e]")
+
 
         if (isDoubleTapping) {
             return true
         }
-        if (player.exoPlayerIsNull()) {
+        if (playerManager.exoPlayerIsNull()) {
             return false
         }
 
@@ -227,10 +211,10 @@ class PopupPlayerGestureListener(
     }
 
     override fun onScroll(
-        initialEvent: MotionEvent?,
-        movingEvent: MotionEvent,
-        distanceX: Float,
-        distanceY: Float,
+            initialEvent: MotionEvent?,
+            movingEvent: MotionEvent,
+            distanceX: Float,
+            distanceY: Float,
     ): Boolean {
         if (initialEvent == null) {
             return false

@@ -1,30 +1,27 @@
- /*
- * Created by Christian Schabesberger on 02.08.16.
- * <p>
- * Copyright (C) Christian Schabesberger 2016 <chris.schabesberger@mailbox.org>
- * DownloadActivity.java is part of NewPipe.
- * <p>
- * NewPipe is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * <p>
- * NewPipe is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * <p>
- * You should have received a copy of the GNU General Public License
- * along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
- */
+/*
+* Created by Christian Schabesberger on 02.08.16.
+* <p>
+* Copyright (C) Christian Schabesberger 2016 <chris.schabesberger@mailbox.org>
+* DownloadActivity.java is part of NewPipe.
+* <p>
+* NewPipe is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+* <p>
+* NewPipe is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+* <p>
+* You should have received a copy of the GNU General Public License
+* along with NewPipe.  If not, see <http://www.gnu.org/licenses/>.
+*/
 package org.schabi.newpipe
 
 import android.content.*
 import android.content.pm.PackageManager
-import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
+import android.os.*
 import android.util.Log
 import android.view.*
 import android.widget.AdapterView
@@ -53,7 +50,7 @@ import org.schabi.newpipe.fragments.detail.VideoDetailFragment
 import org.schabi.newpipe.fragments.list.comments.CommentRepliesFragment
 import org.schabi.newpipe.fragments.list.search.SearchFragment
 import org.schabi.newpipe.local.feed.notifications.NotificationWorker.Companion.initialize
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.event.OnKeyDownListener
 import org.schabi.newpipe.player.helper.PlayerHolder
 import org.schabi.newpipe.player.playqueue.PlayQueue
@@ -94,7 +91,8 @@ import org.schabi.newpipe.util.ThemeHelper.setDayNightMode
 import org.schabi.newpipe.util.ThemeHelper.setTheme
 import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
 
- @UnstableApi class MainActivity : AppCompatActivity() {
+@UnstableApi
+class MainActivity : AppCompatActivity() {
     private var mainBinding: ActivityMainBinding? = null
     private var drawerHeaderBinding: DrawerHeaderBinding? = null
     private var drawerLayoutBinding: DrawerLayoutBinding? = null
@@ -110,9 +108,13 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
     // Activity's LifeCycle
     ////////////////////////////////////////////////////////////////////////// */
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (DEBUG) {
-            Log.d(TAG, "onCreate() called with: "
-                    + "savedInstanceState = [" + savedInstanceState + "]")
+
+        Logd(TAG, "onCreate() called with: " + "savedInstanceState = [" + savedInstanceState + "]")
+        if (BuildConfig.DEBUG) {
+            val builder = StrictMode.ThreadPolicy.Builder()
+                .detectAll()  // Enable all detections
+                .penaltyLog()  // Log violations to the console
+            StrictMode.setThreadPolicy(builder.build())
         }
 
         setDayNightMode(this)
@@ -420,17 +422,17 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
 
         val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
         if (sharedPreferences.getBoolean(KEY_THEME_CHANGE, false)) {
-            if (DEBUG) {
-                Log.d(TAG, "Theme has changed, recreating activity...")
-            }
+
+            Logd(TAG, "Theme has changed, recreating activity...")
+
             sharedPreferences.edit().putBoolean(KEY_THEME_CHANGE, false).apply()
             ActivityCompat.recreate(this)
         }
 
         if (sharedPreferences.getBoolean(KEY_MAIN_PAGE_CHANGE, false)) {
-            if (DEBUG) {
-                Log.d(TAG, "main page has changed, recreating main fragment...")
-            }
+
+            Logd(TAG, "main page has changed, recreating main fragment...")
+
             sharedPreferences.edit().putBoolean(KEY_MAIN_PAGE_CHANGE, false).apply()
             openMainActivity(this)
         }
@@ -441,9 +443,9 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
     }
 
     override fun onNewIntent(intent: Intent) {
-        if (DEBUG) {
-            Log.d(TAG, "onNewIntent() called with: intent = [$intent]")
-        }
+
+        Logd(TAG, "onNewIntent() called with: intent = [$intent]")
+
         if (intent != null) {
             // Return if launched from a launcher (e.g. Nova Launcher, Pixel Launcher ...)
             // to not destroy the already created backstack
@@ -468,9 +470,9 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
     }
 
     override fun onBackPressed() {
-        if (DEBUG) {
-            Log.d(TAG, "onBackPressed() called")
-        }
+
+        Logd(TAG, "onBackPressed() called")
+
 
         if (isTv(this)) {
             if (mainBinding!!.root.isDrawerOpen(drawerLayoutBinding!!.navigation)) {
@@ -521,7 +523,8 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
 
     override fun onRequestPermissionsResult(requestCode: Int,
                                             permissions: Array<String>,
-                                            grantResults: IntArray) {
+                                            grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         for (i in grantResults) {
             if (i == PackageManager.PERMISSION_DENIED) return
@@ -581,9 +584,9 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
     // Menu
     ////////////////////////////////////////////////////////////////////////// */
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: menu = [$menu]")
-        }
+
+        Logd(TAG, "onCreateOptionsMenu() called with: menu = [$menu]")
+
         super.onCreateOptionsMenu(menu)
 
         val fragment = supportFragmentManager.findFragmentById(R.id.fragment_holder)
@@ -600,9 +603,9 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        if (DEBUG) {
-            Log.d(TAG, "onOptionsItemSelected() called with: item = [$item]")
-        }
+
+        Logd(TAG, "onOptionsItemSelected() called with: item = [$item]")
+
 
         if (item.itemId == android.R.id.home) {
             onHomeButtonPressed()
@@ -615,9 +618,9 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
     // Init
     ////////////////////////////////////////////////////////////////////////// */
     private fun initFragments() {
-        if (DEBUG) {
-            Log.d(TAG, "initFragments() called")
-        }
+
+        Logd(TAG, "initFragments() called")
+
         clearStateFiles()
         if (intent != null && intent.hasExtra(KEY_LINK_TYPE)) {
             // When user watch a video inside popup and then tries to open the video in main player
@@ -658,9 +661,7 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
 
     private fun handleIntent(intent: Intent) {
         try {
-            if (DEBUG) {
-                Log.d(TAG, "handleIntent() called with: intent = [$intent]")
-            }
+            Logd(TAG, "handleIntent() called with: intent = [$intent]")
 
             when {
                 intent.hasExtra(KEY_LINK_TYPE) -> {
@@ -671,13 +672,21 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
                     val linkType = intent.getSerializableExtra(KEY_LINK_TYPE) as? LinkType
                     when (linkType) {
                         LinkType.STREAM -> {
-                            val intentCacheKey = intent.getStringExtra(Player.PLAY_QUEUE_KEY)
+                            val intentCacheKey = intent.getStringExtra(PlayerManager.PLAY_QUEUE_KEY)
                             val playQueue: PlayQueue? =
-                                if (intentCacheKey != null) SerializedCache.instance.take(intentCacheKey, PlayQueue::class.java)
+                                if (intentCacheKey != null) SerializedCache.instance.take(intentCacheKey,
+                                    PlayQueue::class.java)
                                 else null
 
-                            val switchingPlayers = intent.getBooleanExtra(VideoDetailFragment.KEY_SWITCHING_PLAYERS, false)
-                            openVideoDetailFragment(applicationContext, supportFragmentManager, serviceId, url, title, playQueue, switchingPlayers)
+                            val switchingPlayers =
+                                intent.getBooleanExtra(VideoDetailFragment.KEY_SWITCHING_PLAYERS, false)
+                            openVideoDetailFragment(applicationContext,
+                                supportFragmentManager,
+                                serviceId,
+                                url,
+                                title,
+                                playQueue,
+                                switchingPlayers)
                         }
                         LinkType.CHANNEL -> openChannelFragment(supportFragmentManager, serviceId, url, title)
                         LinkType.PLAYLIST -> openPlaylistFragment(supportFragmentManager, serviceId, url, title)
@@ -744,7 +753,8 @@ import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
 
     private fun openDetailFragmentFromCommentReplies(fm: FragmentManager, popBackStack: Boolean) {
         // obtain the name of the fragment under the replies fragment that's going to be popped
-        val fragmentUnderEntryName = if (fm.backStackEntryCount < 2) null else fm.getBackStackEntryAt(fm.backStackEntryCount - 2).name
+        val fragmentUnderEntryName =
+            if (fm.backStackEntryCount < 2) null else fm.getBackStackEntryAt(fm.backStackEntryCount - 2).name
 
         // the root comment is the comment for which the user opened the replies page
         val repliesFragment = fm.findFragmentByTag(CommentRepliesFragment.TAG) as CommentRepliesFragment?

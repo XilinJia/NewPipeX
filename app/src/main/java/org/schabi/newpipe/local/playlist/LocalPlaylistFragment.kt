@@ -51,6 +51,7 @@ import org.schabi.newpipe.local.history.HistoryRecordManager
 import org.schabi.newpipe.player.playqueue.PlayQueue
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue
 import org.schabi.newpipe.util.Localization.localizeStreamCount
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.openVideoDetailFragment
 import org.schabi.newpipe.util.NavigationHelper.playOnBackgroundPlayer
 import org.schabi.newpipe.util.OnClickGesture
@@ -169,7 +170,8 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         itemTouchHelper!!.attachToRecyclerView(itemsList)
 
         itemListAdapter!!.setSelectedListener(object : OnClickGesture<LocalItem> {
-            @OptIn(UnstableApi::class) override fun selected(selectedItem: LocalItem) {
+            @OptIn(UnstableApi::class)
+            override fun selected(selectedItem: LocalItem) {
                 if (selectedItem is PlaylistStreamEntry) {
                     val item = selectedItem.streamEntity
                     openVideoDetailFragment(requireContext(), fM!!, item.serviceId, item.url, item.title, null, false)
@@ -234,9 +236,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
-        }
+
+        Logd(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
+
         super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.menu_local_playlist, menu)
     }
@@ -260,7 +262,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         super.onDestroy()
         debouncedSaveSignal?.onComplete()
         disposables?.dispose()
-        
+
         tabsPagerAdapter?.localPlaylistFragments?.remove(this)
 
         debouncedSaveSignal = null
@@ -316,8 +318,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
                         .setMessage(R.string.remove_watched_popup_warning)
                         .setTitle(R.string.remove_watched_popup_title)
                         .setPositiveButton(R.string.ok) { d: DialogInterface?, id: Int -> removeWatchedStreams(false) }
-                        .setNeutralButton(R.string.remove_watched_popup_yes_and_partially_watched_videos) {
-                            d: DialogInterface?, id: Int -> removeWatchedStreams(true) }
+                        .setNeutralButton(R.string.remove_watched_popup_yes_and_partially_watched_videos) { d: DialogInterface?, id: Int ->
+                            removeWatchedStreams(true)
+                        }
                         .setNegativeButton(R.string.cancel) { d: DialogInterface, id: Int -> d.cancel() }
                         .show()
                 }
@@ -351,7 +354,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
                     .map(PlaylistStreamEntry::streamEntity)
                     .map { streamEntity: StreamEntity ->
                         if (shouldSharePlaylistDetails) {
-                            return@map context.getString(R.string.video_details_list_item, streamEntity.title, streamEntity.url)
+                            return@map context.getString(R.string.video_details_list_item,
+                                streamEntity.title,
+                                streamEntity.url)
                         } else {
                             return@map streamEntity.url
                         }
@@ -360,7 +365,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             }
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ urlsText: String? ->
-                shareText(context, name!!, if (shouldSharePlaylistDetails) context.getString(R.string.share_playlist_content_details,
+                shareText(context,
+                    name!!,
+                    if (shouldSharePlaylistDetails) context.getString(R.string.share_playlist_content_details,
                         name, urlsText) else urlsText)
             },
                 { throwable: Throwable? -> showUiErrorSnackbar(this, "Sharing playlist", throwable!!) }))
@@ -383,7 +390,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             .zipWith(historyIdsMaybe) { playlist: List<PlaylistStreamEntry>, historyStreamIds: List<Long>? ->
                 // Remove Watched, Functionality data
                 val itemsToKeep: MutableList<PlaylistStreamEntry?> = ArrayList()
-                val isThumbnailPermanent = playlistManager?.getIsPlaylistThumbnailPermanent(playlistId!!)?: false
+                val isThumbnailPermanent = playlistManager?.getIsPlaylistThumbnailPermanent(playlistId!!) ?: false
                 var thumbnailVideoRemoved = false
 
                 if (removePartiallyWatched) {
@@ -437,7 +444,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
                 hideLoading()
                 isRewritingPlaylist = false
             }, { throwable: Throwable? ->
-                showError(ErrorInfo(throwable!!, UserAction.REQUESTED_BOOKMARK, "Removing watched videos, partially watched=$removePartiallyWatched"))
+                showError(ErrorInfo(throwable!!,
+                    UserAction.REQUESTED_BOOKMARK,
+                    "Removing watched videos, partially watched=$removePartiallyWatched"))
             }))
     }
 
@@ -501,9 +510,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         this.name = title
         setTitle(title)
 
-        if (DEBUG) {
-            Log.d(TAG, "Updating playlist id=[$playlistId] with new title=[$title] items")
-        }
+
+        Logd(TAG, "Updating playlist id=[$playlistId] with new title=[$title] items")
+
 
         val disposable = playlistManager!!.renamePlaylist(playlistId!!, title)
             .observeOn(AndroidSchedulers.mainThread())
@@ -520,9 +529,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             R.string.playlist_thumbnail_change_success,
             Toast.LENGTH_SHORT)
 
-        if (DEBUG) {
-            Log.d(TAG, "Updating playlist id=[$playlistId] with new thumbnail stream id=[$thumbnailStreamId]")
-        }
+
+        Logd(TAG, "Updating playlist id=[$playlistId] with new thumbnail stream id=[$thumbnailStreamId]")
+
 
         val disposable = playlistManager!!
             .changePlaylistThumbnail(playlistId!!, thumbnailStreamId, isPermanent)
@@ -613,7 +622,8 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
 
         // List must be loaded and modified in order to save
         if (isLoadingComplete == null || isModified == null || !isLoadingComplete!!.get() || !isModified!!.get()) {
-            Log.w(TAG, "Attempting to save playlist when local playlist is not loaded or not modified: playlist id=[$playlistId]")
+            Log.w(TAG,
+                "Attempting to save playlist when local playlist is not loaded or not modified: playlist id=[$playlistId]")
             return
         }
 
@@ -623,9 +633,7 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             if (item is PlaylistStreamEntry) streamIds.add(item.streamId)
         }
 
-        if (DEBUG) {
-            Log.d(TAG, "Updating playlist id=[$playlistId] with [${streamIds.size}] items")
-        }
+        Logd(TAG, "Updating playlist id=[$playlistId] with [${streamIds.size}] items")
 
         val disposable = playlistManager!!.updateJoin(playlistId!!, streamIds)
             .observeOn(AndroidSchedulers.mainThread())
@@ -649,13 +657,26 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             }
             return object : ItemTouchHelper.SimpleCallback(directions,
                 ItemTouchHelper.ACTION_STATE_IDLE) {
-                override fun interpolateOutOfBoundsScroll(recyclerView: RecyclerView, viewSize: Int, viewSizeOutOfBounds: Int, totalSize: Int, msSinceStartScroll: Long): Int {
-                    val standardSpeed = super.interpolateOutOfBoundsScroll(recyclerView, viewSize, viewSizeOutOfBounds, totalSize, msSinceStartScroll)
-                    val minimumAbsVelocity = max(MINIMUM_INITIAL_DRAG_VELOCITY.toDouble(), abs(standardSpeed.toDouble())).toInt()
+                override fun interpolateOutOfBoundsScroll(recyclerView: RecyclerView,
+                                                          viewSize: Int,
+                                                          viewSizeOutOfBounds: Int,
+                                                          totalSize: Int,
+                                                          msSinceStartScroll: Long
+                ): Int {
+                    val standardSpeed = super.interpolateOutOfBoundsScroll(recyclerView,
+                        viewSize,
+                        viewSizeOutOfBounds,
+                        totalSize,
+                        msSinceStartScroll)
+                    val minimumAbsVelocity =
+                        max(MINIMUM_INITIAL_DRAG_VELOCITY.toDouble(), abs(standardSpeed.toDouble())).toInt()
                     return minimumAbsVelocity * sign(viewSizeOutOfBounds.toDouble()).toInt()
                 }
 
-                override fun onMove(recyclerView: RecyclerView, source: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                override fun onMove(recyclerView: RecyclerView,
+                                    source: RecyclerView.ViewHolder,
+                                    target: RecyclerView.ViewHolder
+                ): Boolean {
                     if (source.itemViewType != target.itemViewType || itemListAdapter == null) return false
 
                     val sourceIndex = source.bindingAdapterPosition
@@ -688,7 +709,8 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         return getPlayQueue(max(itemListAdapter!!.itemsList.indexOf(infoItem).toDouble(), 0.0).toInt())
     }
 
-    @OptIn(UnstableApi::class) protected fun showInfoItemDialog(item: PlaylistStreamEntry) {
+    @OptIn(UnstableApi::class)
+    protected fun showInfoItemDialog(item: PlaylistStreamEntry) {
         val infoItem = item.toStreamInfoItem()
 
         try {
@@ -696,7 +718,8 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             val dialogBuilder = InfoItemDialog.Builder(requireActivity(), context!!, this, infoItem)
 
             // add entries in the middle
-            dialogBuilder.addAllEntries(StreamDialogDefaultEntry.SET_AS_PLAYLIST_THUMBNAIL, StreamDialogDefaultEntry.DELETE)
+            dialogBuilder.addAllEntries(StreamDialogDefaultEntry.SET_AS_PLAYLIST_THUMBNAIL,
+                StreamDialogDefaultEntry.DELETE)
 
             // set custom actions
             // all entries modified below have already been added within the builder
@@ -727,9 +750,9 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
         }
     }
 
-    override val playQueue: PlayQueue 
+    override val playQueue: PlayQueue
         get() = getPlayQueue(0)
-    
+
     private fun getPlayQueue(index: Int): PlayQueue {
         if (itemListAdapter == null) return SinglePlayQueue(emptyList(), 0)
 
@@ -753,10 +776,12 @@ class LocalPlaylistFragment : BaseLocalListFragment<List<PlaylistStreamEntry>, V
             .setTitle(R.string.share_playlist)
             .setMessage(R.string.share_playlist_with_titles_message)
             .setCancelable(true)
-            .setPositiveButton(R.string.share_playlist_with_titles) {
-                dialog: DialogInterface?, which: Int -> sharePlaylist( /* shouldSharePlaylistDetails= */true) }
-            .setNegativeButton(R.string.share_playlist_with_list) {
-                dialog: DialogInterface?, which: Int -> sharePlaylist( /* shouldSharePlaylistDetails= */false) }
+            .setPositiveButton(R.string.share_playlist_with_titles) { dialog: DialogInterface?, which: Int ->
+                sharePlaylist( /* shouldSharePlaylistDetails= */true)
+            }
+            .setNegativeButton(R.string.share_playlist_with_list) { dialog: DialogInterface?, which: Int ->
+                sharePlaylist( /* shouldSharePlaylistDetails= */false)
+            }
             .show()
     }
 

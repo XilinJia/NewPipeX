@@ -33,14 +33,14 @@ import kotlin.collections.MutableList
      * state
      */
     fun addAndPrepare(playerUi: PlayerUi) {
-        if (playerUi.player.getFragmentListener().isPresent) {
+        if (playerUi.playerManager.getFragmentListener().isPresent) {
             // make sure UIs know whether a service is connected or not
             playerUi.onFragmentListenerSet()
         }
 
-        if (!playerUi.player.exoPlayerIsNull()) {
+        if (!playerUi.playerManager.exoPlayerIsNull()) {
             playerUi.initPlayer()
-            if (playerUi.player.playQueue != null) {
+            if (playerUi.playerManager.playQueue != null) {
                 playerUi.initPlayback()
             }
         }

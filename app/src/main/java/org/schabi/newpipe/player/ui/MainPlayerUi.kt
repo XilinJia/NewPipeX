@@ -37,15 +37,13 @@ import org.schabi.newpipe.info_list.StreamSegmentItem
 import org.schabi.newpipe.ktx.AnimationType
 import org.schabi.newpipe.ktx.animate
 import org.schabi.newpipe.local.dialog.PlaylistDialog.Companion.showForPlayQueue
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.event.PlayerServiceEventListener
 import org.schabi.newpipe.player.gesture.BasePlayerGestureListener
 import org.schabi.newpipe.player.gesture.MainPlayerGestureListener
 import org.schabi.newpipe.player.helper.PlaybackParameterDialog
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.helper.PlayerHelper.MinimizeMode
-import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
-import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi.Companion
 import org.schabi.newpipe.player.notification.NotificationConstants
 import org.schabi.newpipe.player.playqueue.*
 import org.schabi.newpipe.util.DeviceUtils.dpToPx
@@ -53,6 +51,7 @@ import org.schabi.newpipe.util.DeviceUtils.isLandscape
 import org.schabi.newpipe.util.DeviceUtils.isTablet
 import org.schabi.newpipe.util.DeviceUtils.isTv
 import org.schabi.newpipe.util.DeviceUtils.spToPx
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.playOnPopupPlayer
 import org.schabi.newpipe.util.external_communication.KoreUtils.shouldShowPlayWithKodi
 import org.schabi.newpipe.util.external_communication.ShareUtils.shareText
@@ -64,8 +63,8 @@ import kotlin.math.min
     // Constructor, setup, destroy
     ////////////////////////////////////////////////////////////////////////// */
 //region Constructor, setup, destroy
-@UnstableApi class MainPlayerUi(player: Player, playerBinding: PlayerBinding)
-    : VideoPlayerUi(player, playerBinding), OnLayoutChangeListener {
+@UnstableApi class MainPlayerUi(playerManager: PlayerManager, playerBinding: PlayerBinding)
+    : VideoPlayerUi(playerManager, playerBinding), OnLayoutChangeListener {
 
     override var isFullscreen = false
     var isVerticalVideo: Boolean = false
@@ -89,9 +88,9 @@ import kotlin.math.min
      * enough for phones, but not for tablets since the mini player can be also shown in landscape.
      */
     private fun directlyOpenFullscreenIfNeeded() {
-        if (PlayerHelper.isStartMainPlayerFullscreenEnabled(player.service) && isTablet(player.service)
-                && PlayerHelper.globalScreenOrientationLocked(player.service)) {
-            player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
+        if (PlayerHelper.isStartMainPlayerFullscreenEnabled(playerManager.service) && isTablet(playerManager.service)
+                && PlayerHelper.globalScreenOrientationLocked(playerManager.service)) {
+            playerManager.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
         }
     }
 
@@ -106,11 +105,8 @@ import kotlin.math.min
         binding.playPauseButton.requestFocus()
 
         // Note: This is for automatically playing (when "Resume playback" is off), see #6179
-        if (player.playWhenReady) {
-            player.play()
-        } else {
-            player.pause()
-        }
+        if (playerManager.playWhenReady) playerManager.play()
+        else playerManager.pause()
     }
 
     override fun buildGestureListener(): BasePlayerGestureListener {
@@ -123,18 +119,16 @@ import kotlin.math.min
         binding.screenRotationButton.setOnClickListener(makeOnClickListener {
             // Only if it's not a vertical video or vertical video but in landscape with locked
             // orientation a screen orientation can be changed automatically
-            if (!isVerticalVideo || (isLandscape && PlayerHelper.globalScreenOrientationLocked(context))) {
-                player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
-            } else {
-                toggleFullscreen()
-            }
+            if (!isVerticalVideo || (isLandscape && PlayerHelper.globalScreenOrientationLocked(context)))
+                playerManager.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
+            else toggleFullscreen()
         })
         binding.queueButton.setOnClickListener { v: View? -> onQueueClicked() }
         binding.segmentsButton.setOnClickListener { v: View? -> onSegmentsClicked() }
 
         binding.addToPlaylistButton.setOnClickListener { v: View? ->
             parentActivity.map { obj: AppCompatActivity? -> obj!!.supportFragmentManager }
-                .ifPresent { fragmentManager: FragmentManager? -> showForPlayQueue(player, fragmentManager!!) }
+                .ifPresent { fragmentManager: FragmentManager? -> showForPlayQueue(playerManager, fragmentManager!!) }
         }
 
         settingsContentObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -148,7 +142,7 @@ import kotlin.math.min
         binding.root.addOnLayoutChangeListener(this)
 
         binding.moreOptionsButton.setOnLongClickListener { v: View? ->
-            player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onMoreOptionsLongClicked() }
+            playerManager.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onMoreOptionsLongClicked() }
             hideControls(0, 0)
             hideSystemUIIfNeeded()
             true
@@ -171,7 +165,7 @@ import kotlin.math.min
         super.initPlayback()
         playQueueAdapter?.dispose()
 
-        if (player.playQueue != null) playQueueAdapter = PlayQueueAdapter(context, player.playQueue!!)
+        if (playerManager.playQueue != null) playQueueAdapter = PlayQueueAdapter(context, playerManager.playQueue!!)
         segmentAdapter = StreamSegmentAdapter(streamSegmentListener)
     }
 
@@ -191,7 +185,7 @@ import kotlin.math.min
     }
 
     override fun destroyPlayer() {
-        Log.d(TAG, "destroyPlayer")
+        Logd(TAG, "destroyPlayer")
         super.destroyPlayer()
         playQueueAdapter?.unsetSelectedListener()
         playQueueAdapter?.dispose()
@@ -207,7 +201,7 @@ import kotlin.math.min
 
     private fun initVideoPlayer() {
         // restore last resize mode
-        setResizeMode(PlayerHelper.retrieveResizeModeFromPrefs(player))
+        setResizeMode(PlayerHelper.retrieveResizeModeFromPrefs(playerManager))
         binding.root.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
@@ -248,19 +242,15 @@ import kotlin.math.min
     ////////////////////////////////////////////////////////////////////////// */
     //region Broadcast receiver
     override fun onBroadcastReceived(intent: Intent?) {
-        Log.d(TAG, "onBroadcastReceived ${intent?.action}")
+        Logd(TAG, "onBroadcastReceived ${intent?.action}")
         super.onBroadcastReceived(intent)
         when (intent?.action) {
-            Intent.ACTION_CONFIGURATION_CHANGED -> {
-                // Close it because when changing orientation from portrait
-                // (in fullscreen mode) the size of queue layout can be larger than the screen size
-                closeItemsList()
-            }
-            NotificationConstants.ACTION_PLAY_PAUSE -> {
-                // Ensure that we have audio-only stream playing when a user
-                // started to play from notification's play button from outside of the app
-                if (!fragmentIsVisible) onFragmentStopped()
-            }
+            // Close it because when changing orientation from portrait
+            // (in fullscreen mode) the size of queue layout can be larger than the screen size
+            Intent.ACTION_CONFIGURATION_CHANGED -> closeItemsList()
+            // Ensure that we have audio-only stream playing when a user
+            // started to play from notification's play button from outside of the app
+            NotificationConstants.ACTION_PLAY_PAUSE -> if (!fragmentIsVisible) onFragmentStopped()
             VideoDetailFragment.ACTION_VIDEO_FRAGMENT_STOPPED -> {
                 fragmentIsVisible = false
                 onFragmentStopped()
@@ -268,7 +258,7 @@ import kotlin.math.min
             VideoDetailFragment.ACTION_VIDEO_FRAGMENT_RESUMED -> {
                 // Restore video source when user returns to the fragment
                 fragmentIsVisible = true
-                player.useVideoSource(true)
+                playerManager.useVideoSource(true)
 
                 // When a user returns from background, the system UI will always be shown even if
                 // controls are invisible: hide it in that case
@@ -288,11 +278,10 @@ import kotlin.math.min
         fragmentIsVisible = true
         // Apply window insets because Android will not do it when orientation changes
         // from landscape to portrait
-        if (!isFullscreen) {
-            binding.playbackControlRoot.setPadding(0, 0, 0, 0)
-        }
+        if (!isFullscreen) binding.playbackControlRoot.setPadding(0, 0, 0, 0)
+
         binding.itemsListPanel.setPadding(0, 0, 0, 0)
-        player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onViewCreated() }
+        playerManager.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onViewCreated() }
     }
 
     /**
@@ -301,18 +290,18 @@ import kotlin.math.min
      * next lines of code will enable audio-only playback only if needed
      */
     private fun onFragmentStopped() {
-        if (player.isPlaying || player.isLoading) {
+        if (playerManager.isPlaying || playerManager.isLoading) {
             when (PlayerHelper.getMinimizeOnExitAction(context)) {
                 MinimizeMode.MINIMIZE_ON_EXIT_MODE_BACKGROUND -> {
-                    player.useVideoSource(false)
+                    playerManager.useVideoSource(false)
 //                    player.exoPlayer?.clearVideoSurface()
                 }
                 MinimizeMode.MINIMIZE_ON_EXIT_MODE_POPUP -> parentActivity.ifPresent { activity: AppCompatActivity? ->
-                    player.setRecovery()
-                    playOnPopupPlayer(activity!!, player.playQueue, true)
+                    playerManager.setRecovery()
+                    playOnPopupPlayer(activity!!, playerManager.playQueue, true)
                 }
-                MinimizeMode.MINIMIZE_ON_EXIT_MODE_NONE -> player.pause()
-                else -> player.pause()
+                MinimizeMode.MINIMIZE_ON_EXIT_MODE_NONE -> playerManager.pause()
+                else -> playerManager.pause()
             }
         }
     }
@@ -326,12 +315,8 @@ import kotlin.math.min
     override fun onUpdateProgress(currentProgress: Int, duration: Int, bufferPercent: Int) {
         super.onUpdateProgress(currentProgress, duration, bufferPercent)
 
-        if (areSegmentsVisible) {
-            segmentAdapter?.selectSegmentAt(getNearestStreamSegmentPosition(currentProgress.toLong()))
-        }
-        if (isQueueVisible) {
-            updateQueueTime(currentProgress)
-        }
+        if (areSegmentsVisible) segmentAdapter?.selectSegmentAt(getNearestStreamSegmentPosition(currentProgress.toLong()))
+        if (isQueueVisible) updateQueueTime(currentProgress)
     }
 
     override fun onPlaying() {
@@ -352,10 +337,10 @@ import kotlin.math.min
     //region Controls showing / hiding
     override fun showOrHideButtons() {
         super.showOrHideButtons()
-        val playQueue = player.playQueue ?: return
+        val playQueue = playerManager.playQueue ?: return
 
         val showQueue = !playQueue.streams.isEmpty()
-        val showSegment = !player.currentStreamInfo
+        val showSegment = !playerManager.currentStreamInfo
             .map { obj: StreamInfo -> obj.streamSegments }
             .map { obj: List<StreamSegment> -> obj.isEmpty() }
             .orElse( /*no stream info=*/true)
@@ -379,7 +364,7 @@ import kotlin.math.min
     }
 
     public override fun hideSystemUIIfNeeded() {
-        player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.hideSystemUiIfNeeded() }
+        playerManager.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.hideSystemUiIfNeeded() }
     }
 
     /**
@@ -417,15 +402,14 @@ import kotlin.math.min
                 val videoInfoHeight = (dpToPx(DETAIL_ROOT_MINIMUM_HEIGHT, context) + spToPx(DETAIL_TITLE_TEXT_SIZE_TABLET, context))
                 return min(bitmap.height.toDouble(), (screenHeight - videoInfoHeight).toDouble()).toFloat()
             }
-            else -> { // fullscreen player: max height is the device height
-                return min(bitmap.height.toDouble(), screenHeight.toDouble()).toFloat()
-            }
+            // fullscreen player: max height is the device height
+            else -> return min(bitmap.height.toDouble(), screenHeight.toDouble()).toFloat()
         }
     }
 
     private fun showHideKodiButton() {
         // show kodi button if it supports the current service and it is enabled in settings
-        val playQueue = player.playQueue
+        val playQueue = playerManager.playQueue
         binding.playWithKodi.visibility =
             if (playQueue?.item != null && shouldShowPlayWithKodi(context, playQueue.item!!.serviceId)) View.VISIBLE else View.GONE
     }
@@ -458,10 +442,7 @@ import kotlin.math.min
             val height = b - t
             val min = min(width.toDouble(), height.toDouble()).toInt()
             val maxGestureLength = (min * 0.75).toInt()
-
-            if (MainActivity.DEBUG) {
-                Log.d(TAG, "maxGestureLength = $maxGestureLength")
-            }
+            Logd(TAG, "maxGestureLength = $maxGestureLength")
 
             binding.volumeProgressBar.max = maxGestureLength
             binding.brightnessProgressBar.max = maxGestureLength
@@ -472,8 +453,8 @@ import kotlin.math.min
     }
 
     private fun setInitialGestureValues() {
-        if (player.audioReactor != null) {
-            val currentVolumeNormalized = player.audioReactor!!.volume.toFloat() / player.audioReactor!!.maxVolume
+        if (playerManager.audioReactor != null) {
+            val currentVolumeNormalized = playerManager.audioReactor!!.volume.toFloat() / playerManager.audioReactor!!.maxVolume
             binding.volumeProgressBar.progress = (binding.volumeProgressBar.max * currentVolumeNormalized).toInt()
         }
     }
@@ -489,7 +470,7 @@ import kotlin.math.min
         showHideKodiButton()
         if (areSegmentsVisible) {
             if (segmentAdapter!!.setItems(info)) {
-                val adapterPosition = getNearestStreamSegmentPosition(player.exoPlayer!!.currentPosition)
+                val adapterPosition = getNearestStreamSegmentPosition(playerManager.exoPlayer!!.currentPosition)
                 segmentAdapter!!.selectSegmentAt(adapterPosition)
                 binding.itemsList.scrollToPosition(adapterPosition)
             } else {
@@ -519,12 +500,12 @@ import kotlin.math.min
         binding.itemsListPanel.requestFocus()
         binding.itemsListPanel.animate(true, DEFAULT_CONTROLS_DURATION, AnimationType.SLIDE_AND_ALPHA)
 
-        val playQueue = player.playQueue
+        val playQueue = playerManager.playQueue
         if (playQueue != null) {
             binding.itemsList.scrollToPosition(playQueue.index)
         }
 
-        updateQueueTime(player.exoPlayer!!.currentPosition.toInt())
+        updateQueueTime(playerManager.exoPlayer!!.currentPosition.toInt())
     }
 
     private fun buildQueue() {
@@ -559,7 +540,7 @@ import kotlin.math.min
         binding.itemsListPanel.requestFocus()
         binding.itemsListPanel.animate(true, DEFAULT_CONTROLS_DURATION, AnimationType.SLIDE_AND_ALPHA)
 
-        val adapterPosition = getNearestStreamSegmentPosition(player.exoPlayer!!.currentPosition)
+        val adapterPosition = getNearestStreamSegmentPosition(playerManager.exoPlayer!!.currentPosition)
         segmentAdapter!!.selectSegmentAt(adapterPosition)
         binding.itemsList.scrollToPosition(adapterPosition)
     }
@@ -572,7 +553,7 @@ import kotlin.math.min
         binding.itemsList.clearOnScrollListeners()
         itemTouchHelper?.attachToRecyclerView(null)
 
-        player.currentStreamInfo.ifPresent { info: StreamInfo? ->
+        playerManager.currentStreamInfo.ifPresent { info: StreamInfo? ->
             segmentAdapter!!.setItems(info!!)
         }
 
@@ -604,7 +585,7 @@ import kotlin.math.min
     private val queueScrollListener: OnScrollBelowItemsListener
         get() = object : OnScrollBelowItemsListener() {
             override fun onScrolledDown(recyclerView: RecyclerView?) {
-                val playQueue = player.playQueue
+                val playQueue = playerManager.playQueue
                 if (playQueue != null && !playQueue.isComplete) {
                     playQueue.fetch()
                 } else if (binding != null) {
@@ -617,17 +598,17 @@ import kotlin.math.min
         get() = object : StreamSegmentListener {
             override fun onItemClick(item: StreamSegmentItem, seconds: Int) {
                 segmentAdapter!!.selectSegment(item)
-                player.seekTo(seconds * 1000L)
-                player.triggerProgressUpdate()
+                playerManager.seekTo(seconds * 1000L)
+                playerManager.triggerProgressUpdate()
             }
 
             override fun onItemLongClick(item: StreamSegmentItem, seconds: Int) {
-                val currentMetadata = player.currentMetadata
+                val currentMetadata = playerManager.currentMetadata
                 if (currentMetadata == null || currentMetadata.serviceId != ServiceList.YouTube.serviceId) return
 
-                val currentItem = player.currentItem
+                val currentItem = playerManager.currentItem
                 if (currentItem != null) {
-                    var videoUrl = player.videoUrl
+                    var videoUrl = playerManager.videoUrl
                     videoUrl += ("&t=$seconds")
                     shareText(context, currentItem.title, videoUrl, currentItem.thumbnails)
                 }
@@ -636,7 +617,7 @@ import kotlin.math.min
 
     private fun getNearestStreamSegmentPosition(playbackPosition: Long): Int {
         var nearestPosition = 0
-        val segments = player.currentStreamInfo
+        val segments = playerManager.currentStreamInfo
             .map { obj: StreamInfo -> obj.streamSegments }
             .orElse(emptyList())
 
@@ -650,12 +631,12 @@ import kotlin.math.min
     private val itemTouchCallback: ItemTouchHelper.SimpleCallback
         get() = object : PlayQueueItemTouchCallback() {
             override fun onMove(sourceIndex: Int, targetIndex: Int) {
-                val playQueue = player.playQueue
+                val playQueue = playerManager.playQueue
                 playQueue?.move(sourceIndex, targetIndex)
             }
 
             override fun onSwiped(index: Int) {
-                val playQueue = player.playQueue
+                val playQueue = playerManager.playQueue
                 if (index != -1) {
                     playQueue?.remove(index)
                 }
@@ -665,14 +646,14 @@ import kotlin.math.min
     private val onSelectedListener: PlayQueueItemBuilder.OnSelectedListener
         get() = object : PlayQueueItemBuilder.OnSelectedListener {
             override fun selected(item: PlayQueueItem, view: View) {
-                player.selectQueueItem(item)
+                playerManager.selectQueueItem(item)
             }
 
             override fun held(item: PlayQueueItem, view: View) {
-                val playQueue = player.playQueue
+                val playQueue = playerManager.playQueue
                 val parentActivity: AppCompatActivity? = parentActivity?.orElse(null)
                 if (playQueue != null && parentActivity != null && playQueue.indexOf(item) != -1) {
-                    openPopupMenu(player.playQueue!!, item, view, true, parentActivity.supportFragmentManager, context)
+                    openPopupMenu(playerManager.playQueue!!, item, view, true, parentActivity.supportFragmentManager, context)
                 }
             }
 
@@ -682,7 +663,7 @@ import kotlin.math.min
         }
 
     private fun updateQueueTime(currentTime: Int) {
-        val playQueue = player.playQueue ?: return
+        val playQueue = playerManager.playQueue ?: return
 
         val currentStream = playQueue.index
         var before = 0
@@ -718,12 +699,12 @@ import kotlin.math.min
     //region Click listeners
     override fun onPlaybackSpeedClicked() {
         parentActivity.ifPresent { activity: AppCompatActivity? ->
-            PlaybackParameterDialog.newInstance(player.playbackSpeed.toDouble(),
-                player.playbackPitch.toDouble(),
-                player.playbackSkipSilence,
+            PlaybackParameterDialog.newInstance(playerManager.playbackSpeed.toDouble(),
+                playerManager.playbackPitch.toDouble(),
+                playerManager.playbackSkipSilence,
                 object : PlaybackParameterDialog.Callback {
                     override fun onPlaybackParameterChanged(speed: Float, pitch: Float, skipSilence: Boolean) {
-                        player.setPlaybackParameters(speed, pitch, skipSilence)
+                        playerManager.setPlaybackParameters(speed, pitch, skipSilence)
                     }
                 }
             )
@@ -733,8 +714,8 @@ import kotlin.math.min
 
     override fun onKeyDown(keyCode: Int): Boolean {
         if (keyCode == KeyEvent.KEYCODE_SPACE && isFullscreen) {
-            player.playPause()
-            if (player.isPlaying) hideControls(0, 0)
+            playerManager.playPause()
+            if (playerManager.isPlaying) hideControls(0, 0)
 
             return true
         }
@@ -760,17 +741,17 @@ import kotlin.math.min
 
         if ((PlayerHelper.globalScreenOrientationLocked(context) && isFullscreen) && isLandscape == isVerticalVideo && !isTv(context) && !isTablet(context)) {
             // set correct orientation
-            player.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
+            playerManager.getFragmentListener().ifPresent { obj: PlayerServiceEventListener -> obj.onScreenRotationButtonClicked() }
         }
         setupScreenRotationButton()
     }
 
     fun toggleFullscreen() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "toggleFullscreen() called")
-        }
-        val fragmentListener = player.getFragmentListener().orElse(null)
-        if (fragmentListener == null || player.exoPlayerIsNull()) return
+
+        Logd(TAG, "toggleFullscreen() called")
+
+        val fragmentListener = playerManager.getFragmentListener().orElse(null)
+        if (fragmentListener == null || playerManager.exoPlayerIsNull()) return
 
         isFullscreen = !isFullscreen
         if (isFullscreen) {
@@ -793,8 +774,8 @@ import kotlin.math.min
 
     fun checkLandscape() {
         // check if landscape is correct
-        val videoInLandscapeButNotInFullscreen = (isLandscape && !isFullscreen && !player.isAudioOnly)
-        val notPaused = (player.currentState != Player.STATE_COMPLETED && player.currentState != Player.STATE_PAUSED)
+        val videoInLandscapeButNotInFullscreen = (isLandscape && !isFullscreen && !playerManager.isAudioOnly)
+        val notPaused = (playerManager.currentState != PlayerManager.STATE_COMPLETED && playerManager.currentState != PlayerManager.STATE_PAUSED)
 
         if (videoInLandscapeButNotInFullscreen && notPaused && !isTablet(context)) {
             toggleFullscreen()
@@ -815,7 +796,7 @@ import kotlin.math.min
     val isLandscape: Boolean
         get() =// DisplayMetrics from activity context knows about MultiWindow feature
             // while DisplayMetrics from app context doesn't
-            isLandscape(parentContext.orElse(player.service)) //endregion
+            isLandscape(parentContext.orElse(playerManager.service)) //endregion
 
     companion object {
         private val TAG: String = MainPlayerUi::class.java.simpleName

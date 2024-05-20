@@ -7,12 +7,12 @@ import android.view.View
 import android.view.ViewGroup
 import org.schabi.newpipe.BaseFragment
 import org.schabi.newpipe.R
+import org.schabi.newpipe.util.Logd
 
 class EmptyFragment : BaseFragment() {
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val showMessage = requireArguments().getBoolean(SHOW_MESSAGE)
-        Log.d(TAG, "onCreateView")
+        Logd(TAG, "onCreateView")
         val view = inflater.inflate(R.layout.fragment_empty, container, false)
         view.findViewById<View>(R.id.empty_state_view).visibility = if (showMessage) View.VISIBLE else View.GONE
         return view

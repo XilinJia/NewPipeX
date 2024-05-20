@@ -155,13 +155,10 @@ object InternalUrlsHandler {
                     SinglePlayQueue(info, seconds * 1000L)
                 NavigationHelper.playOnPopupPlayer(context, playQueue, false)
             }, { throwable: Throwable? ->
-                if (DEBUG) {
-                    Log.e(TAG, "Could not play on popup: $url", throwable)
-                }
+                Log.e(TAG, "Could not play on popup: $url", throwable)
                 AlertDialog.Builder(context!!)
                     .setTitle(R.string.player_stream_failure)
-                    .setMessage(
-                        getExceptionDescription(throwable))
+                    .setMessage(getExceptionDescription(throwable))
                     .setPositiveButton(R.string.ok, null)
                     .show()
             }))

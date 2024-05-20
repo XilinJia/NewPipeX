@@ -8,15 +8,15 @@ import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.os.Build
-import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
 import androidx.core.app.*
 import androidx.core.content.ContextCompat
 import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.getPlayQueueActivityIntent
 import org.schabi.newpipe.util.NavigationHelper.getPlayerIntent
 import java.util.*
@@ -25,7 +25,7 @@ import kotlin.math.min
 /**
  * This is a utility class for player notifications.
  */
-@UnstableApi class NotificationUtil(private val player: Player) {
+@UnstableApi class NotificationUtil(private val playerManager: PlayerManager) {
     @NotificationConstants.Action
     private val notificationSlots = NotificationConstants.SLOT_DEFAULTS.clone()
 
@@ -44,12 +44,10 @@ import kotlin.math.min
      */
     @Synchronized
     fun createNotificationIfNeededAndUpdate(forceRecreate: Boolean) {
-        if (forceRecreate || notificationBuilder == null) {
-            notificationBuilder = createNotification()
-        }
+        if (forceRecreate || notificationBuilder == null) notificationBuilder = createNotification()
+
         updateNotification()
-        if (ActivityCompat.checkSelfPermission(player.context,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(playerManager.context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -65,14 +63,12 @@ import kotlin.math.min
     @Synchronized
     fun updateThumbnail() {
         if (notificationBuilder != null) {
-            if (DEBUG) {
-                Log.d(TAG, "updateThumbnail() called with thumbnail = [" + Integer.toHexString(
-                    Optional.ofNullable(player.thumbnail).map { o: Bitmap? -> Objects.hashCode(o) }
-                        .orElse(0)) + "], title = [" + player.videoTitle + "]")
-            }
+            Logd(TAG, "updateThumbnail() called with thumbnail = [" +
+                    Integer.toHexString(Optional.ofNullable(playerManager.thumbnail).map { o: Bitmap? -> Objects.hashCode(o) }
+                        .orElse(0)) + "], title = [" + playerManager.videoTitle + "]")
 
             setLargeIcon(notificationBuilder!!)
-            if (ActivityCompat.checkSelfPermission(player.context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.checkSelfPermission(playerManager.context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
                 // here to request the missing permissions, and then overriding
@@ -88,11 +84,10 @@ import kotlin.math.min
 
     @Synchronized
     private fun createNotification(): NotificationCompat.Builder {
-        if (DEBUG) {
-            Log.d(TAG, "createNotification()")
-        }
-        notificationManager = NotificationManagerCompat.from(player.context)
-        val builder = NotificationCompat.Builder(player.context, player.context.getString(R.string.notification_channel_id))
+        Logd(TAG, "createNotification()")
+
+        notificationManager = NotificationManagerCompat.from(playerManager.context)
+        val builder = NotificationCompat.Builder(playerManager.context, playerManager.context.getString(R.string.notification_channel_id))
 //        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
 
         // setup media style (compact notification slots and media session)
@@ -102,7 +97,7 @@ import kotlin.math.min
             val compactSlots = initializeNotificationSlots()
 //            mediaStyle.setShowActionsInCompactView(*compactSlots)
         }
-        player.UIs()
+        playerManager.UIs
             .get(MediaSessionPlayerUi::class.java)
             .flatMap { obj: MediaSessionPlayerUi -> obj.sessionToken }
 //            .ifPresent { token: MediaSessionCompat.Token? -> mediaStyle.setMediaSession(token) }
@@ -115,9 +110,9 @@ import kotlin.math.min
             .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
             .setShowWhen(false)
             .setSmallIcon(R.drawable.ic_newpipe_triangle_white)
-            .setColor(ContextCompat.getColor(player.context, R.color.dark_background_color))
-            .setColorized(player.prefs.getBoolean(player.context.getString(R.string.notification_colorize_key), true))
-            .setDeleteIntent(PendingIntentCompat.getBroadcast(player.context,
+            .setColor(ContextCompat.getColor(playerManager.context, R.color.dark_background_color))
+            .setColorized(playerManager.prefs.getBoolean(playerManager.context.getString(R.string.notification_colorize_key), true))
+            .setDeleteIntent(PendingIntentCompat.getBroadcast(playerManager.context,
                 NOTIFICATION_ID, Intent(NotificationConstants.ACTION_CLOSE), PendingIntent.FLAG_UPDATE_CURRENT, false))
 
         // set the initial value for the video thumbnail, updatable with updateNotificationThumbnail
@@ -131,16 +126,14 @@ import kotlin.math.min
      */
     @Synchronized
     private fun updateNotification() {
-        if (DEBUG) {
-            Log.d(TAG, "updateNotification()")
-        }
+        Logd(TAG, "updateNotification()")
 
         // also update content intent, in case the user switched players
-        notificationBuilder!!.setContentIntent(PendingIntentCompat.getActivity(player.context,
+        notificationBuilder!!.setContentIntent(PendingIntentCompat.getActivity(playerManager.context,
             NOTIFICATION_ID, intentForNotification, PendingIntent.FLAG_UPDATE_CURRENT, false))
-        notificationBuilder!!.setContentTitle(player.videoTitle)
-        notificationBuilder!!.setContentText(player.uploaderName)
-        notificationBuilder!!.setTicker(player.videoTitle)
+        notificationBuilder!!.setContentTitle(playerManager.videoTitle)
+        notificationBuilder!!.setContentText(playerManager.uploaderName)
+        notificationBuilder!!.setTicker(playerManager.videoTitle)
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             // notification actions are ignored on Android 13+, and are replaced by code in
@@ -169,18 +162,17 @@ import kotlin.math.min
 
     fun createNotificationAndStartForeground() {
         if (notificationBuilder == null) notificationBuilder = createNotification()
-
         updateNotification()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            player.service.startForeground(NOTIFICATION_ID, notificationBuilder!!.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            playerManager.service.startForeground(NOTIFICATION_ID, notificationBuilder!!.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
         } else {
-            player.service.startForeground(NOTIFICATION_ID, notificationBuilder!!.build())
+            playerManager.service.startForeground(NOTIFICATION_ID, notificationBuilder!!.build())
         }
     }
 
     fun cancelNotificationAndStopForeground() {
-        ServiceCompat.stopForeground(player.service, ServiceCompat.STOP_FOREGROUND_REMOVE)
+        ServiceCompat.stopForeground(playerManager.service, ServiceCompat.STOP_FOREGROUND_REMOVE)
         notificationManager?.cancel(NOTIFICATION_ID)
         notificationManager = null
         notificationBuilder = null
@@ -200,12 +192,12 @@ import kotlin.math.min
      * sent to the system
      */
     private fun initializeNotificationSlots(): IntArray {
-        val settingsCompactSlots = NotificationConstants.getCompactSlotsFromPreferences(player.context, player.prefs)
+        val settingsCompactSlots = NotificationConstants.getCompactSlotsFromPreferences(playerManager.context, playerManager.prefs)
         val adjustedCompactSlots: MutableList<Int> = ArrayList()
 
         var nonNothingIndex = 0
         for (i in 0..4) {
-            notificationSlots[i] = player.prefs.getInt(player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]), NotificationConstants.SLOT_DEFAULTS[i])
+            notificationSlots[i] = playerManager.prefs.getInt(playerManager.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]), NotificationConstants.SLOT_DEFAULTS[i])
 
             if (notificationSlots[i] != NotificationConstants.NOTHING) {
                 if (settingsCompactSlots.contains(i)) adjustedCompactSlots.add(nonNothingIndex)
@@ -225,20 +217,20 @@ import kotlin.math.min
     }
 
     private fun addAction(builder: NotificationCompat.Builder?, @NotificationConstants.Action slot: Int) {
-        val data = NotificationActionData.fromNotificationActionEnum(player, slot) ?: return
+        val data = NotificationActionData.fromNotificationActionEnum(playerManager, slot) ?: return
 
-        val intent = PendingIntentCompat.getBroadcast(player.context, NOTIFICATION_ID, Intent(data.action()), PendingIntent.FLAG_UPDATE_CURRENT, false)
+        val intent = PendingIntentCompat.getBroadcast(playerManager.context, NOTIFICATION_ID, Intent(data.action()), PendingIntent.FLAG_UPDATE_CURRENT, false)
         builder!!.addAction(NotificationCompat.Action(data.icon(), data.name(), intent))
     }
 
     private val intentForNotification: Intent
         get() {
-            if (player.audioPlayerSelected() || player.popupPlayerSelected()) {
+            if (playerManager.audioPlayerSelected() || playerManager.popupPlayerSelected()) {
                 // Means we play in popup or audio only. Let's show the play queue
-                return getPlayQueueActivityIntent(player.context)
+                return getPlayQueueActivityIntent(playerManager.context)
             } else {
                 // We are playing in fragment. Don't open another activity just show fragment. That's it
-                val intent = getPlayerIntent(player.context, MainActivity::class.java, null, true)
+                val intent = getPlayerIntent(playerManager.context, MainActivity::class.java, null, true)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 intent.setAction(Intent.ACTION_MAIN)
                 intent.addCategory(Intent.CATEGORY_LAUNCHER)
@@ -251,20 +243,17 @@ import kotlin.math.min
     // BITMAP
     /////////////////////////////////////////////////////
     private fun setLargeIcon(builder: NotificationCompat.Builder) {
-        val showThumbnail = player.prefs.getBoolean(player.context.getString(R.string.show_thumbnail_key), true)
-        val thumbnail = player.thumbnail
+        val showThumbnail = playerManager.prefs.getBoolean(playerManager.context.getString(R.string.show_thumbnail_key), true)
+        val thumbnail = playerManager.thumbnail
         if (thumbnail == null || !showThumbnail) {
             // since the builder is reused, make sure the thumbnail is unset if there is not one
             builder.setLargeIcon(null as Bitmap?)
             return
         }
 
-        val scaleImageToSquareAspectRatio = player.prefs.getBoolean(player.context.getString(R.string.scale_to_square_image_in_notifications_key), false)
-        if (scaleImageToSquareAspectRatio) {
-            builder.setLargeIcon(getBitmapWithSquareAspectRatio(thumbnail))
-        } else {
-            builder.setLargeIcon(thumbnail)
-        }
+        val scaleImageToSquareAspectRatio = playerManager.prefs.getBoolean(playerManager.context.getString(R.string.scale_to_square_image_in_notifications_key), false)
+        if (scaleImageToSquareAspectRatio) builder.setLargeIcon(getBitmapWithSquareAspectRatio(thumbnail))
+        else builder.setLargeIcon(thumbnail)
     }
 
     private fun getBitmapWithSquareAspectRatio(bitmap: Bitmap): Bitmap {
@@ -280,7 +269,7 @@ import kotlin.math.min
 
     companion object {
         private val TAG: String = NotificationUtil::class.java.simpleName
-        private const val DEBUG = Player.DEBUG
+        private const val DEBUG = PlayerManager.DEBUG
         private const val NOTIFICATION_ID = 123789
     }
 }

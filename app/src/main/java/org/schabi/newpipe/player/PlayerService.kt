@@ -26,9 +26,9 @@ import android.os.IBinder
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
-import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
 import org.schabi.newpipe.player.notification.NotificationPlayerUi
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ThemeHelper.setTheme
 import java.lang.ref.WeakReference
 
@@ -36,36 +36,30 @@ import java.lang.ref.WeakReference
  * One service for all players.
  */
 @OptIn(UnstableApi::class) class PlayerService : Service() {
-    private var player: Player? = null
+    private var playerManager: PlayerManager? = null
 
     private val mBinder: IBinder = LocalBinder(this)
-
 
     /*//////////////////////////////////////////////////////////////////////////
     // Service's LifeCycle
     ////////////////////////////////////////////////////////////////////////// */
     @OptIn(UnstableApi::class) override fun onCreate() {
-        if (DEBUG) {
-            Log.d(TAG, "onCreate() called")
-        }
+        Logd(TAG, "onCreate() called")
         assureCorrectAppLanguage(this)
         setTheme(this)
 
-        player = Player(this)
+        playerManager = PlayerManager(this)
         /*
         Create the player notification and start immediately the service in foreground,
         otherwise if nothing is played or initializing the player and its components (especially
         loading stream metadata) takes a lot of time, the app would crash on Android 8+ as the
         service would never be put in the foreground while we said to the system we would do so
          */
-        player!!.UIs().get(NotificationPlayerUi::class.java)
-            .ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
+        playerManager!!.UIs.get(NotificationPlayerUi::class.java).ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
     }
 
     @OptIn(UnstableApi::class) override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (DEBUG) {
-            Log.d(TAG, "onStartCommand() called with: intent = [$intent], flags = [$flags], startId = [$startId]")
-        }
+        Logd(TAG, "onStartCommand() called with: intent = [$intent], flags = [$flags], startId = [$startId]")
 
         /*
         Be sure that the player notification is set and the service is started in foreground,
@@ -77,10 +71,9 @@ import java.lang.ref.WeakReference
         If the service is already started in foreground, requesting it to be started shouldn't
         do anything
          */
-        player?.UIs()?.get(NotificationPlayerUi::class.java)
-            ?.ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
+        playerManager?.UIs?.get(NotificationPlayerUi::class.java)?.ifPresent { obj: NotificationPlayerUi -> obj.createNotificationAndStartForeground() }
 
-        if (Intent.ACTION_MEDIA_BUTTON == intent?.action && player?.playQueue == null) {
+        if (Intent.ACTION_MEDIA_BUTTON == intent?.action && playerManager?.playQueue == null) {
             /*
             No need to process media button's actions if the player is not working, otherwise
             the player service would strangely start with nothing to play
@@ -91,29 +84,27 @@ import java.lang.ref.WeakReference
             return START_NOT_STICKY
         }
 
-        if (intent != null) player?.handleIntent(intent)
-//        player?.UIs()?.get(MediaSessionPlayerUi::class.java)
+        if (intent != null) playerManager?.handleIntent(intent)
+//        player?.UIs?.get(MediaSessionPlayerUi::class.java)
 //            ?.ifPresent { ui: MediaSessionPlayerUi -> ui.handleMediaButtonIntent(intent) }
 
         return START_NOT_STICKY
     }
 
     fun stopForImmediateReusing() {
-        if (DEBUG) {
-            Log.d(TAG, "stopForImmediateReusing() called")
-        }
+        Logd(TAG, "stopForImmediateReusing() called")
 
-        if (player != null && !player!!.exoPlayerIsNull()) {
+        if (playerManager != null && !playerManager!!.exoPlayerIsNull()) {
             // Releases wifi & cpu, disables keepScreenOn, etc.
             // We can't just pause the player here because it will make transition
             // from one stream to a new stream not smooth
-            player!!.smoothStopForImmediateReusing()
+            playerManager!!.smoothStopForImmediateReusing()
         }
     }
 
     override fun onTaskRemoved(rootIntent: Intent) {
         super.onTaskRemoved(rootIntent)
-        if (player != null && !player!!.videoPlayerSelected()) return
+        if (playerManager != null && !playerManager!!.videoPlayerSelected()) return
 
         onDestroy()
         // Unload from memory completely
@@ -121,15 +112,13 @@ import java.lang.ref.WeakReference
     }
 
     override fun onDestroy() {
-        if (DEBUG) {
-            Log.d(TAG, "destroy() called")
-        }
+        Logd(TAG, "destroy() called")
         cleanup()
     }
 
     private fun cleanup() {
-        player?.destroy()
-        player = null
+        playerManager?.destroy()
+        playerManager = null
     }
 
     fun stopService() {
@@ -147,17 +136,16 @@ import java.lang.ref.WeakReference
 
     class LocalBinder internal constructor(playerService: PlayerService) : Binder() {
         private val playerService = WeakReference(playerService)
-
         val service: PlayerService?
             get() = playerService.get()
 
-        fun getPlayer(): Player? {
-            return playerService.get()!!.player
+        fun getPlayer(): PlayerManager? {
+            return playerService.get()!!.playerManager
         }
     }
 
     companion object {
         private val TAG: String = PlayerService::class.java.simpleName
-        private const val DEBUG = Player.DEBUG
+        private const val DEBUG = PlayerManager.DEBUG
     }
 }

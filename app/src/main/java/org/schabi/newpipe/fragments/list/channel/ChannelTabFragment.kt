@@ -25,6 +25,7 @@ import org.schabi.newpipe.player.playqueue.PlayQueue
 import org.schabi.newpipe.util.ChannelTabHelper.isStreamsTab
 import org.schabi.newpipe.util.ExtractorHelper.getChannelTab
 import org.schabi.newpipe.util.ExtractorHelper.getMoreChannelTabItems
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.PlayButtonHelper.initPlaylistControlClickListener
 import java.util.function.Supplier
 import java.util.stream.Collectors
@@ -51,10 +52,8 @@ class ChannelTabFragment : BaseListInfoFragment<InfoItem, ChannelTabInfo>(UserAc
         setHasOptionsMenu(false)
     }
 
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        Logd(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_channel_tab, container, false)
     }
 
@@ -66,8 +65,7 @@ class ChannelTabFragment : BaseListInfoFragment<InfoItem, ChannelTabInfo>(UserAc
     override val listHeaderSupplier: Supplier<View>?
         get() {
             if (isStreamsTab(tabHandler!!)) {
-                playlistControlBinding = PlaylistControlBinding
-                    .inflate(requireActivity().layoutInflater, itemsList, false)
+                playlistControlBinding = PlaylistControlBinding.inflate(requireActivity().layoutInflater, itemsList, false)
                 return Supplier { playlistControlBinding!!.root }
             }
             return null

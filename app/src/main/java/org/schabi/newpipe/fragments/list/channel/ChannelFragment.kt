@@ -41,6 +41,7 @@ import org.schabi.newpipe.util.ChannelTabHelper.getTranslationKey
 import org.schabi.newpipe.util.ChannelTabHelper.showChannelTab
 import org.schabi.newpipe.util.ExtractorHelper.getChannelInfo
 import org.schabi.newpipe.util.Localization.shortSubscriberCount
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NO_SERVICE_ID
 import org.schabi.newpipe.util.NavigationHelper.openChannelFragment
 import org.schabi.newpipe.util.NavigationHelper.openSettings
@@ -110,9 +111,10 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
 
     override fun onCreateView(inflater: LayoutInflater,
                               container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+                              savedInstanceState: Bundle?
+    ): View? {
         binding = FragmentChannelBinding.inflate(inflater, container, false)
-        Log.d(TAG, "onCreateView")
+        Logd(TAG, "onCreateView")
         return binding!!.root
     }
 
@@ -145,9 +147,7 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
                 } catch (e: Exception) {
                     showUiErrorSnackbar(this, "Opening channel fragment", e)
                 }
-            } else if (DEBUG) {
-                Log.i(TAG, "Can't open parent channel because we got no channel URL")
-            }
+            } else Logd(TAG, "Can't open parent channel because we got no channel URL")
         }
         binding!!.subChannelAvatarView.setOnClickListener(openSubChannel)
         binding!!.subChannelTitleView.setOnClickListener(openSubChannel)
@@ -164,16 +164,11 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
     /*//////////////////////////////////////////////////////////////////////////
     // Menu
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onCreateOptionsMenu(menu: Menu,
-                                     inflater: MenuInflater
-    ) {
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.menu_channel, menu)
 
-        if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: "
-                    + "menu = [" + menu + "], inflater = [" + inflater + "]")
-        }
+        Logd(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -212,7 +207,10 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
     private fun monitorSubscription(info: ChannelInfo) {
         val onError = Consumer { throwable: Throwable? ->
             binding!!.channelSubscribeButton.animate(false, 100)
-            showSnackBarError(ErrorInfo(throwable!!, UserAction.SUBSCRIPTION_GET, "Get subscription status", currentInfo))
+            showSnackBarError(ErrorInfo(throwable!!,
+                UserAction.SUBSCRIPTION_GET,
+                "Get subscription status",
+                currentInfo))
         }
 
         val observable = subscriptionManager!!
@@ -258,13 +256,13 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
     }
 
     private fun updateSubscription(info: ChannelInfo) {
-        if (DEBUG) {
-            Log.d(TAG, "updateSubscription() called with: info = [$info]")
-        }
+
+        Logd(TAG, "updateSubscription() called with: info = [$info]")
+
         val onComplete = Action {
-            if (DEBUG) {
-                Log.d(TAG, "Updated subscription: " + info.url)
-            }
+
+            Logd(TAG, "Updated subscription: " + info.url)
+
         }
 
         val onError = Consumer { throwable: Throwable ->
@@ -280,9 +278,9 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
 
     private fun monitorSubscribeButton(action: Function<Any, Any>): Disposable {
         val onNext = Consumer { o: Any ->
-            if (DEBUG) {
-                Log.d(TAG, "Changed subscription status to this channel!")
-            }
+
+            Logd(TAG, "Changed subscription status to this channel!")
+
         }
 
         val onError = Consumer { throwable: Throwable ->
@@ -301,16 +299,16 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
 
     private fun getSubscribeUpdateMonitor(info: ChannelInfo): Consumer<List<SubscriptionEntity>> {
         return Consumer { subscriptionEntities: List<SubscriptionEntity> ->
-            if (DEBUG) {
-                Log.d(TAG, "subscriptionManager.subscriptionTable.doOnNext() called with: "
-                        + "subscriptionEntities = [" + subscriptionEntities + "]")
-            }
+
+            Logd(TAG, "subscriptionManager.subscriptionTable.doOnNext() called with: "
+                    + "subscriptionEntities = [" + subscriptionEntities + "]")
+
             subscribeButtonMonitor?.dispose()
 
             if (subscriptionEntities.isEmpty()) {
-                if (DEBUG) {
-                    Log.d(TAG, "No subscription to this channel!")
-                }
+
+                Logd(TAG, "No subscription to this channel!")
+
                 val channel = SubscriptionEntity()
                 channel.serviceId = info.serviceId
                 channel.url = info.url
@@ -322,9 +320,9 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
                 updateNotifyButton(null)
                 subscribeButtonMonitor = monitorSubscribeButton(mapOnSubscribe(channel))
             } else {
-                if (DEBUG) {
-                    Log.d(TAG, "Found subscription to this channel!")
-                }
+
+                Logd(TAG, "Found subscription to this channel!")
+
                 channelSubscription = subscriptionEntities[0]
                 updateNotifyButton(channelSubscription)
                 subscribeButtonMonitor = monitorSubscribeButton(mapOnUnsubscribe(channelSubscription))
@@ -333,10 +331,10 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
     }
 
     private fun updateSubscribeButton(isSubscribed: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG, "updateSubscribeButton() called with: "
-                    + "isSubscribed = [" + isSubscribed + "]")
-        }
+
+        Logd(TAG, "updateSubscribeButton() called with: "
+                + "isSubscribed = [" + isSubscribed + "]")
+
 
         val isButtonVisible = (binding!!.channelSubscribeButton.visibility == View.VISIBLE)
         val backgroundDuration = if (isButtonVisible) 300 else 0
@@ -346,16 +344,22 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
             .getColor(requireActivity(), R.color.subscribed_background_color)
         val subscribedText = ContextCompat.getColor(requireActivity(), R.color.subscribed_text_color)
         val subscribeBackground =
-            ColorUtils.blendARGB(resolveColorFromAttr(requireActivity(), R.attr.colorPrimary), subscribedBackground, 0.35f)
+            ColorUtils.blendARGB(resolveColorFromAttr(requireActivity(), R.attr.colorPrimary),
+                subscribedBackground,
+                0.35f)
         val subscribeText = ContextCompat.getColor(requireActivity(), R.color.subscribe_text_color)
 
         if (isSubscribed) {
             binding!!.channelSubscribeButton.setText(R.string.subscribed_button_title)
-            binding!!.channelSubscribeButton.animateBackgroundColor(backgroundDuration.toLong(), subscribeBackground, subscribedBackground)
+            binding!!.channelSubscribeButton.animateBackgroundColor(backgroundDuration.toLong(),
+                subscribeBackground,
+                subscribedBackground)
             binding!!.channelSubscribeButton.animateTextColor(textDuration.toLong(), subscribeText, subscribedText)
         } else {
             binding!!.channelSubscribeButton.setText(R.string.subscribe_button_title)
-            binding!!.channelSubscribeButton.animateBackgroundColor(backgroundDuration.toLong(), subscribedBackground, subscribeBackground)
+            binding!!.channelSubscribeButton.animateBackgroundColor(backgroundDuration.toLong(),
+                subscribedBackground,
+                subscribeBackground)
             binding!!.channelSubscribeButton.animateTextColor(textDuration.toLong(), subscribedText, subscribeText)
         }
 
@@ -414,7 +418,8 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
             }
 
             if (showChannelTab(context, preferences, R.string.show_channel_tabs_about)) {
-                tabAdapter!!.addFragment(ChannelAboutFragment.getInstance(currentInfo), context.getString(R.string.channel_tab_about))
+                tabAdapter!!.addFragment(ChannelAboutFragment.getInstance(currentInfo),
+                    context.getString(R.string.channel_tab_about))
             }
         }
 
@@ -525,7 +530,8 @@ class ChannelFragment : BaseStateFragment<ChannelInfo>(), WriteRead {
         }
 
         if (!TextUtils.isEmpty(currentInfo!!.parentChannelName)) {
-            binding!!.subChannelTitleView.text = String.format(getString(R.string.channel_created_by), currentInfo!!.parentChannelName)
+            binding!!.subChannelTitleView.text =
+                String.format(getString(R.string.channel_created_by), currentInfo!!.parentChannelName)
             binding!!.subChannelTitleView.visibility = View.VISIBLE
             binding!!.subChannelAvatarView.visibility = View.VISIBLE
         }

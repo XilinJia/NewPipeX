@@ -18,6 +18,7 @@ import org.schabi.newpipe.extractor.ListInfo
 import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.exceptions.ContentNotSupportedException
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NO_SERVICE_ID
 import org.schabi.newpipe.views.NewPipeRecyclerView
 import java.util.*
@@ -90,9 +91,8 @@ abstract class BaseListInfoFragment<I : InfoItem, L : ListInfo<I>> protected con
     // Load and handle
     ////////////////////////////////////////////////////////////////////////// */
     override fun doInitialLoadLogic() {
-        if (DEBUG) {
-            Log.d(TAG, "doInitialLoadLogic() called")
-        }
+        Logd(TAG, "doInitialLoadLogic() called")
+
         if (currentInfo == null) startLoading(false)
         else handleResult(currentInfo!!)
     }

@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  */
 @UnstableApi abstract class PlayQueue internal constructor(index: Int, startWith: List<PlayQueueItem>?) : Serializable {
+
     private val queueIndex: AtomicInteger
     private val history: MutableList<PlayQueueItem> = ArrayList()
 
@@ -51,9 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
     init {
         streams = if (startWith != null) ArrayList(startWith) else ArrayList()
-
         if (streams.size > index) history.add(streams[index])
-
         queueIndex = AtomicInteger(index)
     }
 
@@ -69,7 +68,6 @@ import java.util.concurrent.atomic.AtomicInteger
      */
     fun init() {
         eventBroadcast = BehaviorSubject.create()
-
         broadcastReceiver = eventBroadcast!!.toFlowable(BackpressureStrategy.BUFFER)
             .observeOn(AndroidSchedulers.mainThread())
             .startWithItem(InitEvent())
@@ -80,7 +78,6 @@ import java.util.concurrent.atomic.AtomicInteger
      */
     open fun dispose() {
         eventBroadcast?.onComplete()
-
         eventBroadcast = null
         broadcastReceiver = null
         isDisposed = true
@@ -142,10 +139,7 @@ import java.util.concurrent.atomic.AtomicInteger
             }
 
             queueIndex.set(newIndex)
-
-            if (oldIndex != newIndex) {
-                history.add(streams[newIndex])
-            }
+            if (oldIndex != newIndex) history.add(streams[newIndex])
 
             /*
         TODO: Documentation states that a SelectEvent will only be emitted if the new index is...
@@ -168,7 +162,6 @@ import java.util.concurrent.atomic.AtomicInteger
      */
     fun getItem(index: Int): PlayQueueItem? {
         if (index < 0 || index >= streams.size) return null
-
         return streams[index]
     }
 
@@ -419,7 +412,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
         if (currentItem != null) {
             streams.shuffle()
-
             // Move currentItem to the head of the queue
             streams.remove(currentItem)
             streams.add(0, currentItem)
@@ -459,7 +451,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
         if (streams.size > queueIndex.get()) history.add(streams[queueIndex.get()])
 
-
         broadcast(ReorderEvent(originIndex, queueIndex.get()))
     }
 
@@ -474,12 +465,9 @@ import java.util.concurrent.atomic.AtomicInteger
     @Synchronized
     fun previous(): Boolean {
         if (history.size <= 1) return false
-
         history.removeAt(history.size - 1)
-
         val last = history.removeAt(history.size - 1)
         index = indexOf(last)
-
         return true
     }
 
@@ -504,7 +492,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
     fun equalStreamsAndIndex(other: PlayQueue?): Boolean {
         if (equalStreams(other)) return other!!.index == index //NOSONAR: other is not null
-
         return false
     }
 

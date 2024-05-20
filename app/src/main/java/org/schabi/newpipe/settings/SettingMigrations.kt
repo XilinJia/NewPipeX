@@ -10,6 +10,7 @@ import org.schabi.newpipe.error.ErrorInfo
 import org.schabi.newpipe.error.ErrorUtil.Companion.openActivity
 import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.util.DeviceUtils.isFireTv
+import org.schabi.newpipe.util.Logd
 import java.util.*
 
 /**
@@ -168,22 +169,15 @@ object SettingMigrations {
         for (currentMigration in SETTING_MIGRATIONS) {
             try {
                 if (currentMigration.shouldMigrate(currentVersion)) {
-                    if (MainActivity.DEBUG) {
-                        Log.d(TAG, "Migrating preferences from version "
-                                + currentVersion + " to " + currentMigration.newVersion)
-                    }
+                    Logd(TAG, "Migrating preferences from version $currentVersion to ${currentMigration.newVersion}")
                     currentMigration.migrate(context)
                     currentVersion = currentMigration.newVersion
                 }
             } catch (e: Exception) {
                 // save the version with the last successful migration and report the error
                 sp?.edit()?.putInt(lastPrefVersionKey, currentVersion)?.apply()
-                openActivity(context, ErrorInfo(
-                    e,
-                    UserAction.PREFERENCES_MIGRATION,
-                    "Migrating preferences from version " + lastPrefVersion + " to "
-                            + VERSION + ". "
-                            + "Error at " + currentVersion + " => " + ++currentVersion
+                openActivity(context, ErrorInfo(e, UserAction.PREFERENCES_MIGRATION,
+                    "Migrating preferences from version $lastPrefVersion to $VERSION. Error at $currentVersion => ${++currentVersion}"
                 ))
                 return
             }

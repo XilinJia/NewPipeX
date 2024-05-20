@@ -50,18 +50,17 @@ import org.schabi.newpipe.fragments.detail.VideoDetailFragment
 import org.schabi.newpipe.ktx.AnimationType
 import org.schabi.newpipe.ktx.animate
 import org.schabi.newpipe.ktx.animateRotation
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.gesture.BasePlayerGestureListener
 import org.schabi.newpipe.player.gesture.DisplayPortion
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.mediaitem.MediaItemTag
-import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
-import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi.Companion
 import org.schabi.newpipe.player.playback.SurfaceHolderCallback
 import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHelper
 import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHolder
 import org.schabi.newpipe.util.DeviceUtils.isTv
 import org.schabi.newpipe.util.Localization.audioTrackName
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.playOnMainPlayer
 import org.schabi.newpipe.util.external_communication.KoreUtils.playWithKore
 import org.schabi.newpipe.util.external_communication.ShareUtils.copyToClipboard
@@ -74,8 +73,9 @@ import java.util.function.Function
 import java.util.function.Predicate
 import java.util.stream.Collectors
 
-@UnstableApi abstract class VideoPlayerUi protected constructor(player: Player, playerBinding: PlayerBinding)
-    : PlayerUi(player), OnSeekBarChangeListener, PopupMenu.OnMenuItemClickListener, PopupMenu.OnDismissListener {
+@UnstableApi
+abstract class VideoPlayerUi protected constructor(playerManager: PlayerManager, playerBinding: PlayerBinding) :
+    PlayerUi(playerManager), OnSeekBarChangeListener, PopupMenu.OnMenuItemClickListener, PopupMenu.OnDismissListener {
 
     private enum class PlayButtonAction {
         PLAY, PAUSE, REPLAY
@@ -134,7 +134,8 @@ import java.util.stream.Collectors
         binding.resizeTextView.text = PlayerHelper.resizeTypeOf(context, binding.surfaceView.getResizeMode())
 
         binding.playbackSeekBar.thumb.colorFilter = PorterDuffColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
-        binding.playbackSeekBar.progressDrawable.colorFilter = PorterDuffColorFilter(Color.RED, PorterDuff.Mode.MULTIPLY)
+        binding.playbackSeekBar.progressDrawable.colorFilter =
+            PorterDuffColorFilter(Color.RED, PorterDuff.Mode.MULTIPLY)
 
         val themeWrapper = ContextThemeWrapper(context, R.style.DarkPopupMenu)
 
@@ -143,7 +144,8 @@ import java.util.stream.Collectors
         playbackSpeedPopupMenu = PopupMenu(context, binding.playbackSpeed)
         captionPopupMenu = PopupMenu(themeWrapper, binding.captionTextView)
 
-        binding.progressBarLoadingPanel.indeterminateDrawable.colorFilter = PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY)
+        binding.progressBarLoadingPanel.indeterminateDrawable.colorFilter =
+            PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY)
 
         binding.titleTextView.isSelected = true
         binding.channelTextView.isSelected = true
@@ -162,7 +164,7 @@ import java.util.stream.Collectors
         binding.playbackSeekBar.setOnSeekBarChangeListener(this)
         binding.captionTextView.setOnClickListener(makeOnClickListener { this.onCaptionClicked() })
         binding.resizeTextView.setOnClickListener(makeOnClickListener { this.onResizeClicked() })
-        binding.playbackLiveSync.setOnClickListener(makeOnClickListener { player.seekToDefault() })
+        binding.playbackLiveSync.setOnClickListener(makeOnClickListener { playerManager.seekToDefault() })
 
         playerGestureListener = buildGestureListener()
         gestureDetector = GestureDetector(context, playerGestureListener!!)
@@ -171,29 +173,32 @@ import java.util.stream.Collectors
         binding.repeatButton.setOnClickListener { v: View? -> onRepeatClicked() }
         binding.shuffleButton.setOnClickListener { v: View? -> onShuffleClicked() }
 
-        binding.playPauseButton.setOnClickListener(makeOnClickListener { player.playPause() })
-        binding.playPreviousButton.setOnClickListener(makeOnClickListener { player.playPrevious() })
-        binding.playNextButton.setOnClickListener(makeOnClickListener { player.playNext() })
+        binding.playPauseButton.setOnClickListener(makeOnClickListener { playerManager.playPause() })
+        binding.playPreviousButton.setOnClickListener(makeOnClickListener { playerManager.playPrevious() })
+        binding.playNextButton.setOnClickListener(makeOnClickListener { playerManager.playNext() })
 
         binding.moreOptionsButton.setOnClickListener(makeOnClickListener { this.onMoreOptionsClicked() })
         binding.share.setOnClickListener(makeOnClickListener {
-            val currentItem = player.currentItem
-            if (currentItem != null) shareText(context, currentItem.title, player.videoUrlAtCurrentTime, currentItem.thumbnails)
+            val currentItem = playerManager.currentItem
+            if (currentItem != null) shareText(context,
+                currentItem.title,
+                playerManager.videoUrlAtCurrentTime,
+                currentItem.thumbnails)
         })
         binding.share.setOnLongClickListener { v: View? ->
-            copyToClipboard(context, player.videoUrlAtCurrentTime)
+            copyToClipboard(context, playerManager.videoUrlAtCurrentTime)
             true
         }
         binding.fullScreenButton.setOnClickListener(makeOnClickListener {
-            player.setRecovery()
-            if (player.playQueue != null) playOnMainPlayer(context, player.playQueue!!, true)
+            playerManager.setRecovery()
+            if (playerManager.playQueue != null) playOnMainPlayer(context, playerManager.playQueue!!, true)
         })
         binding.playWithKodi.setOnClickListener(makeOnClickListener { this.onPlayWithKodiClicked() })
         binding.openInBrowser.setOnClickListener(makeOnClickListener { this.onOpenInBrowserClicked() })
         binding.playerCloseButton.setOnClickListener(makeOnClickListener { // set package to this app's package to prevent the intent from being seen outside
             context.sendBroadcast(Intent(VideoDetailFragment.ACTION_HIDE_MAIN_PLAYER).setPackage(App.PACKAGE_NAME))
         })
-        binding.switchMute.setOnClickListener(makeOnClickListener { player.toggleMute() })
+        binding.switchMute.setOnClickListener(makeOnClickListener { playerManager.toggleMute() })
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.itemsListPanel) { view: View, windowInsets: WindowInsetsCompat ->
             val cutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
@@ -260,7 +265,7 @@ import java.util.stream.Collectors
      */
     private fun setupPlayerSeekOverlay() {
         binding.fastSeekOverlay
-            .seekSecondsSupplier { PlayerHelper.retrieveSeekDurationFromPreferences(player) / 1000 }
+            .seekSecondsSupplier { PlayerHelper.retrieveSeekDurationFromPreferences(playerManager) / 1000 }
             .performListener(object : PerformListener {
                 override fun onDoubleTap() {
                     binding.fastSeekOverlay.animate(true, SEEK_OVERLAY_DURATION.toLong())
@@ -271,7 +276,7 @@ import java.util.stream.Collectors
                 }
 
                 override fun getFastSeekDirection(portion: DisplayPortion): FastSeekDirection {
-                    if (player.exoPlayerIsNull()) {
+                    if (playerManager.exoPlayerIsNull()) {
                         // Abort seeking
                         playerGestureListener!!.endMultiDoubleTap()
                         return FastSeekDirection.NONE
@@ -280,12 +285,12 @@ import java.util.stream.Collectors
                         DisplayPortion.LEFT -> {
                             // Check if it's possible to rewind
                             // Small puffer to eliminate infinite rewind seeking
-                            if (player.exoPlayer!!.currentPosition < 500L) return FastSeekDirection.NONE
+                            if (playerManager.exoPlayer!!.currentPosition < 500L) return FastSeekDirection.NONE
                             return FastSeekDirection.BACKWARD
                         }
                         DisplayPortion.RIGHT -> {
                             // Check if it's possible to fast-forward
-                            if (player.currentState == Player.STATE_COMPLETED || player.exoPlayer!!.currentPosition >= player.exoPlayer!!.duration)
+                            if (playerManager.currentState == PlayerManager.STATE_COMPLETED || playerManager.exoPlayer!!.currentPosition >= playerManager.exoPlayer!!.duration)
                                 return FastSeekDirection.NONE
                             return FastSeekDirection.FORWARD
                         }
@@ -296,8 +301,8 @@ import java.util.stream.Collectors
 
                 override fun seek(forward: Boolean) {
                     playerGestureListener!!.keepInDoubleTapMode()
-                    if (forward) player.fastForward()
-                    else player.fastRewind()
+                    if (forward) playerManager.fastForward()
+                    else playerManager.fastRewind()
                 }
             })
         playerGestureListener!!.doubleTapControls(binding.fastSeekOverlay)
@@ -326,13 +331,13 @@ import java.util.stream.Collectors
         super.initPlayback()
 
         // #6825 - Ensure that the shuffle-button is in the correct state on the UI
-        setShuffleButton(player.exoPlayer!!.shuffleModeEnabled)
+        setShuffleButton(playerManager.exoPlayer!!.shuffleModeEnabled)
     }
 
     abstract fun removeViewFromParent()
 
     override fun destroyPlayer() {
-        Log.d(TAG, "destroyPlayer")
+        Logd(TAG, "destroyPlayer")
         super.destroyPlayer()
         clearVideoSurface()
     }
@@ -345,7 +350,7 @@ import java.util.stream.Collectors
     }
 
     protected open fun setupElementsVisibility() {
-        setMuteButton(player.isMuted)
+        setMuteButton(playerManager.isMuted)
         binding.moreOptionsButton.animateRotation(DEFAULT_CONTROLS_DURATION, 0)
     }
 
@@ -372,7 +377,7 @@ import java.util.stream.Collectors
             // When the orientation changes, the screen height might be smaller. If the end screen
             // thumbnail is not re-scaled, it can be larger than the current screen height and thus
             // enlarging the whole player. This causes the seekbar to be out of the visible area.
-            updateEndScreenThumbnail(player.thumbnail)
+            updateEndScreenThumbnail(playerManager.thumbnail)
         }
     }
 
@@ -404,12 +409,12 @@ import java.util.stream.Collectors
         }
 
         val endScreenHeight = calculateMaxEndScreenThumbnailHeight(thumbnail)
-        val endScreenBitmap = BitmapCompat.createScaledBitmap(thumbnail, (thumbnail.width / (thumbnail.height / endScreenHeight)).toInt(),
-            endScreenHeight.toInt(), null, true)
+        val endScreenBitmap =
+            BitmapCompat.createScaledBitmap(thumbnail, (thumbnail.width / (thumbnail.height / endScreenHeight)).toInt(),
+                endScreenHeight.toInt(), null, true)
 
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "Thumbnail - onThumbnailLoaded() called with: currentThumbnail = [$thumbnail], ${thumbnail.width}x${thumbnail.height}, scaled end screen height = $endScreenHeight, scaled end screen width = ${endScreenBitmap.width}")
-        }
+        Logd(TAG,
+            "Thumbnail - onThumbnailLoaded() called with: currentThumbnail = [$thumbnail], ${thumbnail.width}x${thumbnail.height}, scaled end screen height = $endScreenHeight, scaled end screen width = ${endScreenBitmap.width}")
 
         binding.endScreen.setImageBitmap(endScreenBitmap)
     }
@@ -425,15 +430,17 @@ import java.util.stream.Collectors
     override fun onUpdateProgress(currentProgress: Int, duration: Int, bufferPercent: Int) {
         if (duration != binding.playbackSeekBar.max) setVideoDurationToControls(duration)
 
-        if (player.currentState != Player.STATE_PAUSED) updatePlayBackElementsCurrentDuration(currentProgress)
+        if (playerManager.currentState != PlayerManager.STATE_PAUSED) updatePlayBackElementsCurrentDuration(currentProgress)
 
-        if (player.isLoading || bufferPercent > 90) {
-            binding.playbackSeekBar.secondaryProgress = (binding.playbackSeekBar.max * (bufferPercent.toFloat() / 100)).toInt()
+        if (playerManager.isLoading || bufferPercent > 90) {
+            binding.playbackSeekBar.secondaryProgress =
+                (binding.playbackSeekBar.max * (bufferPercent.toFloat() / 100)).toInt()
         }
         if (MainActivity.DEBUG && bufferPercent % 20 == 0) { //Limit log
-            Log.d(TAG, "notifyProgressUpdateToListeners() called with: isVisible = $isControlsVisible, currentProgress = [$currentProgress], duration = [$duration], bufferPercent = [$bufferPercent]")
+            Logd(TAG,
+                "notifyProgressUpdateToListeners() called with: isVisible = $isControlsVisible, currentProgress = [$currentProgress], duration = [$duration], bufferPercent = [$bufferPercent]")
         }
-        binding.playbackLiveSync.isClickable = !player.isLiveEdge
+        binding.playbackLiveSync.isClickable = !playerManager.isLiveEdge
     }
 
     /**
@@ -443,7 +450,7 @@ import java.util.stream.Collectors
      */
     private fun updatePlayBackElementsCurrentDuration(currentProgress: Int) {
         // Don't set seekbar progress while user is seeking
-        if (player.currentState != Player.STATE_PAUSED_SEEK) binding.playbackSeekBar.progress = currentProgress
+        if (playerManager.currentState != PlayerManager.STATE_PAUSED_SEEK) binding.playbackSeekBar.progress = currentProgress
 
         binding.playbackCurrentTime.text = PlayerHelper.getTimeString(currentProgress)
     }
@@ -459,7 +466,7 @@ import java.util.stream.Collectors
         binding.playbackSeekBar.max = duration
         // This is important for Android TVs otherwise it would apply the default from
         // setMax/Min methods which is (max - min) / 20
-        binding.playbackSeekBar.keyProgressIncrement = PlayerHelper.retrieveSeekDurationFromPreferences(player)
+        binding.playbackSeekBar.keyProgressIncrement = PlayerHelper.retrieveSeekDurationFromPreferences(playerManager)
     }
 
     // seekbar listener
@@ -467,15 +474,16 @@ import java.util.stream.Collectors
         // Currently we don't need method execution when fromUser is false
         if (!fromUser) return
 
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onProgressChanged() called with: seekBar = [$seekBar], progress = [$progress]")
-        }
+
+        Logd(TAG, "onProgressChanged() called with: seekBar = [$seekBar], progress = [$progress]")
+
 
         binding.currentDisplaySeek.text = PlayerHelper.getTimeString(progress)
 
         // Seekbar Preview Thumbnail
         SeekbarPreviewThumbnailHelper
-            .tryResizeAndSetSeekbarPreviewThumbnail(player.context, seekbarPreviewThumbnailHolder.getBitmapAt(progress).orElse(null),
+            .tryResizeAndSetSeekbarPreviewThumbnail(playerManager.context,
+                seekbarPreviewThumbnailHolder.getBitmapAt(progress).orElse(null),
                 binding.currentSeekbarPreviewThumbnail) { binding.subtitleView.width }
 
         adjustSeekbarPreviewContainer()
@@ -490,13 +498,16 @@ import java.util.stream.Collectors
 
             // Calculate the current left position of seekbar progress in px
             // More info: https://stackoverflow.com/q/20493577
-            val currentSeekbarLeft = (binding.playbackSeekBar.left + binding.playbackSeekBar.paddingLeft + binding.playbackSeekBar.thumb.bounds.left)
+            val currentSeekbarLeft =
+                (binding.playbackSeekBar.left + binding.playbackSeekBar.paddingLeft + binding.playbackSeekBar.thumb.bounds.left)
 
             // Calculate the (unchecked) left position of the container
             val uncheckedContainerLeft = currentSeekbarLeft - (binding.seekbarPreviewContainer.width / 2)
 
             // Fix the position so it's within the boundaries
-            val checkedContainerLeft = MathUtils.clamp(uncheckedContainerLeft, 0, binding.playbackWindowRoot.width - binding.seekbarPreviewContainer.width)
+            val checkedContainerLeft = MathUtils.clamp(uncheckedContainerLeft,
+                0,
+                binding.playbackWindowRoot.width - binding.seekbarPreviewContainer.width)
 
             // See also: https://stackoverflow.com/a/23249734
             val params = LinearLayout.LayoutParams(binding.seekbarPreviewContainer.layoutParams)
@@ -511,10 +522,10 @@ import java.util.stream.Collectors
 
     // seekbar listener
     override fun onStartTrackingTouch(seekBar: SeekBar) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onStartTrackingTouch() called with: seekBar = [$seekBar]")
-        }
-        if (player.currentState != Player.STATE_PAUSED_SEEK) player.changeState(Player.STATE_PAUSED_SEEK)
+
+        Logd(TAG, "onStartTrackingTouch() called with: seekBar = [$seekBar]")
+
+        if (playerManager.currentState != PlayerManager.STATE_PAUSED_SEEK) playerManager.changeState(PlayerManager.STATE_PAUSED_SEEK)
 
         showControls(0)
         binding.currentDisplaySeek.animate(true, DEFAULT_CONTROLS_DURATION, AnimationType.SCALE_AND_ALPHA)
@@ -523,20 +534,20 @@ import java.util.stream.Collectors
 
     // seekbar listener
     override fun onStopTrackingTouch(seekBar: SeekBar) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onStopTrackingTouch() called with: seekBar = [$seekBar]")
-        }
 
-        player.seekTo(seekBar.progress.toLong())
-        if (player.exoPlayer!!.duration == seekBar.progress.toLong()) player.exoPlayer!!.play()
+        Logd(TAG, "onStopTrackingTouch() called with: seekBar = [$seekBar]")
+
+
+        playerManager.seekTo(seekBar.progress.toLong())
+        if (playerManager.exoPlayer!!.duration == seekBar.progress.toLong()) playerManager.exoPlayer!!.play()
 
         binding.playbackCurrentTime.text = PlayerHelper.getTimeString(seekBar.progress)
         binding.currentDisplaySeek.animate(false, 200, AnimationType.SCALE_AND_ALPHA)
         binding.currentSeekbarPreviewThumbnail.animate(false, 200, AnimationType.SCALE_AND_ALPHA)
 
-        if (player.currentState == Player.STATE_PAUSED_SEEK) player.changeState(Player.STATE_BUFFERING)
+        if (playerManager.currentState == PlayerManager.STATE_PAUSED_SEEK) playerManager.changeState(PlayerManager.STATE_BUFFERING)
 
-        if (!player.isProgressLoopRunning) player.startProgressLoop()
+        if (!playerManager.isProgressLoopRunning) playerManager.startProgressLoop()
 
         showControlsThenHide()
     }
@@ -546,14 +557,15 @@ import java.util.stream.Collectors
         get() = binding != null && binding.playbackControlRoot.visibility == View.VISIBLE
 
     fun showControlsThenHide() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "showControlsThenHide() called")
-        }
+
+        Logd(TAG, "showControlsThenHide() called")
+
 
         showOrHideButtons()
         showSystemUIPartially()
 
-        val hideTime = if (binding.playbackControlRoot.isInTouchMode) DEFAULT_CONTROLS_HIDE_TIME else DPAD_CONTROLS_HIDE_TIME
+        val hideTime =
+            if (binding.playbackControlRoot.isInTouchMode) DEFAULT_CONTROLS_HIDE_TIME else DPAD_CONTROLS_HIDE_TIME
 
         showHideShadow(true, DEFAULT_CONTROLS_DURATION)
         binding.playbackControlRoot.animate(true, DEFAULT_CONTROLS_DURATION, AnimationType.ALPHA, 0) {
@@ -562,9 +574,9 @@ import java.util.stream.Collectors
     }
 
     fun showControls(duration: Long) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "showControls() called")
-        }
+
+        Logd(TAG, "showControls() called")
+
         showOrHideButtons()
         showSystemUIPartially()
         controlsVisibilityHandler.removeCallbacksAndMessages(null)
@@ -573,9 +585,9 @@ import java.util.stream.Collectors
     }
 
     fun hideControls(duration: Long, delay: Long) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "hideControls() called with: duration = [$duration], delay = [$delay]")
-        }
+
+        Logd(TAG, "hideControls() called with: duration = [$duration], delay = [$delay]")
+
 
         showOrHideButtons()
 
@@ -595,7 +607,7 @@ import java.util.stream.Collectors
     }
 
     protected open fun showOrHideButtons() {
-        val playQueue = player.playQueue ?: return
+        val playQueue = playerManager.playQueue ?: return
 
         val showPrev = playQueue.index != 0
         val showNext = playQueue.index + 1 != playQueue.streams.size
@@ -653,8 +665,8 @@ import java.util.stream.Collectors
     //region Playback states
     override fun onPrepared() {
         super.onPrepared()
-        setVideoDurationToControls(player.exoPlayer!!.duration.toInt())
-        binding.playbackSpeed.text = PlayerHelper.formatSpeed(player.playbackSpeed.toDouble())
+        setVideoDurationToControls(playerManager.exoPlayer!!.duration.toInt())
+        binding.playbackSpeed.text = PlayerHelper.formatSpeed(playerManager.playbackSpeed.toDouble())
     }
 
     override fun onBlocked() {
@@ -749,10 +761,14 @@ import java.util.stream.Collectors
     private fun animatePlayButtons(show: Boolean, duration: Long) {
         binding.playPauseButton.animate(show, duration, AnimationType.SCALE_AND_ALPHA)
 
-        val playQueue = player.playQueue ?: return
+        val playQueue = playerManager.playQueue ?: return
 
-        if (!show || playQueue.index > 0) binding.playPreviousButton.animate(show, duration, AnimationType.SCALE_AND_ALPHA)
-        if (!show || playQueue.index + 1 < playQueue.streams.size) binding.playNextButton.animate(show, duration, AnimationType.SCALE_AND_ALPHA)
+        if (!show || playQueue.index > 0) binding.playPreviousButton.animate(show,
+            duration,
+            AnimationType.SCALE_AND_ALPHA)
+        if (!show || playQueue.index + 1 < playQueue.streams.size) binding.playNextButton.animate(show,
+            duration,
+            AnimationType.SCALE_AND_ALPHA)
     }
 
 
@@ -762,17 +778,17 @@ import java.util.stream.Collectors
     ////////////////////////////////////////////////////////////////////////// */
     //region Repeat, shuffle, mute
     fun onRepeatClicked() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onRepeatClicked() called")
-        }
-        player.cycleNextRepeatMode()
+
+        Logd(TAG, "onRepeatClicked() called")
+
+        playerManager.cycleNextRepeatMode()
     }
 
     fun onShuffleClicked() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onShuffleClicked() called")
-        }
-        player.toggleShuffleModeEnabled()
+
+        Logd(TAG, "onShuffleClicked() called")
+
+        playerManager.toggleShuffleModeEnabled()
     }
 
     override fun onRepeatModeChanged(repeatMode: @androidx.media3.common.Player.RepeatMode Int) {
@@ -840,11 +856,11 @@ import java.util.stream.Collectors
         binding.titleTextView.text = info.name
         binding.channelTextView.text = info.uploaderName
 
-        seekbarPreviewThumbnailHolder.resetFrom(player.context, info.previewFrames)
+        seekbarPreviewThumbnailHolder.resetFrom(playerManager.context, info.previewFrames)
     }
 
     private fun updateStreamRelatedViews() {
-        player.currentStreamInfo.ifPresent { info: StreamInfo ->
+        playerManager.currentStreamInfo.ifPresent { info: StreamInfo ->
             binding.qualityTextView.visibility = View.GONE
             binding.audioTrackTextView.visibility = View.GONE
             binding.playbackSpeed.visibility = View.GONE
@@ -869,7 +885,7 @@ import java.util.stream.Collectors
                     binding.playbackLiveSync.visibility = View.VISIBLE
                 }
                 StreamType.VIDEO_STREAM, StreamType.POST_LIVE_STREAM -> {
-                    if (player.currentMetadata != null && player.currentMetadata!!.maybeQuality.isEmpty
+                    if (playerManager.currentMetadata != null && playerManager.currentMetadata!!.maybeQuality.isEmpty
                             || (info.videoStreams.isEmpty() && info.videoOnlyStreams.isEmpty())) {
                     } else {
                         buildQualityMenu()
@@ -902,7 +918,7 @@ import java.util.stream.Collectors
 
         qualityPopupMenu!!.menu.removeGroup(POPUP_MENU_ID_QUALITY)
 
-        val availableStreams = Optional.ofNullable<MediaItemTag>(player.currentMetadata)
+        val availableStreams = Optional.ofNullable<MediaItemTag>(playerManager.currentMetadata)
             .flatMap<MediaItemTag.Quality> { obj: MediaItemTag -> obj.maybeQuality }
             .map<List<VideoStream>?>(Function<MediaItemTag.Quality, List<VideoStream>?> { it.sortedVideoStreams })
             .orElse(null)
@@ -916,7 +932,7 @@ import java.util.stream.Collectors
         qualityPopupMenu!!.setOnMenuItemClickListener(this)
         qualityPopupMenu!!.setOnDismissListener(this)
 
-        player.selectedVideoStream.ifPresent { s: VideoStream -> binding.qualityTextView.text = s.getResolution() }
+        playerManager.selectedVideoStream.ifPresent { s: VideoStream -> binding.qualityTextView.text = s.getResolution() }
     }
 
     private fun buildAudioTrackMenu() {
@@ -924,7 +940,7 @@ import java.util.stream.Collectors
 
         audioTrackPopupMenu!!.menu.removeGroup(POPUP_MENU_ID_AUDIO_TRACK)
 
-        val availableStreams = Optional.ofNullable<MediaItemTag>(player.currentMetadata)
+        val availableStreams = Optional.ofNullable<MediaItemTag>(playerManager.currentMetadata)
             .flatMap<MediaItemTag.AudioTrack> { obj: MediaItemTag -> obj.maybeAudioTrack }
             .map<List<AudioStream>?>(Function<MediaItemTag.AudioTrack, List<AudioStream>?> { it.audioStreams })
             .orElse(null)
@@ -932,10 +948,15 @@ import java.util.stream.Collectors
 
         for (i in availableStreams.indices) {
             val audioStream = availableStreams[i]
-            audioTrackPopupMenu!!.menu.add(POPUP_MENU_ID_AUDIO_TRACK, i, Menu.NONE, audioTrackName(context, audioStream))
+            audioTrackPopupMenu!!.menu.add(POPUP_MENU_ID_AUDIO_TRACK,
+                i,
+                Menu.NONE,
+                audioTrackName(context, audioStream))
         }
 
-        player.selectedAudioStream?.ifPresent { s: AudioStream? -> binding.audioTrackTextView.text = audioTrackName(context, s!!) }
+        playerManager.selectedAudioStream?.ifPresent { s: AudioStream? ->
+            binding.audioTrackTextView.text = audioTrackName(context, s!!)
+        }
         binding.audioTrackTextView.visibility = View.VISIBLE
         audioTrackPopupMenu!!.setOnMenuItemClickListener(this)
         audioTrackPopupMenu!!.setOnDismissListener(this)
@@ -950,7 +971,7 @@ import java.util.stream.Collectors
             playbackSpeedPopupMenu!!.menu.add(POPUP_MENU_ID_PLAYBACK_SPEED, i, Menu.NONE,
                 PlayerHelper.formatSpeed(PLAYBACK_SPEEDS[i].toDouble()))
         }
-        binding.playbackSpeed.text = PlayerHelper.formatSpeed(player.playbackSpeed.toDouble())
+        binding.playbackSpeed.text = PlayerHelper.formatSpeed(playerManager.playbackSpeed.toDouble())
         playbackSpeedPopupMenu!!.setOnMenuItemClickListener(this)
         playbackSpeedPopupMenu!!.setOnDismissListener(this)
     }
@@ -965,12 +986,12 @@ import java.util.stream.Collectors
         // Add option for turning off caption
         val captionOffItem = captionPopupMenu!!.menu.add(POPUP_MENU_ID_CAPTION, 0, Menu.NONE, R.string.caption_none)
         captionOffItem.setOnMenuItemClickListener { menuItem: MenuItem? ->
-            val textRendererIndex = player.captionRendererIndex
-            if (textRendererIndex != Player.RENDERER_UNAVAILABLE) {
-                player.trackSelector.setParameters(player.trackSelector
+            val textRendererIndex = playerManager.captionRendererIndex
+            if (textRendererIndex != PlayerManager.RENDERER_UNAVAILABLE) {
+                playerManager.trackSelector.setParameters(playerManager.trackSelector
                     .buildUponParameters().setRendererDisabled(textRendererIndex, true))
             }
-            player.prefs.edit().remove(context.getString(R.string.caption_user_set_key)).apply()
+            playerManager.prefs.edit().remove(context.getString(R.string.caption_user_set_key)).apply()
             true
         }
 
@@ -979,8 +1000,8 @@ import java.util.stream.Collectors
             val captionLanguage = availableLanguages[i]
             val captionItem = captionPopupMenu!!.menu.add(POPUP_MENU_ID_CAPTION, i + 1, Menu.NONE, captionLanguage)
             captionItem.setOnMenuItemClickListener { menuItem: MenuItem? ->
-                val textRendererIndex = player.captionRendererIndex
-                if (textRendererIndex != Player.RENDERER_UNAVAILABLE) {
+                val textRendererIndex = playerManager.captionRendererIndex
+                if (textRendererIndex != PlayerManager.RENDERER_UNAVAILABLE) {
                     // DefaultTrackSelector will select for text tracks in the following order.
                     // When multiple tracks share the same rank, a random track will be chosen.
                     // 1. ANY track exactly matching preferred language name
@@ -989,12 +1010,13 @@ import java.util.stream.Collectors
                     // 4. ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND track matching preferred language stem
                     // This means if a caption track of preferred language is not available,
                     // then an auto-generated track of that language will be chosen automatically.
-                    player.trackSelector.setParameters(player.trackSelector
+                    playerManager.trackSelector.setParameters(playerManager.trackSelector
                         .buildUponParameters()
-                        .setPreferredTextLanguages(captionLanguage!!, PlayerHelper.captionLanguageStemOf(captionLanguage))
+                        .setPreferredTextLanguages(captionLanguage!!,
+                            PlayerHelper.captionLanguageStemOf(captionLanguage))
                         .setPreferredTextRoleFlags(C.ROLE_FLAG_CAPTION)
                         .setRendererDisabled(textRendererIndex, false))
-                    player.prefs.edit().putString(context.getString(
+                    playerManager.prefs.edit().putString(context.getString(
                         R.string.caption_user_set_key), captionLanguage).apply()
                 }
                 true
@@ -1003,25 +1025,26 @@ import java.util.stream.Collectors
         captionPopupMenu!!.setOnDismissListener(this)
 
         // apply caption language from previous user preference
-        val textRendererIndex = player.captionRendererIndex
-        if (textRendererIndex == Player.RENDERER_UNAVAILABLE) return
+        val textRendererIndex = playerManager.captionRendererIndex
+        if (textRendererIndex == PlayerManager.RENDERER_UNAVAILABLE) return
 
         // If user prefers to show no caption, then disable the renderer.
         // Otherwise, DefaultTrackSelector may automatically find an available caption
         // and display that.
-        val userPreferredLanguage = player.prefs.getString(context.getString(R.string.caption_user_set_key), null)
+        val userPreferredLanguage = playerManager.prefs.getString(context.getString(R.string.caption_user_set_key), null)
         if (userPreferredLanguage == null) {
-            player.trackSelector.setParameters(player.trackSelector.buildUponParameters()
+            playerManager.trackSelector.setParameters(playerManager.trackSelector.buildUponParameters()
                 .setRendererDisabled(textRendererIndex, true))
             return
         }
 
         // Only set preferred language if it does not match the user preference,
         // otherwise there might be an infinite cycle at onTextTracksChanged.
-        val selectedPreferredLanguages: List<String> = player.trackSelector.parameters.preferredTextLanguages
+        val selectedPreferredLanguages: List<String> = playerManager.trackSelector.parameters.preferredTextLanguages
         if (!selectedPreferredLanguages.contains(userPreferredLanguage)) {
-            player.trackSelector.setParameters(player.trackSelector.buildUponParameters()
-                .setPreferredTextLanguages(userPreferredLanguage, PlayerHelper.captionLanguageStemOf(userPreferredLanguage))
+            playerManager.trackSelector.setParameters(playerManager.trackSelector.buildUponParameters()
+                .setPreferredTextLanguages(userPreferredLanguage,
+                    PlayerHelper.captionLanguageStemOf(userPreferredLanguage))
                 .setPreferredTextRoleFlags(C.ROLE_FLAG_CAPTION)
                 .setRendererDisabled(textRendererIndex, false))
         }
@@ -1033,7 +1056,7 @@ import java.util.stream.Collectors
         qualityPopupMenu!!.show()
         isSomePopupMenuVisible = true
 
-        player.selectedVideoStream
+        playerManager.selectedVideoStream
             .map { s: VideoStream -> MediaFormat.getNameById(s.formatId) + " " + s.getResolution() }
             .ifPresent { text: String? -> binding.qualityTextView.text = text }
     }
@@ -1047,11 +1070,11 @@ import java.util.stream.Collectors
      * Called when an item of the quality selector or the playback speed selector is selected.
      */
     override fun onMenuItemClick(menuItem: MenuItem): Boolean {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onMenuItemClick() called with: "
-                    + "menuItem = [" + menuItem + "], "
-                    + "menuItem.getItemId = [" + menuItem.itemId + "]")
-        }
+
+        Logd(TAG, "onMenuItemClick() called with: "
+                + "menuItem = [" + menuItem + "], "
+                + "menuItem.getItemId = [" + menuItem.itemId + "]")
+
 
         when (menuItem.groupId) {
             POPUP_MENU_ID_QUALITY -> {
@@ -1066,7 +1089,7 @@ import java.util.stream.Collectors
                 val speedIndex = menuItem.itemId
                 val speed = PLAYBACK_SPEEDS[speedIndex]
 
-                player.playbackSpeed = speed
+                playerManager.playbackSpeed = speed
                 binding.playbackSpeed.text = PlayerHelper.formatSpeed(speed.toDouble())
             }
         }
@@ -1076,7 +1099,7 @@ import java.util.stream.Collectors
 
     private fun onQualityItemClick(menuItem: MenuItem) {
         val menuItemIndex = menuItem.itemId
-        val currentMetadata = player.currentMetadata
+        val currentMetadata = playerManager.currentMetadata
         if (currentMetadata == null || currentMetadata.maybeQuality.isEmpty) return
 
         val quality = currentMetadata.maybeQuality.get()
@@ -1085,14 +1108,14 @@ import java.util.stream.Collectors
         if (selectedStreamIndex == menuItemIndex || availableStreams.size <= menuItemIndex) return
 
         val newResolution = availableStreams[menuItemIndex].getResolution()
-        player.setPlaybackQuality(newResolution)
+        playerManager.setPlaybackQuality(newResolution)
 
         binding.qualityTextView.text = menuItem.title
     }
 
     private fun onAudioTrackItemClick(menuItem: MenuItem) {
         val menuItemIndex = menuItem.itemId
-        val currentMetadata = player.currentMetadata
+        val currentMetadata = playerManager.currentMetadata
         if (currentMetadata == null || currentMetadata.maybeAudioTrack.isEmpty) return
 
         val audioTrack = currentMetadata.maybeAudioTrack.get()
@@ -1101,7 +1124,7 @@ import java.util.stream.Collectors
         if (selectedStreamIndex == menuItemIndex || availableStreams.size <= menuItemIndex) return
 
         val newAudioTrack = availableStreams[menuItemIndex].audioTrackId
-        player.setAudioTrack(newAudioTrack)
+        playerManager.setAudioTrack(newAudioTrack)
 
         binding.audioTrackTextView.text = menuItem.title
     }
@@ -1110,22 +1133,22 @@ import java.util.stream.Collectors
      * Called when some popup menu is dismissed.
      */
     override fun onDismiss(menu: PopupMenu?) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onDismiss() called with: menu = [$menu]")
-        }
-        isSomePopupMenuVisible = false //TODO check if this works
-        player.selectedVideoStream.ifPresent { s: VideoStream -> binding.qualityTextView.text = s.getResolution() }
 
-        if (player.isPlaying) {
+        Logd(TAG, "onDismiss() called with: menu = [$menu]")
+
+        isSomePopupMenuVisible = false //TODO check if this works
+        playerManager.selectedVideoStream.ifPresent { s: VideoStream -> binding.qualityTextView.text = s.getResolution() }
+
+        if (playerManager.isPlaying) {
             hideControls(DEFAULT_CONTROLS_DURATION, 0)
             hideSystemUIIfNeeded()
         }
     }
 
     private fun onCaptionClicked() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onCaptionClicked() called")
-        }
+
+        Logd(TAG, "onCaptionClicked() called")
+
         captionPopupMenu!!.show()
         isSomePopupMenuVisible = true
     }
@@ -1139,8 +1162,9 @@ import java.util.stream.Collectors
     override fun onTextTracksChanged(currentTracks: Tracks) {
         super.onTextTracksChanged(currentTracks)
 
-        val trackTypeTextSupported = (!currentTracks.containsType(C.TRACK_TYPE_TEXT) || currentTracks.isTypeSupported(C.TRACK_TYPE_TEXT, false))
-        if (player.trackSelector.currentMappedTrackInfo == null || !trackTypeTextSupported) {
+        val trackTypeTextSupported =
+            (!currentTracks.containsType(C.TRACK_TYPE_TEXT) || currentTracks.isTypeSupported(C.TRACK_TYPE_TEXT, false))
+        if (playerManager.trackSelector.currentMappedTrackInfo == null || !trackTypeTextSupported) {
             binding.captionTextView.visibility = View.GONE
             return
         }
@@ -1166,7 +1190,7 @@ import java.util.stream.Collectors
 
         // Build UI
         buildCaptionMenu(availableLanguages)
-        if (player.trackSelector.parameters.getRendererDisabled(player.captionRendererIndex) || selectedTracks.isEmpty)
+        if (playerManager.trackSelector.parameters.getRendererDisabled(playerManager.captionRendererIndex) || selectedTracks.isEmpty)
             binding.captionTextView.setText(R.string.caption_none)
         else binding.captionTextView.text = selectedTracks.get().language
 
@@ -1200,21 +1224,23 @@ import java.util.stream.Collectors
      */
     protected fun makeOnClickListener(runnable: Runnable): View.OnClickListener {
         return View.OnClickListener { v: View ->
-            if (MainActivity.DEBUG) {
-                Log.d(TAG, "onClick() called with: v = [$v]")
-            }
+
+            Logd(TAG, "onClick() called with: v = [$v]")
+
             runnable.run()
 
             // Manages the player controls after handling the view click.
-            if (player.currentState == Player.STATE_COMPLETED) return@OnClickListener
+            if (playerManager.currentState == PlayerManager.STATE_COMPLETED) return@OnClickListener
 
             controlsVisibilityHandler.removeCallbacksAndMessages(null)
             showHideShadow(true, DEFAULT_CONTROLS_DURATION)
             binding.playbackControlRoot.animate(true, DEFAULT_CONTROLS_DURATION,
                 AnimationType.ALPHA, 0) {
-                if (player.currentState == Player.STATE_PLAYING && !isSomePopupMenuVisible) {
+                if (playerManager.currentState == PlayerManager.STATE_PLAYING && !isSomePopupMenuVisible) {
                     // Hide controls in fullscreen immediately
-                    if (v === binding.playPauseButton || (v === binding.screenRotationButton && isFullscreen)) hideControls(0, 0)
+                    if (v === binding.playPauseButton || (v === binding.screenRotationButton && isFullscreen)) hideControls(
+                        0,
+                        0)
                     else hideControls(DEFAULT_CONTROLS_DURATION, DEFAULT_CONTROLS_HIDE_TIME)
                 }
             }
@@ -1231,7 +1257,7 @@ import java.util.stream.Collectors
                 if ((binding.root.hasFocus() && !binding.playbackControlRoot.hasFocus()) || this.isAnyListViewOpen) {
                     // do not interfere with focus in playlist and play queue etc.
                 } else {
-                    if (player.currentState == Player.STATE_BLOCKED) return true
+                    if (playerManager.currentState == PlayerManager.STATE_BLOCKED) return true
 
                     if (isControlsVisible) {
                         hideControls(DEFAULT_CONTROLS_DURATION, DPAD_CONTROLS_HIDE_TIME)
@@ -1249,9 +1275,8 @@ import java.util.stream.Collectors
     }
 
     private fun onMoreOptionsClicked() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onMoreOptionsClicked() called")
-        }
+
+        Logd(TAG, "onMoreOptionsClicked() called")
 
         val isMoreControlsVisible = binding.secondaryControls.visibility == View.VISIBLE
 
@@ -1267,15 +1292,15 @@ import java.util.stream.Collectors
     }
 
     private fun onPlayWithKodiClicked() {
-        if (player.currentMetadata != null) {
-            player.pause()
-            playWithKore(context, Uri.parse(player.videoUrl))
+        if (playerManager.currentMetadata != null) {
+            playerManager.pause()
+            playWithKore(context, Uri.parse(playerManager.videoUrl))
         }
     }
 
     private fun onOpenInBrowserClicked() {
-        player.currentStreamInfo.ifPresent { streamInfo: StreamInfo ->
-            openUrlInBrowser(player.context, streamInfo.originalUrl)
+        playerManager.currentStreamInfo.ifPresent { streamInfo: StreamInfo ->
+            openUrlInBrowser(playerManager.context, streamInfo.originalUrl)
         }
     }
 
@@ -1290,7 +1315,7 @@ import java.util.stream.Collectors
     }
 
     fun onResizeClicked() {
-        setResizeMode(PlayerHelper.nextResizeModeAndSaveToPrefs(player, binding.surfaceView.getResizeMode()))
+        setResizeMode(PlayerHelper.nextResizeModeAndSaveToPrefs(playerManager, binding.surfaceView.getResizeMode()))
     }
 
     override fun onVideoSizeChanged(videoSize: VideoSize) {
@@ -1314,16 +1339,16 @@ import java.util.stream.Collectors
      * be called many times and even while the UI is in unready states.
      */
     fun setupVideoSurfaceIfNeeded() {
-        if (!surfaceIsSetup && player.exoPlayer != null && binding.root.parent != null) {
-            Log.d(TAG, "setupVideoSurfaceIfNeeded")
+        if (!surfaceIsSetup && playerManager.exoPlayer != null && binding.root.parent != null) {
+            Logd(TAG, "setupVideoSurfaceIfNeeded")
             // make sure there is nothing left over from previous calls
             clearVideoSurface()
 
             // TODO: test
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { // >=API23
-                Log.d(TAG, "adding surface callback")
+                Logd(TAG, "adding surface callback")
                 if (surfaceHolderCallback == null) {
-                    surfaceHolderCallback = SurfaceHolderCallback(context, player.exoPlayer!!)
+                    surfaceHolderCallback = SurfaceHolderCallback(context, playerManager.exoPlayer!!)
                     binding.surfaceView.holder.addCallback(surfaceHolderCallback)
                 }
 
@@ -1332,10 +1357,10 @@ import java.util.stream.Collectors
                 if (binding.surfaceView.holder.surface.isValid) {
                     // initially set the surface manually otherwise
                     // onRenderedFirstFrame() will not be called
-                    player.exoPlayer!!.setVideoSurfaceHolder(binding.surfaceView.holder)
+                    playerManager.exoPlayer!!.setVideoSurfaceHolder(binding.surfaceView.holder)
                 }
             } else {
-                player.exoPlayer!!.setVideoSurfaceView(binding.surfaceView)
+                playerManager.exoPlayer!!.setVideoSurfaceView(binding.surfaceView)
             }
 
             surfaceIsSetup = true
@@ -1350,7 +1375,7 @@ import java.util.stream.Collectors
 //            surfaceHolderCallback!!.release()
 //            surfaceHolderCallback = null
 //        }
-        Optional.ofNullable(player.exoPlayer).ifPresent { obj: ExoPlayer -> obj.clearVideoSurface() }
+        Optional.ofNullable(playerManager.exoPlayer).ifPresent { obj: ExoPlayer -> obj.clearVideoSurface() }
         surfaceIsSetup = false
     }
 

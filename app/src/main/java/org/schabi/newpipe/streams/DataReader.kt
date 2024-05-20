@@ -2,7 +2,6 @@ package org.schabi.newpipe.streams
 
 import android.util.Log
 import org.schabi.newpipe.streams.io.SharpStream
-import org.schabi.newpipe.util.printStackTrace
 import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream

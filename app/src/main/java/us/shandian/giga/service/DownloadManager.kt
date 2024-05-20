@@ -8,6 +8,7 @@ import org.schabi.newpipe.BuildConfig
 import org.schabi.newpipe.streams.io.StoredDirectoryHelper
 import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.streams.io.StoredFileHelper.Companion.deserialize
+import org.schabi.newpipe.util.Logd
 import us.shandian.giga.get.DownloadMission
 import us.shandian.giga.get.FinishedMission
 import us.shandian.giga.get.Mission
@@ -52,9 +53,7 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
      * @param handler Thread required for Messaging
      */
     init {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "new DownloadManager instance. 0x" + Integer.toHexString(this.hashCode()))
-        }
+        Logd(TAG, "new DownloadManager instance. 0x" + Integer.toHexString(this.hashCode()))
 
         mFinishedMissionStore = FinishedMissionStore(context)
         mHandler = handler
@@ -78,7 +77,7 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
             val mission = finishedMissions[i]
 
             if (!mission.storage!!.existsAsFile()) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "downloaded file removed: " + mission.storage!!.name)
+                Logd(TAG, "downloaded file removed: " + mission.storage!!.name)
 
                 mFinishedMissionStore.deleteMission(mission)
                 finishedMissions.removeAt(i)
@@ -97,9 +96,7 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
         }
         if (subs.size < 1) return
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Loading pending downloads from directory: " + mPendingMissionsDir.absolutePath)
-        }
+        Logd(TAG, "Loading pending downloads from directory: " + mPendingMissionsDir.absolutePath)
 
         val tempDir = pickAvailableTemporalDir(ctx)
         Log.i(TAG, "using '$tempDir' as temporal directory")
@@ -300,9 +297,7 @@ class DownloadManager internal constructor(context: Context, handler: Handler, s
                 // length == 0 since the file picker may create an empty file before yielding it,
                 // but that does not mean the file really belonged to a previous mission.
                 if (!storage.existsAsFile() || storage.length() == 0L) {
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "matched downloaded file removed: " + storage.name)
-                    }
+                    Logd(TAG, "matched downloaded file removed: " + storage.name)
 
                     mFinishedMissionStore.deleteMission(mMissionsFinished[i])
                     mMissionsFinished.removeAt(i)

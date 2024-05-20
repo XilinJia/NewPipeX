@@ -4,6 +4,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
+import org.schabi.newpipe.util.Logd
 
 enum class PlayerType {
     MAIN,
@@ -28,8 +29,8 @@ enum class PlayerType {
          */
         @OptIn(UnstableApi::class) @JvmStatic
         fun retrieveFromIntent(intent: Intent): PlayerType {
-            val ext = intent.getIntExtra(Player.PLAYER_TYPE, MAIN.valueForIntent())
-            Log.d("PlayerType", "retrieveFromIntent $ext")
+            val ext = intent.getIntExtra(PlayerManager.PLAYER_TYPE, MAIN.valueForIntent())
+            Logd("PlayerType", "retrieveFromIntent $ext")
             return entries[ext]
         }
     }

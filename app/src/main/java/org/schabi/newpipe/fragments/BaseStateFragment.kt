@@ -15,6 +15,7 @@ import org.schabi.newpipe.error.ErrorUtil
 import org.schabi.newpipe.error.ErrorUtil.Companion.showSnackbar
 import org.schabi.newpipe.ktx.animate
 import org.schabi.newpipe.util.InfoCache
+import org.schabi.newpipe.util.Logd
 import java.util.concurrent.atomic.AtomicBoolean
 
 abstract class BaseStateFragment<I> : BaseFragment(), ViewContract<I> {
@@ -36,7 +37,7 @@ abstract class BaseStateFragment<I> : BaseFragment(), ViewContract<I> {
     var lastPanelError: ErrorInfo? = null
 
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
-        Log.d(TAG, "onCreateView")
+        Logd(TAG, "onCreateView")
         super.onViewCreated(rootView, savedInstanceState)
         doInitialLoadLogic()
     }
@@ -87,9 +88,9 @@ abstract class BaseStateFragment<I> : BaseFragment(), ViewContract<I> {
     }
 
     protected open fun startLoading(forceLoad: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG, "startLoading() called with: forceLoad = [$forceLoad]")
-        }
+
+            Logd(TAG, "startLoading() called with: forceLoad = [$forceLoad]")
+
         showLoading()
         isLoading.set(true)
     }
@@ -117,9 +118,9 @@ abstract class BaseStateFragment<I> : BaseFragment(), ViewContract<I> {
     }
 
     override fun handleResult(result: I) {
-        if (DEBUG) {
-            Log.d(TAG, "handleResult() called with: result = [$result]")
-        }
+
+            Logd(TAG, "handleResult() called with: result = [$result]")
+
         hideLoading()
     }
 
@@ -137,9 +138,7 @@ abstract class BaseStateFragment<I> : BaseFragment(), ViewContract<I> {
         handleError()
 
         if (isDetached || isRemoving) {
-            if (DEBUG) {
-                Log.w(TAG, "showError() is detached or removing = [$errorInfo]")
-            }
+            Logd(TAG, "showError() is detached or removing = [$errorInfo]")
             return
         }
 
@@ -151,9 +150,7 @@ abstract class BaseStateFragment<I> : BaseFragment(), ViewContract<I> {
         handleError()
 
         if (isDetached || isRemoving) {
-            if (DEBUG) {
-                Log.w(TAG, "showTextError() is detached or removing = [$errorString]")
-            }
+            Logd(TAG, "showTextError() is detached or removing = [$errorString]")
             return
         }
 
@@ -179,9 +176,9 @@ abstract class BaseStateFragment<I> : BaseFragment(), ViewContract<I> {
      * @param errorInfo The error information
      */
     fun showSnackBarError(errorInfo: ErrorInfo) {
-        if (DEBUG) {
-            Log.d(TAG, "showSnackBarError() called with: errorInfo = [$errorInfo]")
-        }
+
+            Logd(TAG, "showSnackBarError() called with: errorInfo = [$errorInfo]")
+
         showSnackbar(this, errorInfo)
     }
 }

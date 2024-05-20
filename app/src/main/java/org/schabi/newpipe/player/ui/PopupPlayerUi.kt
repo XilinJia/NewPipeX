@@ -18,18 +18,19 @@ import androidx.core.math.MathUtils
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.SubtitleView
-import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.PlayerBinding
 import org.schabi.newpipe.databinding.PlayerPopupCloseOverlayBinding
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.gesture.BasePlayerGestureListener
 import org.schabi.newpipe.player.gesture.PopupPlayerGestureListener
 import org.schabi.newpipe.player.helper.PlayerHelper
+import org.schabi.newpipe.util.Logd
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-@UnstableApi class PopupPlayerUi(player: Player, playerBinding: PlayerBinding) : VideoPlayerUi(player, playerBinding) {
+@UnstableApi
+class PopupPlayerUi(playerManager: PlayerManager, playerBinding: PlayerBinding) : VideoPlayerUi(playerManager, playerBinding) {
     /*//////////////////////////////////////////////////////////////////////////
     // Popup player
     ////////////////////////////////////////////////////////////////////////// */
@@ -62,14 +63,10 @@ import kotlin.math.sqrt
 
     @SuppressLint("RtlHardcoded")
     private fun initPopup() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "initPopup() called")
-        }
+        Logd(TAG, "initPopup() called")
 
         // Popup is already added to windowManager
-        if (popupHasParent()) {
-            return
-        }
+        if (popupHasParent()) return
 
         updateScreenSize()
 
@@ -90,14 +87,10 @@ import kotlin.math.sqrt
 
     @SuppressLint("RtlHardcoded")
     private fun initPopupCloseOverlay() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "initPopupCloseOverlay() called")
-        }
+        Logd(TAG, "initPopupCloseOverlay() called")
 
         // closeOverlayView is already added to windowManager
-        if (closeOverlayBinding != null) {
-            return
-        }
+        if (closeOverlayBinding != null) return
 
         closeOverlayBinding = PlayerPopupCloseOverlayBinding.inflate(LayoutInflater.from(context))
 
@@ -132,12 +125,7 @@ import kotlin.math.sqrt
     }
 
     override fun setupElementsSize(resources: Resources) {
-        setupElementsSize(
-            0,
-            0,
-            resources.getDimensionPixelSize(R.dimen.player_popup_controls_padding),
-            resources.getDimensionPixelSize(R.dimen.player_popup_buttons_padding)
-        )
+        setupElementsSize(0, 0, resources.getDimensionPixelSize(R.dimen.player_popup_controls_padding), resources.getDimensionPixelSize(R.dimen.player_popup_buttons_padding))
     }
 
     override fun removeViewFromParent() {
@@ -162,14 +150,11 @@ import kotlin.math.sqrt
             updateScreenSize()
             changePopupSize(popupLayoutParams!!.width)
             checkPopupPositionBounds()
-        } else if (player.isPlaying || player.isLoading) {
-            if (Intent.ACTION_SCREEN_OFF == intent.action) {
-                // Use only audio source when screen turns off while popup player is playing
-                player.useVideoSource(false)
-            } else if (Intent.ACTION_SCREEN_ON == intent.action) {
-                // Restore video source when screen turns on and user was watching video in popup
-                player.useVideoSource(true)
-            }
+        } else if (playerManager.isPlaying || playerManager.isLoading) {
+            // Use only audio source when screen turns off while popup player is playing
+            if (Intent.ACTION_SCREEN_OFF == intent.action) playerManager.useVideoSource(false)
+            // Restore video source when screen turns on and user was watching video in popup
+            else if (Intent.ACTION_SCREEN_ON == intent.action) playerManager.useVideoSource(true)
         }
     }
 
@@ -189,19 +174,11 @@ import kotlin.math.sqrt
      *
      */
     fun checkPopupPositionBounds() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "checkPopupPositionBounds() called with: "
-                    + "screenWidth = [" + screenWidth + "], "
-                    + "screenHeight = [" + screenHeight + "]")
-        }
-        if (popupLayoutParams == null) {
-            return
-        }
+        Logd(TAG, "checkPopupPositionBounds() called with: screenWidth = [$screenWidth], screenHeight = [$screenHeight]")
+        if (popupLayoutParams == null) return
 
-        popupLayoutParams!!.x = MathUtils.clamp(popupLayoutParams!!.x, 0, screenWidth
-                - popupLayoutParams!!.width)
-        popupLayoutParams!!.y = MathUtils.clamp(popupLayoutParams!!.y, 0, screenHeight
-                - popupLayoutParams!!.height)
+        popupLayoutParams!!.x = MathUtils.clamp(popupLayoutParams!!.x, 0, screenWidth - popupLayoutParams!!.width)
+        popupLayoutParams!!.y = MathUtils.clamp(popupLayoutParams!!.y, 0, screenHeight - popupLayoutParams!!.height)
     }
 
     fun updateScreenSize() {
@@ -209,8 +186,7 @@ import kotlin.math.sqrt
             val windowMetrics = windowManager!!.currentWindowMetrics
             val bounds = windowMetrics.bounds
             val windowInsets = windowMetrics.windowInsets
-            val insets = windowInsets.getInsetsIgnoringVisibility(
-                WindowInsets.Type.navigationBars() or WindowInsets.Type.displayCutout())
+            val insets = windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.navigationBars() or WindowInsets.Type.displayCutout())
             screenWidth = bounds.width() - (insets.left + insets.right)
             screenHeight = bounds.height() - (insets.top + insets.bottom)
         } else {
@@ -219,10 +195,7 @@ import kotlin.math.sqrt
             screenWidth = metrics.widthPixels
             screenHeight = metrics.heightPixels
         }
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "updateScreenSize() called: screenWidth = ["
-                    + screenWidth + "], screenHeight = [" + screenHeight + "]")
-        }
+        Logd(TAG, "updateScreenSize() called: screenWidth = [$screenWidth], screenHeight = [$screenHeight]")
     }
 
     /**
@@ -231,21 +204,14 @@ import kotlin.math.sqrt
      * [PlayerHelper.getMinimumVideoHeight]
      */
     fun changePopupSize(width: Int) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "changePopupSize() called with: width = [$width]")
-        }
-
-        if (anyPopupViewIsNull()) {
-            return
-        }
+        Logd(TAG, "changePopupSize() called with: width = [$width]")
+        if (anyPopupViewIsNull()) return
 
         val minimumWidth = context.resources.getDimension(R.dimen.popup_minimum_width)
         val actualWidth = MathUtils.clamp(width, minimumWidth.toInt(), screenWidth)
         val actualHeight = PlayerHelper.getMinimumVideoHeight(width.toFloat()).toInt()
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "updatePopupSize() updated values:"
-                    + "  width = [" + actualWidth + "], height = [" + actualHeight + "]")
-        }
+
+        Logd(TAG, "updatePopupSize() updated values:  width = [$actualWidth], height = [$actualHeight]")
 
         popupLayoutParams!!.width = actualWidth
         popupLayoutParams!!.height = actualHeight
@@ -266,15 +232,12 @@ import kotlin.math.sqrt
     ////////////////////////////////////////////////////////////////////////// */
     //region Popup closing
     fun closePopup() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "closePopup() called, isPopupClosing = $isPopupClosing")
-        }
-        if (isPopupClosing) {
-            return
-        }
+        Logd(TAG, "closePopup() called, isPopupClosing = $isPopupClosing")
+        if (isPopupClosing) return
+
         isPopupClosing = true
 
-        player.saveStreamProgressState()
+        playerManager.saveStreamProgressState()
         windowManager!!.removeView(binding.root)
 
         animatePopupOverlayAndFinishService()
@@ -283,27 +246,21 @@ import kotlin.math.sqrt
     fun removePopupFromView() {
         // wrap in try-catch since it could sometimes generate errors randomly
         try {
-            if (popupHasParent()) {
-                windowManager!!.removeView(binding.root)
-            }
+            if (popupHasParent()) windowManager!!.removeView(binding.root)
         } catch (e: IllegalArgumentException) {
             Log.w(TAG, "Failed to remove popup from window manager", e)
         }
 
         try {
-            val closeOverlayHasParent = (closeOverlayBinding != null
-                    && closeOverlayBinding!!.root.parent != null)
-            if (closeOverlayHasParent) {
-                windowManager!!.removeView(closeOverlayBinding!!.root)
-            }
+            val closeOverlayHasParent = (closeOverlayBinding != null && closeOverlayBinding!!.root.parent != null)
+            if (closeOverlayHasParent) windowManager!!.removeView(closeOverlayBinding!!.root)
         } catch (e: IllegalArgumentException) {
             Log.w(TAG, "Failed to remove popup overlay from window manager", e)
         }
     }
 
     private fun animatePopupOverlayAndFinishService() {
-        val targetTranslationY = (closeOverlayBinding!!.closeButton.rootView.height
-                - closeOverlayBinding!!.closeButton.y).toInt()
+        val targetTranslationY = (closeOverlayBinding!!.closeButton.rootView.height - closeOverlayBinding!!.closeButton.y).toInt()
 
         closeOverlayBinding!!.closeButton.animate().setListener(null).cancel()
         closeOverlayBinding!!.closeButton.animate()
@@ -314,15 +271,13 @@ import kotlin.math.sqrt
                 override fun onAnimationCancel(animation: Animator) {
                     end()
                 }
-
                 override fun onAnimationEnd(animation: Animator) {
                     end()
                 }
-
                 private fun end() {
                     windowManager!!.removeView(closeOverlayBinding!!.root)
                     closeOverlayBinding = null
-                    player.service.stopService()
+                    playerManager.service.stopService()
                 }
             }).start()
     }
@@ -333,9 +288,7 @@ import kotlin.math.sqrt
     ////////////////////////////////////////////////////////////////////////// */
     //region Playback states
     private fun changePopupWindowFlags(flags: Int) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "changePopupWindowFlags() called with: flags = [$flags]")
-        }
+        Logd(TAG, "changePopupWindowFlags() called with: flags = [$flags]")
 
         if (!anyPopupViewIsNull()) {
             popupLayoutParams!!.flags = flags
@@ -360,8 +313,7 @@ import kotlin.math.sqrt
 
     override fun setupSubtitleView(captionScale: Float) {
         val captionRatio = (captionScale - 1.0f) / 5.0f + 1.0f
-        binding.subtitleView.setFractionalTextSize(
-            SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * captionRatio)
+        binding.subtitleView.setFractionalTextSize(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * captionRatio)
     }
 
     override fun onPlaybackSpeedClicked() {
@@ -376,10 +328,8 @@ import kotlin.math.sqrt
     ////////////////////////////////////////////////////////////////////////// */
     //region Gestures
     private fun distanceFromCloseButton(popupMotionEvent: MotionEvent): Int {
-        val closeOverlayButtonX = (closeOverlayBinding!!.closeButton.left
-                + closeOverlayBinding!!.closeButton.width / 2)
-        val closeOverlayButtonY = (closeOverlayBinding!!.closeButton.top
-                + closeOverlayBinding!!.closeButton.height / 2)
+        val closeOverlayButtonX = (closeOverlayBinding!!.closeButton.left + closeOverlayBinding!!.closeButton.width / 2)
+        val closeOverlayButtonY = (closeOverlayBinding!!.closeButton.top + closeOverlayBinding!!.closeButton.height / 2)
 
         val fingerX = popupLayoutParams!!.x + popupMotionEvent.x
         val fingerY = popupLayoutParams!!.y + popupMotionEvent.y
@@ -410,45 +360,34 @@ import kotlin.math.sqrt
      */
     @SuppressLint("RtlHardcoded")
     fun retrievePopupLayoutParamsFromPrefs(): WindowManager.LayoutParams {
-        val prefs = player.prefs
-        val context = player.context
+        val prefs = playerManager.prefs
+        val context = playerManager.context
 
         val popupRememberSizeAndPos = prefs.getBoolean(
             context.getString(R.string.popup_remember_size_pos_key), true)
         val defaultSize = context.resources.getDimension(R.dimen.popup_default_width)
-        val popupWidth = if (popupRememberSizeAndPos
-        ) prefs.getFloat(context.getString(R.string.popup_saved_width_key), defaultSize)
-        else defaultSize
+        val popupWidth = if (popupRememberSizeAndPos) prefs.getFloat(context.getString(R.string.popup_saved_width_key), defaultSize) else defaultSize
         val popupHeight = PlayerHelper.getMinimumVideoHeight(popupWidth)
 
-        val params = WindowManager.LayoutParams(
-            popupWidth.toInt(), popupHeight.toInt(),
-            popupLayoutParamType(),
-            IDLE_WINDOW_FLAGS,
-            PixelFormat.TRANSLUCENT)
+        val params = WindowManager.LayoutParams(popupWidth.toInt(), popupHeight.toInt(), popupLayoutParamType(), IDLE_WINDOW_FLAGS, PixelFormat.TRANSLUCENT)
         params.gravity = Gravity.LEFT or Gravity.TOP
         params.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
 
         val centerX = (screenWidth / 2f - popupWidth / 2f).toInt()
         val centerY = (screenHeight / 2f - popupHeight / 2f).toInt()
-        params.x = if (popupRememberSizeAndPos
-        ) prefs.getInt(context.getString(R.string.popup_saved_x_key), centerX) else centerX
-        params.y = if (popupRememberSizeAndPos
-        ) prefs.getInt(context.getString(R.string.popup_saved_y_key), centerY) else centerY
+        params.x = if (popupRememberSizeAndPos) prefs.getInt(context.getString(R.string.popup_saved_x_key), centerX) else centerX
+        params.y = if (popupRememberSizeAndPos) prefs.getInt(context.getString(R.string.popup_saved_y_key), centerY) else centerY
 
         return params
     }
 
     fun savePopupPositionAndSizeToPrefs() {
         if (popupLayoutParams != null) {
-            val context = player.context
-            player.prefs.edit()
-                .putFloat(context.getString(R.string.popup_saved_width_key),
-                    popupLayoutParams!!.width.toFloat())
-                .putInt(context.getString(R.string.popup_saved_x_key),
-                    popupLayoutParams!!.x)
-                .putInt(context.getString(R.string.popup_saved_y_key),
-                    popupLayoutParams!!.y)
+            val context = playerManager.context
+            playerManager.prefs.edit()
+                .putFloat(context.getString(R.string.popup_saved_width_key), popupLayoutParams!!.width.toFloat())
+                .putInt(context.getString(R.string.popup_saved_x_key), popupLayoutParams!!.x)
+                .putInt(context.getString(R.string.popup_saved_y_key), popupLayoutParams!!.y)
                 .apply()
         }
     }
@@ -487,22 +426,15 @@ import kotlin.math.sqrt
         /*//////////////////////////////////////////////////////////////////////////
     // Popup player window manager
     ////////////////////////////////////////////////////////////////////////// */
-        const val IDLE_WINDOW_FLAGS: Int = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
-        const val ONGOING_PLAYBACK_WINDOW_FLAGS: Int = (IDLE_WINDOW_FLAGS
-                or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        const val IDLE_WINDOW_FLAGS: Int = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+        const val ONGOING_PLAYBACK_WINDOW_FLAGS: Int = (IDLE_WINDOW_FLAGS or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         @SuppressLint("RtlHardcoded")
         fun buildCloseOverlayLayoutParams(): WindowManager.LayoutParams {
-            val flags = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                    or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                    or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+            val flags = (WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
 
-            val closeOverlayLayoutParams = WindowManager.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
-                popupLayoutParamType(),
-                flags,
-                PixelFormat.TRANSLUCENT)
+            val closeOverlayLayoutParams = WindowManager.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT,
+                popupLayoutParamType(), flags, PixelFormat.TRANSLUCENT)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 // Setting maximum opacity allowed for touch events to other apps for Android 12 and
@@ -511,14 +443,12 @@ import kotlin.math.sqrt
             }
 
             closeOverlayLayoutParams.gravity = Gravity.LEFT or Gravity.TOP
-            closeOverlayLayoutParams.softInputMode =
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            closeOverlayLayoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
             return closeOverlayLayoutParams
         }
 
         fun popupLayoutParamType(): Int {
-            return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
-            ) WindowManager.LayoutParams.TYPE_PHONE
+            return if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) WindowManager.LayoutParams.TYPE_PHONE
             else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         }
     }

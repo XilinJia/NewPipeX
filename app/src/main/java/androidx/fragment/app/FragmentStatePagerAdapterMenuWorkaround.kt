@@ -24,6 +24,7 @@ import androidx.annotation.IntDef
 import androidx.core.os.BundleCompat
 import androidx.lifecycle.Lifecycle
 import androidx.viewpager.widget.PagerAdapter
+import org.schabi.newpipe.util.Logd
 
 // TODO: Replace this deprecated class with its ViewPager2 counterpart
 /**
@@ -130,9 +131,8 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
         }
 
         val fragment = getItem(position)
-        if (DEBUG) {
-            Log.v(TAG, "Adding item #$position: f=$fragment")
-        }
+        Logd(TAG, "Adding item #$position: f=$fragment")
+
         if (mSavedState.size > position) {
             val fss = mSavedState[position]
             if (fss != null) {
@@ -161,39 +161,28 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
                              `object`: Any
     ) {
         val fragment = `object` as Fragment
+        if (mCurTransaction == null) mCurTransaction = mFragmentManager.beginTransaction()
 
-        if (mCurTransaction == null) {
-            mCurTransaction = mFragmentManager.beginTransaction()
-        }
-        if (DEBUG) {
-            Log.v(TAG, "Removing item #" + position + ": f=" + `object`
-                    + " v=" + `object`.view)
-        }
+        Logd(TAG, "Removing item #$position: f=$`object` v=${`object`.view}")
+
         while (mSavedState.size <= position) {
             mSavedState.add(null)
         }
-        mSavedState[position] = if (fragment.isAdded
-        ) mFragmentManager.saveFragmentInstanceState(fragment) else null
+        mSavedState[position] = if (fragment.isAdded) mFragmentManager.saveFragmentInstanceState(fragment) else null
         mFragments.set(position, null)
 
         mCurTransaction!!.remove(fragment)
-        if (fragment == mCurrentPrimaryItem) {
-            mCurrentPrimaryItem = null
-        }
+        if (fragment == mCurrentPrimaryItem) mCurrentPrimaryItem = null
     }
 
     @Suppress("deprecation")
-    override fun setPrimaryItem(container: ViewGroup, position: Int,
-                                `object`: Any
-    ) {
+    override fun setPrimaryItem(container: ViewGroup, position: Int, `object`: Any) {
         val fragment = `object` as Fragment
         if (fragment !== mCurrentPrimaryItem) {
             if (mCurrentPrimaryItem != null) {
                 mCurrentPrimaryItem!!.setMenuVisibility(false)
                 if (mBehavior == Behavior.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
-                    if (mCurTransaction == null) {
-                        mCurTransaction = mFragmentManager.beginTransaction()
-                    }
+                    if (mCurTransaction == null) mCurTransaction = mFragmentManager.beginTransaction()
                     mCurTransaction!!.setMaxLifecycle(mCurrentPrimaryItem!!, Lifecycle.State.STARTED)
                 } else {
                     mCurrentPrimaryItem!!.userVisibleHint = false
@@ -201,9 +190,7 @@ abstract class FragmentStatePagerAdapterMenuWorkaround
             }
             fragment.setMenuVisibility(true)
             if (mBehavior == Behavior.BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
-                if (mCurTransaction == null) {
-                    mCurTransaction = mFragmentManager.beginTransaction()
-                }
+                if (mCurTransaction == null) mCurTransaction = mFragmentManager.beginTransaction()
                 mCurTransaction!!.setMaxLifecycle(fragment, Lifecycle.State.RESUMED)
             } else {
                 fragment.userVisibleHint = true

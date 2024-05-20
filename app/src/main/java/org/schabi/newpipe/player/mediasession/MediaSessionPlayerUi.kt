@@ -11,29 +11,26 @@ import android.util.Log
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
-import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.extractor.stream.StreamInfo
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.notification.NotificationActionData
 import org.schabi.newpipe.player.notification.NotificationActionData.Companion.fromNotificationActionEnum
 import org.schabi.newpipe.player.notification.NotificationConstants
 import org.schabi.newpipe.player.notification.NotificationConstants.ACTION_RECREATE_NOTIFICATION
 import org.schabi.newpipe.player.ui.PlayerUi
 import org.schabi.newpipe.player.ui.VideoPlayerUi
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.StreamTypeUtil.isLiveStream
 import java.util.*
 import java.util.stream.Collectors
 import java.util.stream.IntStream
 
-@UnstableApi class MediaSessionPlayerUi(player: Player) : PlayerUi(player), OnSharedPreferenceChangeListener {
+@UnstableApi class MediaSessionPlayerUi(playerManager: PlayerManager) : PlayerUi(playerManager), OnSharedPreferenceChangeListener {
     private var mediaSession: MediaSession? = null
-//    private var sessionConnector: MediaSessionConnector? = null
 
     private val ignoreHardwareMediaButtonsKey = context.getString(R.string.ignore_hardware_media_buttons_key)
     private var shouldIgnoreHardwareMediaButtons = false
-
-//    lateinit var exoplayer: ExoPlayer
 
     // used to check whether any notification action changed, before sending costly updates
     private var prevNotificationActions: List<NotificationActionData?> = listOf<NotificationActionData>()
@@ -42,28 +39,13 @@ import java.util.stream.IntStream
         super.initPlayer()
         destroyPlayer() // release previously used resources
 
-//        val player = ExoPlayer.Builder(context).build()
-        mediaSession = MediaSession.Builder(context, player.exoPlayer!!)
+        mediaSession = MediaSession.Builder(context, playerManager.exoPlayer!!)
 //            .setSessionCallback(MySessionCallback())
             .build()
-//        mediaSession = MediaSessionCompat(context, TAG)
-//        mediaSession!!.isActive = true
-
-//        sessionConnector = MediaSessionConnector(mediaSession!!)
-//        sessionConnector!!.setQueueNavigator(PlayQueueNavigator(mediaSession!!, player))
-//        sessionConnector!!.setPlayer(forwardingPlayer)
-
-        // It seems like events from the Media Control UI in the notification area don't go through
-        // this function, so it's safe to just ignore all events in case we want to ignore the
-        // hardware media buttons. Returning true stops all further event processing of the system.
-//        sessionConnector!!.setMediaButtonEventHandler { p: androidx.media3.common.Player?, i: Intent? -> shouldIgnoreHardwareMediaButtons }
 
         // listen to changes to ignore_hardware_media_buttons_key
 //        updateShouldIgnoreHardwareMediaButtons(player.prefs)
 //        player.prefs.registerOnSharedPreferenceChangeListener(this)
-
-//        sessionConnector!!.setMetadataDeduplicationEnabled(true)
-//        sessionConnector!!.setMediaMetadataProvider { exoPlayer: androidx.media3.common.Player? -> buildMediaMetadata() }
 
         // force updating media session actions by resetting the previous ones
         prevNotificationActions = listOf<NotificationActionData>()
@@ -72,19 +54,8 @@ import java.util.stream.IntStream
 
     override fun destroyPlayer() {
         super.destroyPlayer()
-        Log.d(TAG, "session destroyPlayer")
-        player.prefs.unregisterOnSharedPreferenceChangeListener(this)
-//        if (sessionConnector != null) {
-//            sessionConnector!!.setMediaButtonEventHandler(null)
-//            sessionConnector!!.setPlayer(null)
-//            sessionConnector!!.setQueueNavigator(null)
-//            sessionConnector = null
-//        }
-//        if (mediaSession != null) {
-////            mediaSession!!.isActive = false
-//            mediaSession!!.release()
-//            mediaSession = null
-//        }
+        Logd(TAG, "session destroyPlayer")
+        playerManager.prefs.unregisterOnSharedPreferenceChangeListener(this)
         mediaSession?.run {
             player.release()
             release()
@@ -93,14 +64,9 @@ import java.util.stream.IntStream
         prevNotificationActions = listOf<NotificationActionData>()
     }
 
-    override fun onThumbnailLoaded(bitmap: Bitmap?) {
-        super.onThumbnailLoaded(bitmap)
-//        if (sessionConnector != null) {
-//            // the thumbnail is now loaded: invalidate the metadata to trigger a metadata update
-//            sessionConnector!!.invalidateMediaSessionMetadata()
-//        }
-    }
-
+//    override fun onThumbnailLoaded(bitmap: Bitmap?) {
+//        super.onThumbnailLoaded(bitmap)
+//    }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String?) {
         if (key == null || key == ignoreHardwareMediaButtonsKey) updateShouldIgnoreHardwareMediaButtons(sharedPreferences)
@@ -109,7 +75,6 @@ import java.util.stream.IntStream
     fun updateShouldIgnoreHardwareMediaButtons(sharedPreferences: SharedPreferences) {
         shouldIgnoreHardwareMediaButtons = sharedPreferences.getBoolean(ignoreHardwareMediaButtonsKey, false)
     }
-
 
 //    fun handleMediaButtonIntent(intent: Intent?) {
 //        MediaButtonReceiver.handleIntent(mediaSession, intent)
@@ -121,43 +86,39 @@ import java.util.stream.IntStream
             obj.sessionCompatToken
         }
 
-
     private val forwardingPlayer: ForwardingPlayer
         // ForwardingPlayer means that all media session actions called on this player are
         // forwarded directly to the connected exoplayer, except for the overridden methods. So
         // override play and pause since our player adds more functionality to them over exoplayer.
-        get() = object : ForwardingPlayer(player.exoPlayer!!) {
+        get() = object : ForwardingPlayer(playerManager.exoPlayer!!) {
             override fun play() {
-                player.play()
+                playerManager.play()
                 // hide the player controls even if the play command came from the media session
-                player.UIs().get(VideoPlayerUi::class.java).ifPresent { ui -> ui.hideControls(0, 0) }
+                playerManager.UIs.get(VideoPlayerUi::class.java).ifPresent { ui -> ui.hideControls(0, 0) }
             }
-
             override fun pause() {
-                player.pause()
+                playerManager.pause()
             }
         }
 
     private fun buildMediaMetadata(): MediaMetadataCompat {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "buildMediaMetadata called")
-        }
+        Logd(TAG, "buildMediaMetadata called")
 
         // set title and artist
         val builder = MediaMetadataCompat.Builder()
-            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, player.videoTitle)
-            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, player.uploaderName)
+            .putString(MediaMetadataCompat.METADATA_KEY_TITLE, playerManager.videoTitle)
+            .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, playerManager.uploaderName)
 
         // set duration (-1 for livestreams or if unknown, see the METADATA_KEY_DURATION docs)
-        val duration = player.currentStreamInfo
+        val duration = playerManager.currentStreamInfo
             .filter { info: StreamInfo -> !isLiveStream(info.streamType) }
             .map { info: StreamInfo -> info.duration * 1000L }
             .orElse(-1L)
         builder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
 
         // set album art, unless the user asked not to, or there is no thumbnail available
-        val showThumbnail = player.prefs.getBoolean(context.getString(R.string.show_thumbnail_key), true)
-        Optional.ofNullable(player.thumbnail)
+        val showThumbnail = playerManager.prefs.getBoolean(context.getString(R.string.show_thumbnail_key), true)
+        Optional.ofNullable(playerManager.thumbnail)
             .filter { bitmap: Bitmap? -> showThumbnail }
             .ifPresent { bitmap: Bitmap? ->
                 builder.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
@@ -185,23 +146,14 @@ import java.util.stream.IntStream
         // Android 13+)
         val newNotificationActions = IntStream.of(3, 4)
             .map { i: Int ->
-                player.prefs.getInt(player.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]), NotificationConstants.SLOT_DEFAULTS[i])
+                playerManager.prefs.getInt(playerManager.context.getString(NotificationConstants.SLOT_PREF_KEYS[i]), NotificationConstants.SLOT_DEFAULTS[i])
             }
-            .mapToObj { action: Int -> fromNotificationActionEnum(player, action) }
+            .mapToObj { action: Int -> fromNotificationActionEnum(playerManager, action) }
             .filter { obj: NotificationActionData? -> Objects.nonNull(obj) }
             .collect(Collectors.toList())
 
         // avoid costly notification actions update, if nothing changed from last time
-        if (newNotificationActions != prevNotificationActions) {
-            prevNotificationActions = newNotificationActions
-
-//            sessionConnector!!.setCustomActionProviders(
-//                *newNotificationActions.stream()
-//                    .map<SessionConnectorActionProvider> { data: NotificationActionData? ->
-//                        SessionConnectorActionProvider(data, context)
-//                    }
-//                    .toArray<SessionConnectorActionProvider> { size -> arrayOfNulls<SessionConnectorActionProvider>(size)  })
-        }
+        if (newNotificationActions != prevNotificationActions) prevNotificationActions = newNotificationActions
     }
 
     override fun onBlocked() {

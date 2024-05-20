@@ -16,7 +16,8 @@ import androidx.media3.exoplayer.ExoPlaybackException
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.ListRadioIconItemBinding
 import org.schabi.newpipe.databinding.SingleChoiceDialogViewBinding
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ThemeHelper.isLightThemeSelected
 import java.io.IOException
 import java.util.function.Supplier
@@ -58,11 +59,10 @@ object VideoDetailPlayerCrasher {
         return ContextThemeWrapper(context, if (isLightThemeSelected(context)) R.style.LightTheme else R.style.DarkTheme)
     }
 
-    fun onCrashThePlayer(context: Context, player: Player?) {
-        if (player == null) {
-            Log.d(TAG, "Player is not available")
-            Toast.makeText(context, "Player is not available", Toast.LENGTH_SHORT)
-                .show()
+    fun onCrashThePlayer(context: Context, playerManager: PlayerManager?) {
+        if (playerManager == null) {
+            Logd(TAG, "Player is not available")
+            Toast.makeText(context, "Player is not available", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -88,7 +88,7 @@ object VideoDetailPlayerCrasher {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
             radioButton.setOnClickListener { v: View? ->
-                tryCrashPlayerWith(player, entry.second.get())
+                tryCrashPlayerWith(playerManager, entry.second.get())
                 alertDialog.cancel()
             }
             binding.list.addView(radioButton)
@@ -99,14 +99,14 @@ object VideoDetailPlayerCrasher {
 
     /**
      * Note that this method does not crash the underlying exoplayer directly (it's not possible).
-     * It simply supplies a Exception to [Player.onPlayerError].
-     * @param player
+     * It simply supplies a Exception to [PlayerManager.onPlayerError].
+     * @param playerManager
      * @param exception
      */
-    private fun tryCrashPlayerWith(player: Player, exception: ExoPlaybackException) {
-        Log.d(TAG, "Crashing the player using player.onPlayerError(ex)")
+    private fun tryCrashPlayerWith(playerManager: PlayerManager, exception: ExoPlaybackException) {
+        Logd(TAG, "Crashing the player using player.onPlayerError(ex)")
         try {
-            player.onPlayerError(exception)
+            playerManager.onPlayerError(exception)
         } catch (exPlayer: Exception) {
             Log.e(TAG,
                 "Run into an exception while crashing the player:",

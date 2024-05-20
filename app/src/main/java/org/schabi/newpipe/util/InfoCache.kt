@@ -27,19 +27,19 @@ import org.schabi.newpipe.extractor.InfoItem.InfoType
 class InfoCache private constructor() {
     private val TAG: String = javaClass.simpleName
     fun getFromKey(serviceId: Int, url: String, infoType: InfoType): Info? {
-        if (DEBUG) {
-            Log.d(TAG, "getFromKey() called with: "
-                    + "serviceId = [" + serviceId + "], url = [" + url + "]")
-        }
+
+        Logd(TAG, "getFromKey() called with: "
+                + "serviceId = [" + serviceId + "], url = [" + url + "]")
+
         synchronized(LRU_CACHE) {
             return getInfo(keyOf(serviceId, url, infoType))
         }
     }
 
     fun putInfo(serviceId: Int, url: String, info: Info, infoType: InfoType) {
-        if (DEBUG) {
-            Log.d(TAG, "putInfo() called with: info = [$info]")
-        }
+
+        Logd(TAG, "putInfo() called with: info = [$info]")
+
 
         val expirationMillis = ServiceHelper.getCacheExpirationMillis(info.serviceId)
         synchronized(LRU_CACHE) {
@@ -49,28 +49,28 @@ class InfoCache private constructor() {
     }
 
     fun removeInfo(serviceId: Int, url: String, infoType: InfoType) {
-        if (DEBUG) {
-            Log.d(TAG, "removeInfo() called with: "
-                    + "serviceId = [" + serviceId + "], url = [" + url + "]")
-        }
+
+        Logd(TAG, "removeInfo() called with: "
+                + "serviceId = [" + serviceId + "], url = [" + url + "]")
+
         synchronized(LRU_CACHE) {
             LRU_CACHE.remove(keyOf(serviceId, url, infoType))
         }
     }
 
     fun clearCache() {
-        if (DEBUG) {
-            Log.d(TAG, "clearCache() called")
-        }
+
+        Logd(TAG, "clearCache() called")
+
         synchronized(LRU_CACHE) {
             LRU_CACHE.evictAll()
         }
     }
 
     fun trimCache() {
-        if (DEBUG) {
-            Log.d(TAG, "trimCache() called")
-        }
+
+        Logd(TAG, "trimCache() called")
+
         synchronized(LRU_CACHE) {
             removeStaleCache()
             LRU_CACHE.trimToSize(TRIM_CACHE_TO)

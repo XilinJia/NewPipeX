@@ -8,9 +8,9 @@ import java.util.*
 
 class SerializedCache private constructor() {
     fun <T> take(key: String, type: Class<T>): T? {
-        if (DEBUG) {
-            Log.d(TAG, "take() called with: key = [$key]")
-        }
+
+        Logd(TAG, "take() called with: key = [$key]")
+
         synchronized(LRU_CACHE) {
             return if (LRU_CACHE[key] != null) getItem(
                 LRU_CACHE.remove(key)!!, type) else null
@@ -18,9 +18,9 @@ class SerializedCache private constructor() {
     }
 
     fun <T> get(key: String, type: Class<T>): T? {
-        if (DEBUG) {
-            Log.d(TAG, "get() called with: key = [$key]")
-        }
+
+        Logd(TAG, "get() called with: key = [$key]")
+
         synchronized(LRU_CACHE) {
             val data = LRU_CACHE[key]
             return if (data != null) getItem(data, type) else null
@@ -37,9 +37,9 @@ class SerializedCache private constructor() {
     fun <T : Serializable?> put(key: String, item: T,
                                 type: Class<T>
     ): Boolean {
-        if (DEBUG) {
-            Log.d(TAG, "put() called with: key = [$key], item = [$item]")
-        }
+
+        Logd(TAG, "put() called with: key = [$key], item = [$item]")
+
         synchronized(LRU_CACHE) {
             try {
                 LRU_CACHE.put(key, CacheData(clone(item, type), type))
@@ -52,9 +52,9 @@ class SerializedCache private constructor() {
     }
 
     fun clear() {
-        if (DEBUG) {
-            Log.d(TAG, "clear() called")
-        }
+
+        Logd(TAG, "clear() called")
+
         synchronized(LRU_CACHE) {
             LRU_CACHE.evictAll()
         }

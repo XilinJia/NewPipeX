@@ -7,6 +7,7 @@ import android.util.Log
 import org.schabi.newpipe.BuildConfig
 import org.schabi.newpipe.DownloaderImpl
 import org.schabi.newpipe.streams.io.StoredFileHelper
+import org.schabi.newpipe.util.Logd
 import us.shandian.giga.postprocessing.Postprocessing
 import us.shandian.giga.service.DownloadManagerService
 import us.shandian.giga.util.Utility
@@ -249,12 +250,10 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
     fun establishConnection(threadId: Int, conn: HttpURLConnection) {
         val statusCode = conn.responseCode
 
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, threadId.toString() + ":[request]  Range=" + conn.getRequestProperty("Range"))
-            Log.d(TAG, "$threadId:[response] Code=$statusCode")
-            Log.d(TAG, threadId.toString() + ":[response] Content-Length=" + conn.contentLength)
-            Log.d(TAG, threadId.toString() + ":[response] Content-Range=" + conn.getHeaderField("Content-Range"))
-        }
+        Logd(TAG, threadId.toString() + ":[request]  Range=" + conn.getRequestProperty("Range"))
+        Logd(TAG, "$threadId:[response] Code=$statusCode")
+        Logd(TAG, threadId.toString() + ":[response] Content-Length=" + conn.contentLength)
+        Logd(TAG, threadId.toString() + ":[response] Content-Range=" + conn.getHeaderField("Content-Range"))
 
         when (statusCode) {
             204, 205, 207 -> throw HttpError(statusCode)
@@ -364,10 +363,7 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
     fun notifyFinished() {
         if (current < urls.size) {
             if (++finishCount < threads.size) return
-
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "onFinish: downloaded " + (current + 1) + "/" + urls.size)
-            }
+            Logd(TAG, "onFinish: downloaded " + (current + 1) + "/" + urls.size)
 
             current++
             if (current < urls.size) {
@@ -398,7 +394,7 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
             2 -> "Completed"
             else -> "Failed"
         }
-        Log.d(TAG, action + " postprocessing on " + storage!!.name)
+        Logd(TAG, action + " postprocessing on " + storage!!.name)
 
         if (state == 2) {
             psState = state

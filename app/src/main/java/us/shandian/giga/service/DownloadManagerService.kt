@@ -31,6 +31,7 @@ import org.schabi.newpipe.player.helper.LockManager
 import org.schabi.newpipe.streams.io.StoredDirectoryHelper
 import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.util.Localization.downloadCount
+import org.schabi.newpipe.util.Logd
 import us.shandian.giga.get.DownloadMission
 import us.shandian.giga.get.MissionRecoveryInfo
 import us.shandian.giga.postprocessing.Postprocessing.Companion.getAlgorithm
@@ -89,10 +90,7 @@ class DownloadManagerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "onCreate")
-        }
+        Logd(TAG, "onCreate")
 
         mBinder = DownloadManagerBinder()
         mHandler = Handler { msg: Message -> this.handleMessage(msg) }
@@ -140,9 +138,7 @@ class DownloadManagerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, if (intent == null) "Restarting" else "Starting")
-        }
+        Logd(TAG, if (intent == null) "Restarting" else "Starting")
 
         if (intent == null) return START_NOT_STICKY
 
@@ -171,10 +167,7 @@ class DownloadManagerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Destroying")
-        }
+        Logd(TAG, "Destroying")
 
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
 
@@ -280,7 +273,7 @@ class DownloadManagerService : Service() {
 
     fun updateForegroundState(state: Boolean) {
         if (state == mForeground) return
-        Log.d(TAG, "updateForegroundState state: $state")
+        Logd(TAG, "updateForegroundState state: $state")
         if (state) {
 //            startForeground(FOREGROUND_NOTIFICATION_ID, mNotification)
             val intent = Intent(this, DownloadManagerService::class.java)

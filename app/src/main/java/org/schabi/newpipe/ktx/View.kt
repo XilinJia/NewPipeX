@@ -18,6 +18,7 @@ import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import org.schabi.newpipe.MainActivity
+import org.schabi.newpipe.util.Logd
 
 private const val TAG = "ViewUtils"
 
@@ -31,46 +32,25 @@ private const val TAG = "ViewUtils"
  * @param execOnEnd     runnable that will be executed when the animation ends
  */
 @JvmOverloads
-fun View.animate(
-    enterOrExit: Boolean,
-    duration: Long,
-    animationType: AnimationType = AnimationType.ALPHA,
-    delay: Long = 0,
-    execOnEnd: Runnable? = null,
-) {
+fun View.animate(enterOrExit: Boolean, duration: Long, animationType: AnimationType = AnimationType.ALPHA, delay: Long = 0, execOnEnd: Runnable? = null) {
     if (MainActivity.DEBUG) {
-        val id =
-            try {
-                resources.getResourceEntryName(id)
-            } catch (e: Exception) {
-                id.toString()
-            }
-        val msg =
-            String.format(
-                "%8s →  [%s:%s] [%s %s:%s] execOnEnd=%s",
-                enterOrExit,
-                javaClass.simpleName,
-                id,
-                animationType,
-                duration,
-                delay,
-                execOnEnd,
-            )
-        Log.d(TAG, "animate(): $msg")
+        val id = try {
+            resources.getResourceEntryName(id)
+        } catch (e: Exception) {
+            id.toString()
+        }
+        val msg = String.format("%8s →  [%s:%s] [%s %s:%s] execOnEnd=%s", enterOrExit, javaClass.simpleName, id, animationType, duration, delay, execOnEnd)
+        Logd(TAG, "animate(): $msg")
     }
     if (isVisible && enterOrExit) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "animate(): view was already visible > view = [$this]")
-        }
+        Logd(TAG, "animate(): view was already visible > view = [$this]")
         animate().setListener(null).cancel()
         isVisible = true
         alpha = 1f
         execOnEnd?.run()
         return
     } else if ((isGone || isInvisible) && !enterOrExit) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "animate(): view was already gone > view = [$this]")
-        }
+        Logd(TAG, "animate(): view was already gone > view = [$this]")
         animate().setListener(null).cancel()
         isGone = true
         alpha = 0f
@@ -96,18 +76,9 @@ fun View.animate(
  * @param colorStart the background color to start with
  * @param colorEnd   the background color to end with
  */
-fun View.animateBackgroundColor(
-    duration: Long,
-    @ColorInt colorStart: Int,
-    @ColorInt colorEnd: Int,
-) {
-    if (MainActivity.DEBUG) {
-        Log.d(
-            TAG,
-            "animateBackgroundColor() called with: view = [$this], duration = [$duration], " +
-                "colorStart = [$colorStart], colorEnd = [$colorEnd]",
-        )
-    }
+fun View.animateBackgroundColor(duration: Long, @ColorInt colorStart: Int, @ColorInt colorEnd: Int) {
+    Logd(TAG, "animateBackgroundColor() called with: view = [$this], duration = [$duration], colorStart = [$colorStart], colorEnd = [$colorEnd]", )
+
     val viewPropertyAnimator = ValueAnimator.ofObject(ArgbEvaluator(), colorStart, colorEnd)
     viewPropertyAnimator.interpolator = FastOutSlowInInterpolator()
     viewPropertyAnimator.duration = duration
@@ -120,13 +91,9 @@ fun View.animateBackgroundColor(
     viewPropertyAnimator.start()
 }
 
-fun View.animateHeight(
-    duration: Long,
-    targetHeight: Int,
-): ValueAnimator {
-    if (MainActivity.DEBUG) {
-        Log.d(TAG, "animateHeight: duration = [$duration], from $height to → $targetHeight in: $this")
-    }
+fun View.animateHeight(duration: Long, targetHeight: Int): ValueAnimator {
+    Logd(TAG, "animateHeight: duration = [$duration], from $height to → $targetHeight in: $this")
+
     val animator = ValueAnimator.ofFloat(height.toFloat(), targetHeight.toFloat())
     animator.interpolator = FastOutSlowInInterpolator()
     animator.duration = duration
@@ -141,13 +108,9 @@ fun View.animateHeight(
     return animator
 }
 
-fun View.animateRotation(
-    duration: Long,
-    targetRotation: Int,
-) {
-    if (MainActivity.DEBUG) {
-        Log.d(TAG, "animateRotation: duration = [$duration], from $rotation to → $targetRotation in: $this")
-    }
+fun View.animateRotation(duration: Long, targetRotation: Int) {
+    Logd(TAG, "animateRotation: duration = [$duration], from $rotation to → $targetRotation in: $this")
+
     animate().setListener(null).cancel()
     animate()
         .rotation(targetRotation.toFloat()).setDuration(duration)
@@ -157,7 +120,6 @@ fun View.animateRotation(
                 override fun onAnimationCancel(animation: Animator) {
                     rotation = targetRotation.toFloat()
                 }
-
                 override fun onAnimationEnd(animation: Animator) {
                     rotation = targetRotation.toFloat()
                 }
@@ -165,12 +127,7 @@ fun View.animateRotation(
         ).start()
 }
 
-private fun View.animateAlpha(
-    enterOrExit: Boolean,
-    duration: Long,
-    delay: Long,
-    execOnEnd: Runnable?,
-) {
+private fun View.animateAlpha(enterOrExit: Boolean, duration: Long, delay: Long, execOnEnd: Runnable?) {
     if (enterOrExit) {
         animate().setInterpolator(FastOutSlowInInterpolator()).alpha(1f)
             .setDuration(duration).setStartDelay(delay)
@@ -184,12 +141,7 @@ private fun View.animateAlpha(
     }
 }
 
-private fun View.animateScaleAndAlpha(
-    enterOrExit: Boolean,
-    duration: Long,
-    delay: Long,
-    execOnEnd: Runnable?,
-) {
+private fun View.animateScaleAndAlpha(enterOrExit: Boolean, duration: Long, delay: Long, execOnEnd: Runnable?) {
     if (enterOrExit) {
         scaleX = .8f
         scaleY = .8f
@@ -211,12 +163,7 @@ private fun View.animateScaleAndAlpha(
     }
 }
 
-private fun View.animateLightScaleAndAlpha(
-    enterOrExit: Boolean,
-    duration: Long,
-    delay: Long,
-    execOnEnd: Runnable?,
-) {
+private fun View.animateLightScaleAndAlpha(enterOrExit: Boolean, duration: Long, delay: Long, execOnEnd: Runnable?) {
     if (enterOrExit) {
         alpha = .5f
         scaleX = .95f
@@ -240,12 +187,7 @@ private fun View.animateLightScaleAndAlpha(
     }
 }
 
-private fun View.animateSlideAndAlpha(
-    enterOrExit: Boolean,
-    duration: Long,
-    delay: Long,
-    execOnEnd: Runnable?,
-) {
+private fun View.animateSlideAndAlpha(enterOrExit: Boolean, duration: Long, delay: Long, execOnEnd: Runnable?) {
     if (enterOrExit) {
         translationY = -height.toFloat()
         alpha = 0f
@@ -264,12 +206,7 @@ private fun View.animateSlideAndAlpha(
     }
 }
 
-private fun View.animateLightSlideAndAlpha(
-    enterOrExit: Boolean,
-    duration: Long,
-    delay: Long,
-    execOnEnd: Runnable?,
-) {
+private fun View.animateLightSlideAndAlpha(enterOrExit: Boolean, duration: Long, delay: Long, execOnEnd: Runnable?) {
     if (enterOrExit) {
         translationY = -height / 2.0f
         alpha = 0f
@@ -288,12 +225,7 @@ private fun View.animateLightSlideAndAlpha(
 }
 
 @JvmOverloads
-fun View.slideUp(
-    duration: Long,
-    delay: Long = 0L,
-    @FloatRange(from = 0.0, to = 1.0) translationPercent: Float = 1.0F,
-    execOnEnd: Runnable? = null,
-) {
+fun View.slideUp(duration: Long, delay: Long = 0L, @FloatRange(from = 0.0, to = 1.0) translationPercent: Float = 1.0F, execOnEnd: Runnable? = null) {
     val newTranslationY = (resources.displayMetrics.heightPixels * translationPercent).toInt()
     animate().setListener(null).cancel()
     alpha = 0f

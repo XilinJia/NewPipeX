@@ -30,6 +30,7 @@ import org.schabi.newpipe.player.datasource.NonUriHlsDataSourceFactory
 import org.schabi.newpipe.player.datasource.YoutubeHttpDataSource
 import org.schabi.newpipe.player.helper.PlayerHelper.getProgressiveLoadIntervalBytes
 import org.schabi.newpipe.player.helper.PlayerHelper.preferredCacheSize
+import org.schabi.newpipe.util.Logd
 import java.io.File
 
 @UnstableApi class PlayerDataSource(context: Context, transferListener: TransferListener?) {
@@ -191,12 +192,9 @@ import java.io.File
         private fun instantiateCacheIfNeeded(context: Context) {
             if (cache == null) {
                 val cacheDir = File(context.externalCacheDir, CACHE_FOLDER_NAME)
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "instantiateCacheIfNeeded: cacheDir = " + cacheDir.absolutePath)
-                }
-                if (!cacheDir.exists() && !cacheDir.mkdir()) {
-                    Log.w(TAG, "instantiateCacheIfNeeded: could not create cache dir")
-                }
+                Logd(TAG, "instantiateCacheIfNeeded: cacheDir = " + cacheDir.absolutePath)
+
+                if (!cacheDir.exists() && !cacheDir.mkdir()) Log.w(TAG, "instantiateCacheIfNeeded: could not create cache dir")
 
                 val evictor = LeastRecentlyUsedCacheEvictor(preferredCacheSize)
                 cache = SimpleCache(cacheDir, evictor, StandaloneDatabaseProvider(context))

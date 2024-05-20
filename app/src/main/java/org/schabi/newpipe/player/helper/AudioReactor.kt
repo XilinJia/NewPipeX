@@ -16,6 +16,7 @@ import androidx.media.AudioManagerCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.analytics.AnalyticsListener
+import org.schabi.newpipe.util.Logd
 
 @OptIn(UnstableApi::class) class AudioReactor(private val context: Context, private val player: ExoPlayer)
     : OnAudioFocusChangeListener, AnalyticsListener {
@@ -62,7 +63,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
     // AudioFocus
     ////////////////////////////////////////////////////////////////////////// */
     override fun onAudioFocusChange(focusChange: Int) {
-        Log.d(TAG, "onAudioFocusChange() called with: focusChange = [$focusChange]")
+        Logd(TAG, "onAudioFocusChange() called with: focusChange = [$focusChange]")
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> onAudioFocusGain()
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> onAudioFocusLossCanDuck()
@@ -71,7 +72,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
     }
 
     private fun onAudioFocusGain() {
-        Log.d(TAG, "onAudioFocusGain() called")
+        Logd(TAG, "onAudioFocusGain() called")
         player.volume = DUCK_AUDIO_TO
         animateAudio(DUCK_AUDIO_TO, 1.0f)
 
@@ -81,12 +82,12 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
     }
 
     private fun onAudioFocusLoss() {
-        Log.d(TAG, "onAudioFocusLoss() called")
+        Logd(TAG, "onAudioFocusLoss() called")
         player.pause()
     }
 
     private fun onAudioFocusLossCanDuck() {
-        Log.d(TAG, "onAudioFocusLossCanDuck() called")
+        Logd(TAG, "onAudioFocusLossCanDuck() called")
         // Set the volume to 1/10 on ducking
         player.volume = DUCK_AUDIO_TO
     }

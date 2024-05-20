@@ -22,6 +22,7 @@ import org.schabi.newpipe.streams.io.StoredDirectoryHelper
 import org.schabi.newpipe.streams.io.StoredDirectoryHelper.Companion.getPicker
 import org.schabi.newpipe.util.FilePickerActivityHelper.Companion.isOwnFileUri
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
+import org.schabi.newpipe.util.Logd
 import java.io.File
 import java.io.IOException
 import java.io.UnsupportedEncodingException
@@ -160,10 +161,7 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
-        if (DEBUG) {
-            Log.d(TAG, "onPreferenceTreeClick() called with: preference = [$preference]")
-        }
-
+        Logd(TAG, "onPreferenceTreeClick() called with: preference = [$preference]")
         val key = preference.key
 
         when (key) {
@@ -178,15 +176,9 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
                 updatePreferencesSummary()
                 return true
             }
-            downloadPathVideoPreference -> {
-                launchDirectoryPicker(requestDownloadVideoPathLauncher)
-            }
-            downloadPathAudioPreference -> {
-                launchDirectoryPicker(requestDownloadAudioPathLauncher)
-            }
-            else -> {
-                return super.onPreferenceTreeClick(preference)
-            }
+            downloadPathVideoPreference -> launchDirectoryPicker(requestDownloadVideoPathLauncher)
+            downloadPathAudioPreference -> launchDirectoryPicker(requestDownloadAudioPathLauncher)
+            else -> return super.onPreferenceTreeClick(preference)
         }
 
         return true
@@ -210,9 +202,8 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
         if (result.resultCode != Activity.RESULT_OK) return
 
         var uri: Uri? = null
-        if (result.data != null) {
-            uri = result.data!!.data
-        }
+        if (result.data != null) uri = result.data!!.data
+
         if (uri == null) {
             showMessageDialog(R.string.general_error, R.string.invalid_directory)
             return
@@ -233,9 +224,7 @@ class DownloadSettingsFragment : BasePreferenceFragment() {
                 val mainStorage = StoredDirectoryHelper(context, uri, "")
                 Log.i(TAG, "Acquiring tree success from $uri")
 
-                if (!mainStorage.canWrite()) {
-                    throw IOException("No write permissions on $uri")
-                }
+                if (!mainStorage.canWrite()) throw IOException("No write permissions on $uri")
             } catch (err: IOException) {
                 Log.e(TAG, "Error acquiring tree from $uri", err)
                 showMessageDialog(R.string.general_error, R.string.no_available_dir)

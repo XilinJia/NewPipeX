@@ -28,7 +28,7 @@ object StreamTypeUtil {
      */
     @JvmStatic
     fun isVideo(streamType: StreamType): Boolean {
-        Log.d("StreamTypeUtil", "isVideo: $streamType")
+        Logd("StreamTypeUtil", "isVideo: $streamType")
         return streamType == StreamType.VIDEO_STREAM || streamType == StreamType.LIVE_STREAM || streamType == StreamType.POST_LIVE_STREAM
     }
 

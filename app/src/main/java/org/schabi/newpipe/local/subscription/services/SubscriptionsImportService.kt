@@ -49,6 +49,7 @@ import org.schabi.newpipe.streams.io.StoredFileHelper
 import org.schabi.newpipe.util.ExtractorHelper.getChannelInfo
 import org.schabi.newpipe.util.ExtractorHelper.getChannelTab
 import org.schabi.newpipe.util.KEY_SERVICE_ID
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NO_SERVICE_ID
 import java.io.IOException
 import java.io.InputStream
@@ -175,9 +176,7 @@ class SubscriptionsImportService : BaseImportExportService() {
             }
 
             override fun onNext(successfulInserted: List<SubscriptionEntity>) {
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "startImport() ${successfulInserted.size} items successfully inserted into the database")
-                }
+                Logd(TAG, "startImport() ${successfulInserted.size} items successfully inserted into the database")
             }
 
             override fun onError(error: Throwable) {

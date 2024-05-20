@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit
     /**
      * If the error is not known, e.g. network issue, then the exception is not swallowed here in
      * [FailedMediaSource]. The exception is then propagated to the player, which
-     * [Player][org.schabi.newpipe.player.Player] can react to inside
+     * [Player][org.schabi.newpipe.player.PlayerManager] can react to inside
      * [androidx.media3.common.Player.Listener.onPlayerError].
      *
      * @throws IOException An error which will always result in

@@ -26,8 +26,7 @@ class MainSettingsFragment : BasePreferenceFragment() {
 
         // Hide debug preferences in RELEASE build variant
         if (!DEBUG) {
-            preferenceScreen.removePreference(
-                findPreference(getString(R.string.debug_pref_screen_key))!!)
+            preferenceScreen.removePreference(findPreference(getString(R.string.debug_pref_screen_key))!!)
         }
     }
 

@@ -136,9 +136,7 @@ class NewVersionWorker(
                 putLong(applicationContext.getString(R.string.update_expiry_key), newExpiry)
             }
         } catch (e: Exception) {
-            if (DEBUG) {
-                Log.w(TAG, "Could not extract and save new expiry date", e)
-            }
+            Log.w(TAG, "Could not extract and save new expiry date", e)
         }
 
         // Parse the json from the response.
@@ -155,9 +153,7 @@ class NewVersionWorker(
         } catch (e: JsonParserException) {
             // Most likely something is wrong in data received from NEWPIPE_API_URL.
             // Do not alarm user and fail silently.
-            if (DEBUG) {
-                Log.w(TAG, "Could not get NewPipe API: invalid json", e)
-            }
+            Log.w(TAG, "Could not get NewPipe API: invalid json", e)
         }
     }
 

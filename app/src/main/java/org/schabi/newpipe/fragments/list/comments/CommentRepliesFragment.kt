@@ -21,6 +21,7 @@ import org.schabi.newpipe.util.ExtractorHelper.getMoreCommentItems
 import org.schabi.newpipe.util.Localization.likeCount
 import org.schabi.newpipe.util.Localization.relativeTimeOrTextual
 import org.schabi.newpipe.util.Localization.replyCount
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.openCommentAuthorIfPresent
 import org.schabi.newpipe.util.ServiceHelper.getServiceById
 import org.schabi.newpipe.util.image.ImageStrategy.shouldLoadImages
@@ -49,10 +50,8 @@ class CommentRepliesFragment()
         setInitialData(commentsInfoItem.serviceId, commentsInfoItem.url, "")
     }
 
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        Logd(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_comments, container, false)
     }
 
@@ -88,8 +87,7 @@ class CommentRepliesFragment()
             binding.pinnedImage.visibility = if (item.isPinned) View.VISIBLE else View.GONE
 
             // setup comment content
-            fromDescription(binding.commentContent, item.commentText,
-                HtmlCompat.FROM_HTML_MODE_LEGACY, getServiceById(item.serviceId),
+            fromDescription(binding.commentContent, item.commentText, HtmlCompat.FROM_HTML_MODE_LEGACY, getServiceById(item.serviceId),
                 item.url, disposables, null)
             binding.root
         }

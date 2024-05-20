@@ -49,12 +49,8 @@ object StateSaver {
     @JvmStatic
     fun init(context: Context) {
         val externalCacheDir = context.externalCacheDir
-        if (externalCacheDir != null) {
-            cacheDirPath = externalCacheDir.absolutePath
-        }
-        if (cacheDirPath.isNullOrEmpty()) {
-            cacheDirPath = context.cacheDir.absolutePath
-        }
+        if (externalCacheDir != null) cacheDirPath = externalCacheDir.absolutePath
+        if (cacheDirPath.isNullOrEmpty()) cacheDirPath = context.cacheDir.absolutePath
     }
 
     /**
@@ -82,27 +78,19 @@ object StateSaver {
      * @return the saved state
      */
     private fun tryToRestore(savedState: SavedState, writeRead: WriteRead): SavedState? {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "tryToRestore() called with: savedState = [" + savedState + "], "
-                    + "writeRead = [" + writeRead + "]")
-        }
+        Logd(TAG, "tryToRestore() called with: savedState = [$savedState], writeRead = [$writeRead]")
 
         try {
             var savedObjects = STATE_OBJECTS_HOLDER.remove(savedState.prefixFileSaved)
             if (savedObjects != null) {
                 writeRead.readFrom(savedObjects)
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "tryToSave: reading objects from holder > " + savedObjects
-                            + ", stateObjectsHolder > " + STATE_OBJECTS_HOLDER)
-                }
+                Logd(TAG, "tryToSave: reading objects from holder > $savedObjects, stateObjectsHolder > $STATE_OBJECTS_HOLDER")
                 return savedState
             }
 
             val file = File(savedState.pathFileSaved)
             if (!file.exists()) {
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "Cache file doesn't exist: " + file.absolutePath)
-                }
+                Logd(TAG, "Cache file doesn't exist: ${file.absolutePath}")
                 return null
             }
 
@@ -111,10 +99,7 @@ object StateSaver {
                     savedObjects = inputStream.readObject() as Queue<Any>
                 }
             }
-            if (savedObjects != null) {
-                writeRead.readFrom(savedObjects!!)
-            }
-
+            if (savedObjects != null) writeRead.readFrom(savedObjects!!)
             return savedState
         } catch (e: Exception) {
             Log.e(TAG, "Failed to restore state", e)
@@ -132,15 +117,16 @@ object StateSaver {
      */
     @JvmStatic
     fun tryToSave(isChangingConfig: Boolean, savedState: SavedState?, outState: Bundle, writeRead: WriteRead): SavedState? {
-        val currentSavedPrefix = if (savedState?.prefixFileSaved.isNullOrEmpty()) (System.nanoTime() - writeRead.hashCode()).toString() + ""   // Generate unique prefix
-        else savedState?.prefixFileSaved!!  // Reuse prefix
+        // Generate unique prefix
+        val currentSavedPrefix =
+            if (savedState?.prefixFileSaved.isNullOrEmpty()) (System.nanoTime() - writeRead.hashCode()).toString() + ""
+            else savedState?.prefixFileSaved!!  // Reuse prefix
 
         val newSavedState = tryToSave(isChangingConfig, currentSavedPrefix, writeRead.generateSuffix(), writeRead)
         if (newSavedState != null) {
             outState.putParcelable(KEY_SAVED_STATE, newSavedState)
             return newSavedState
         }
-
         return null
     }
 
@@ -166,13 +152,7 @@ object StateSaver {
      * @return the saved state or `null`
      */
     private fun tryToSave(isChangingConfig: Boolean, prefixFileName: String, suffixFileName: String, writeRead: WriteRead): SavedState? {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "tryToSave() called with: "
-                    + "isChangingConfig = [" + isChangingConfig + "], "
-                    + "prefixFileName = [" + prefixFileName + "], "
-                    + "suffixFileName = [" + suffixFileName + "], "
-                    + "writeRead = [" + writeRead + "]")
-        }
+        Logd(TAG, "tryToSave() called with: isChangingConfig = [$isChangingConfig], prefixFileName = [$prefixFileName], suffixFileName = [$suffixFileName], writeRead = [$writeRead]")
 
         val savedObjects = LinkedList<Any>()
         writeRead.writeTo(savedObjects)
@@ -182,32 +162,26 @@ object StateSaver {
                 STATE_OBJECTS_HOLDER[prefixFileName] = savedObjects
                 return SavedState(prefixFileName, "")
             } else {
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "Nothing to save")
-                }
+                Logd(TAG, "Nothing to save")
                 return null
             }
         }
 
         try {
             var cacheDir = File(cacheDirPath)
-            if (!cacheDir.exists()) {
-                throw RuntimeException("Cache dir does not exist > " + cacheDirPath)
-            }
+            if (!cacheDir.exists()) throw RuntimeException("Cache dir does not exist > " + cacheDirPath)
+
             cacheDir = File(cacheDir, CACHE_DIR_NAME)
             if (!cacheDir.exists()) {
                 if (!cacheDir.mkdir()) {
-                    if (BuildConfig.DEBUG) {
-                        Log.e(TAG,
-                            "Failed to create cache directory " + cacheDir.absolutePath)
-                    }
+                    if (BuildConfig.DEBUG) Log.e(TAG, "Failed to create cache directory ${cacheDir.absolutePath}")
                     return null
                 }
             }
 
             val file = File(cacheDir, prefixFileName + (if (TextUtils.isEmpty(suffixFileName)) ".cache" else suffixFileName))
+            // If the file already exists, just return it
             if (file.exists() && file.length() > 0) {
-                // If the file already exists, just return it
                 return SavedState(prefixFileName, file.absolutePath)
             } else {
                 // Delete any file that contains the prefix
@@ -239,15 +213,14 @@ object StateSaver {
      */
     @JvmStatic
     fun onDestroy(savedState: SavedState?) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "onDestroy() called with: savedState = [$savedState]")
-        }
+        Logd(TAG, "onDestroy() called with: savedState = [$savedState]")
 
         if (!savedState?.pathFileSaved.isNullOrEmpty()) {
             STATE_OBJECTS_HOLDER.remove(savedState!!.prefixFileSaved)
             try {
                 File(savedState.pathFileSaved).delete()
-            } catch (ignored: Exception) { }
+            } catch (ignored: Exception) {
+            }
         }
     }
 
@@ -256,9 +229,7 @@ object StateSaver {
      */
     @JvmStatic
     fun clearStateFiles() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "clearStateFiles() called")
-        }
+        Logd(TAG, "clearStateFiles() called")
 
         STATE_OBJECTS_HOLDER.clear()
         if (cacheDirPath == null) return

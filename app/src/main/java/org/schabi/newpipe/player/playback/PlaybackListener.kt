@@ -40,7 +40,7 @@ interface PlaybackListener {
      *
      * @param mediaSource
      */
-    fun onPlaybackUnblock(mediaSource: MediaSource?)
+    fun onPlaybackUnblock(mediaSource: MediaSource)
 
     /**
      * Called when the queue index is refreshed.

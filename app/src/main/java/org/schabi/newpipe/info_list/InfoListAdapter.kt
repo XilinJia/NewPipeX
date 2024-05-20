@@ -17,6 +17,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.info_list.holder.*
 import org.schabi.newpipe.local.history.HistoryRecordManager
 import org.schabi.newpipe.util.FallbackViewHolder
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.OnClickGesture
 import java.util.function.Supplier
 
@@ -79,27 +80,19 @@ class InfoListAdapter(context: Context) : RecyclerView.Adapter<RecyclerView.View
     fun addInfoItemList(data: List<InfoItem>?) {
         if (data == null) return
 
-        if (DEBUG) {
-            Log.d(TAG,
-                "addInfoItemList() before > infoItemList.size() = ${infoItemList.size}, data.size() = ${data.size}")
-        }
+        Logd(TAG, "addInfoItemList() before > infoItemList.size() = ${infoItemList.size}, data.size() = ${data.size}")
 
         val offsetStart = sizeConsideringHeaderOffset()
         infoItemList.addAll(data)
 
-        if (DEBUG) {
-            Log.d(TAG,
-                "addInfoItemList() after > offsetStart = $offsetStart, infoItemList.size() = ${infoItemList.size}, hasHeader = ${hasHeader()}, showFooter = $showFooter")
-        }
+        Logd(TAG, "addInfoItemList() after > offsetStart = $offsetStart, infoItemList.size() = ${infoItemList.size}, hasHeader = ${hasHeader()}, showFooter = $showFooter")
+
         notifyItemRangeInserted(offsetStart, data.size)
 
         if (showFooter) {
             val footerNow = sizeConsideringHeaderOffset()
             notifyItemMoved(offsetStart, footerNow)
-
-            if (DEBUG) {
-                Log.d(TAG, "addInfoItemList() footer from $offsetStart to $footerNow")
-            }
+            Logd(TAG, "addInfoItemList() footer from $offsetStart to $footerNow")
         }
     }
 
@@ -123,9 +116,9 @@ class InfoListAdapter(context: Context) : RecyclerView.Adapter<RecyclerView.View
     }
 
     fun showFooter(show: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG, "showFooter() called with: show = [$show]")
-        }
+
+        Logd(TAG, "showFooter() called with: show = [$show]")
+
         if (show == showFooter) return
 
         showFooter = show
@@ -138,9 +131,9 @@ class InfoListAdapter(context: Context) : RecyclerView.Adapter<RecyclerView.View
 
     private fun sizeConsideringHeaderOffset(): Int {
         val i = infoItemList.size + (if (hasHeader()) 1 else 0)
-        if (DEBUG) {
-            Log.d(TAG, "sizeConsideringHeaderOffset() called → $i")
-        }
+
+        Logd(TAG, "sizeConsideringHeaderOffset() called → $i")
+
         return i
     }
 
@@ -156,18 +149,17 @@ class InfoListAdapter(context: Context) : RecyclerView.Adapter<RecyclerView.View
             count++
         }
 
-        if (DEBUG) {
-            Log.d(TAG,
-                "getItemCount() called with: count = $count, infoItemList.size() = ${infoItemList.size}, hasHeader = ${hasHeader()}, showFooter = $showFooter")
-        }
+        Logd(TAG,
+            "getItemCount() called with: count = $count, infoItemList.size() = ${infoItemList.size}, hasHeader = ${hasHeader()}, showFooter = $showFooter")
+
         return count
     }
 
     override fun getItemViewType(position: Int): Int {
         var position = position
-        if (DEBUG) {
-            Log.d(TAG, "getItemViewType() called with: position = [$position]")
-        }
+
+        Logd(TAG, "getItemViewType() called with: position = [$position]")
+
 
         when {
             hasHeader() && position == 0 -> {
@@ -236,10 +228,10 @@ class InfoListAdapter(context: Context) : RecyclerView.Adapter<RecyclerView.View
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, type: Int): RecyclerView.ViewHolder {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateViewHolder() called with: "
-                    + "parent = [" + parent + "], type = [" + type + "]")
-        }
+
+        Logd(TAG, "onCreateViewHolder() called with: "
+                + "parent = [" + parent + "], type = [" + type + "]")
+
         return when (type) {
             HEADER_TYPE -> HFHolder(headerSupplier!!.get())
             FOOTER_TYPE -> HFHolder(PignateFooterBinding.inflate(layoutInflater, parent, false).root)
@@ -261,11 +253,11 @@ class InfoListAdapter(context: Context) : RecyclerView.Adapter<RecyclerView.View
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        if (DEBUG) {
-            Log.d(TAG, "onBindViewHolder() called with: "
-                    + "holder = [" + holder.javaClass.simpleName + "], "
-                    + "position = [" + position + "]")
-        }
+
+        Logd(TAG, "onBindViewHolder() called with: "
+                + "holder = [" + holder.javaClass.simpleName + "], "
+                + "position = [" + position + "]")
+
         if (holder is InfoItemHolder) {
             holder.updateFromItem( // If header is present, offset the items by -1
                 infoItemList[if (hasHeader()) position - 1 else position], recordManager)

@@ -12,7 +12,7 @@ import io.reactivex.rxjava3.disposables.Disposable
 import org.schabi.newpipe.NewPipeDatabase.getInstance
 import org.schabi.newpipe.database.stream.model.StreamEntity
 import org.schabi.newpipe.local.playlist.LocalPlaylistManager
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.playqueue.PlayQueue
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 import org.schabi.newpipe.util.StateSaver.WriteRead
@@ -120,16 +120,16 @@ abstract class PlaylistDialog : DialogFragment(), WriteRead {
          * otherwise a [PlaylistCreationDialog]. If the player's play queue is null or empty, no
          * dialog will be created.
          *
-         * @param player          the player from which to extract the context and the play queue
+         * @param playerManager          the player from which to extract the context and the play queue
          * @param fragmentManager the fragment manager to use to show the dialog
          * @return the disposable that was created
          */
         @JvmStatic
         fun showForPlayQueue(
-                player: Player,
+                playerManager: PlayerManager,
                 fragmentManager: FragmentManager
         ): Disposable {
-            val streamEntities = Stream.of(player.playQueue)
+            val streamEntities = Stream.of(playerManager.playQueue)
                 .filter { obj: PlayQueue? -> Objects.nonNull(obj) }
                 .flatMap { playQueue: PlayQueue? -> playQueue!!.streams.stream() }
                 .map { item: PlayQueueItem? ->
@@ -141,7 +141,7 @@ abstract class PlaylistDialog : DialogFragment(), WriteRead {
                 return Disposable.empty()
             }
 
-            return createCorrespondingDialog(player.context, streamEntities
+            return createCorrespondingDialog(playerManager.context, streamEntities
             ) { dialog: PlaylistDialog -> dialog.show(fragmentManager, "PlaylistDialog") }
         }
     }

@@ -27,9 +27,10 @@ import android.widget.LinearLayout
 import androidx.annotation.IntDef
 import icepick.Icepick
 import icepick.State
-import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.ktx.animateHeight
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.views.CollapsibleView
+import org.schabi.newpipe.views.CollapsibleView.ViewMode.Companion.COLLAPSED
 
 /**
  * A view that can be fully collapsed and expanded.
@@ -65,12 +66,9 @@ class CollapsibleView : LinearLayout {
      * some child changes (e.g. add new views, change text).
      */
     fun ready() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, getDebugLogString("ready() called"))
-        }
+        Logd(TAG, getDebugLogString("ready() called"))
 
-        measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST),
-            MeasureSpec.UNSPECIFIED)
+        measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.UNSPECIFIED)
         targetHeight = measuredHeight
 
         layoutParams.height = if (currentState == COLLAPSED) 0 else targetHeight
@@ -79,19 +77,12 @@ class CollapsibleView : LinearLayout {
 
         readyToChangeState = true
 
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, getDebugLogString("ready() *after* measuring"))
-        }
+        Logd(TAG, getDebugLogString("ready() *after* measuring"))
     }
 
     fun collapse() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, getDebugLogString("collapse() called"))
-        }
-
-        if (!readyToChangeState) {
-            return
-        }
+        Logd(TAG, getDebugLogString("collapse() called"))
+        if (!readyToChangeState) return
 
         val height = height
         if (height == 0) {
@@ -108,9 +99,9 @@ class CollapsibleView : LinearLayout {
     }
 
     fun expand() {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, getDebugLogString("expand() called"))
-        }
+
+        Logd(TAG, getDebugLogString("expand() called"))
+
 
         if (!readyToChangeState) {
             return
@@ -118,7 +109,7 @@ class CollapsibleView : LinearLayout {
 
         val height = height
         if (height == this.targetHeight) {
-            setCurrentState(EXPANDED)
+            setCurrentState(ViewMode.EXPANDED)
             return
         }
 
@@ -126,7 +117,7 @@ class CollapsibleView : LinearLayout {
             currentAnimator!!.cancel()
         }
         currentAnimator = this.animateHeight(ANIMATION_DURATION.toLong(), this.targetHeight)
-        setCurrentState(EXPANDED)
+        setCurrentState(ViewMode.EXPANDED)
     }
 
     fun switchState() {
@@ -201,7 +192,7 @@ class CollapsibleView : LinearLayout {
     }
 
     @Retention(AnnotationRetention.SOURCE)
-    @IntDef(ViewMode.COLLAPSED, ViewMode.EXPANDED)
+    @IntDef(COLLAPSED, ViewMode.EXPANDED)
     annotation class ViewMode {
         companion object {
             const val COLLAPSED = 0
@@ -227,7 +218,7 @@ class CollapsibleView : LinearLayout {
 
         private const val ANIMATION_DURATION = 420
 
-        const val COLLAPSED: Int = 0
-        const val EXPANDED: Int = 1
+//        const val COLLAPSED: Int = 0
+//        const val EXPANDED: Int = 1
     }
 }

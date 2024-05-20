@@ -7,7 +7,6 @@ import android.media.AudioManager
 import android.os.Build
 import android.util.Log
 import android.view.LayoutInflater
-import androidx.core.content.ContextCompat
 import androidx.core.math.MathUtils
 import androidx.media3.common.*
 import androidx.media3.common.Player.DiscontinuityReason
@@ -66,6 +65,7 @@ import org.schabi.newpipe.util.ListHelper.getPopupDefaultResolutionIndex
 import org.schabi.newpipe.util.ListHelper.getPopupResolutionIndex
 import org.schabi.newpipe.util.ListHelper.getResolutionIndex
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.sendPlayerStartedEvent
 import org.schabi.newpipe.util.SerializedCache
 import org.schabi.newpipe.util.StreamTypeUtil.isAudio
@@ -79,7 +79,7 @@ import kotlin.math.max
 
 //TODO try to remove and replace everything with context
 @UnstableApi
-class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.media3.common.Player.Listener {
+class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Player.Listener {
     /*//////////////////////////////////////////////////////////////////////////
     // Playback
     ////////////////////////////////////////////////////////////////////////// */
@@ -99,7 +99,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     /*//////////////////////////////////////////////////////////////////////////
     // Player
     ////////////////////////////////////////////////////////////////////////// */
-    var  exoPlayer: ExoPlayer? = null
+    var exoPlayer: ExoPlayer? = null
         private set
     var audioReactor: AudioReactor? = null
         private set
@@ -130,7 +130,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     // UIs, listeners and disposables
     ////////////////////////////////////////////////////////////////////////// */
     // keep the unusual member name
-    private val UIs: PlayerUiList
+    val UIs: PlayerUiList
 
     private lateinit var broadcastReceiver: BroadcastReceiver
     private lateinit var intentFilter: IntentFilter
@@ -151,10 +151,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     ////////////////////////////////////////////////////////////////////////// */
     @JvmField
     val context: Context = service
+
     @JvmField
     val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val recordManager = HistoryRecordManager(context)
-
 
     /*//////////////////////////////////////////////////////////////////////////
     // Constructor
@@ -167,8 +167,9 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         val dataSource = PlayerDataSource(context, DefaultBandwidthMeter.Builder(context).build())
         loadController = LoadController()
 
-        renderFactory = if (prefs.getBoolean(context.getString(R.string.always_use_exoplayer_set_output_surface_workaround_key), false))
-            CustomRenderersFactory(context) else DefaultRenderersFactory(context)
+        renderFactory =
+            if (prefs.getBoolean(context.getString(R.string.always_use_exoplayer_set_output_surface_workaround_key), false)) CustomRenderersFactory(context)
+            else DefaultRenderersFactory(context)
 
         renderFactory.setEnableDecoderFallback(prefs.getBoolean(context.getString(R.string.use_exoplayer_decoder_fallback_key), false))
 
@@ -220,9 +221,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         // We need to setup audioOnly before super(), see "sourceOf"
         isAudioOnly = audioPlayerSelected()
 
-        if (intent.hasExtra(PLAYBACK_QUALITY)) {
-            videoResolver.playbackQuality = intent.getStringExtra(PLAYBACK_QUALITY)
-        }
+        if (intent.hasExtra(PLAYBACK_QUALITY)) videoResolver.playbackQuality = intent.getStringExtra(PLAYBACK_QUALITY)
 
         // Resolve enqueue intents// If playerType changes from one to another we should reload the player
         // (to disable/enable video stream or to set quality)
@@ -289,8 +288,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                             && newQueue.item!!.recoveryPosition != PlayQueueItem.RECOVERY_UNSET -> {
                         // Player can have state = IDLE when playback is stopped or failed
                         // and we should retry in this case
-                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) exoPlayer!!.prepare()
-
+                        if (exoPlayer!!.playbackState == Player.STATE_IDLE) exoPlayer!!.prepare()
                         exoPlayer!!.seekTo(playQueue!!.index, newQueue.item!!.recoveryPosition)
                         exoPlayer!!.playWhenReady = playWhenReady
                     }
@@ -298,28 +296,23 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                         // Do not re-init the same PlayQueue. Save time
                         // Player can have state = IDLE when playback is stopped or failed
                         // and we should retry in this case
-                        if (exoPlayer!!.playbackState == androidx.media3.common.Player.STATE_IDLE) exoPlayer!!.prepare()
-
+                        if (exoPlayer!!.playbackState == Player.STATE_IDLE) exoPlayer!!.prepare()
                         exoPlayer!!.playWhenReady = playWhenReady
                     }
-                    (intent.getBooleanExtra(RESUME_PLAYBACK, false) && getResumePlaybackEnabled(context) && !samePlayQueue
-                            && !newQueue.isEmpty) && newQueue.item != null && newQueue.item!!.recoveryPosition == PlayQueueItem.RECOVERY_UNSET -> {
+                    (intent.getBooleanExtra(RESUME_PLAYBACK, false) && getResumePlaybackEnabled(context) && !samePlayQueue && !newQueue.isEmpty)
+                            && newQueue.item != null && newQueue.item!!.recoveryPosition == PlayQueueItem.RECOVERY_UNSET -> {
                         databaseUpdateDisposable.add(recordManager.loadStreamState(newQueue.item!!)
                             .observeOn(AndroidSchedulers.mainThread()) // Do not place initPlayback() in doFinally() because
                             // it restarts playback after destroy()
                             //.doFinally()
                             .subscribe(
                                 { state: StreamStateEntity ->
-                                    if (!state.isFinished(newQueue.item!!.duration)) {
-                                        // resume playback only if the stream was not played to the end
-                                        newQueue.setRecovery(newQueue.index, state.progressMillis)
-                                    }
+                                    // resume playback only if the stream was not played to the end
+                                    if (!state.isFinished(newQueue.item!!.duration)) newQueue.setRecovery(newQueue.index, state.progressMillis)
                                     initPlayback(newQueue, repeatMode, playbackSpeed, playbackPitch, playbackSkipSilence, playWhenReady, isMuted)
                                 },
                                 { error: Throwable? ->
-                                    if (DEBUG) {
-                                        Log.w(TAG, "Failed to start playback", error)
-                                    }
+                                    Log.w(TAG, "Failed to start playback", error)
                                     // In case any error we can start playback without history
                                     initPlayback(newQueue, repeatMode, playbackSpeed, playbackPitch, playbackSkipSilence, playWhenReady, isMuted)
                                 },
@@ -329,11 +322,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                                 }
                             ))
                     }
-                    else -> {
-                        // Good to go...
-                        // In a case of equal PlayQueues we can re-init old one but only when it is disposed
+                    // Good to go...
+                    // In a case of equal PlayQueues we can re-init old one but only when it is disposed
+                    else ->
                         initPlayback((if (samePlayQueue) playQueue else newQueue)!!, repeatMode, playbackSpeed, playbackPitch, playbackSkipSilence, playWhenReady, isMuted)
-                    }
                 }
 
                 if (oldPlayerType != playerType && playQueue != null) {
@@ -350,17 +342,15 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     private fun initUIsForCurrentPlayerType() {
+        // correct UI already in place
         if ((UIs.get(MainPlayerUi::class.java).isPresent && playerType == PlayerType.MAIN)
-                || (UIs.get(PopupPlayerUi::class.java).isPresent && playerType == PlayerType.POPUP)) {
-            // correct UI already in place
-            return
-        }
+                || (UIs.get(PopupPlayerUi::class.java).isPresent && playerType == PlayerType.POPUP)) return
 
         // try to reuse binding if possible
         val binding = UIs.get(VideoPlayerUi::class.java).map { obj: VideoPlayerUi -> obj.binding }.orElseGet {
-                if (playerType == PlayerType.AUDIO) return@orElseGet null
-                else return@orElseGet PlayerBinding.inflate(LayoutInflater.from(context))
-            }
+            if (playerType == PlayerType.AUDIO) return@orElseGet null
+            else return@orElseGet PlayerBinding.inflate(LayoutInflater.from(context))
+        }
 
         when (playerType) {
             PlayerType.MAIN -> {
@@ -375,13 +365,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         }
     }
 
-    private fun initPlayback(queue: PlayQueue,
-                             repeatMode: @androidx.media3.common.Player.RepeatMode Int,
-                             playbackSpeed: Float,
-                             playbackPitch: Float,
-                             playbackSkipSilence: Boolean,
-                             playOnReady: Boolean,
-                             isMuted: Boolean) {
+    private fun initPlayback(queue: PlayQueue, repeatMode: @Player.RepeatMode Int, playbackSpeed: Float,
+                             playbackPitch: Float, playbackSkipSilence: Boolean, playOnReady: Boolean, isMuted: Boolean) {
         destroyPlayer()
         initPlayer(playOnReady)
         this.repeatMode = repeatMode
@@ -398,9 +383,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     private fun initPlayer(playOnReady: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG, "initPlayer() called with: playOnReady = [$playOnReady]")
-        }
+        Logd(TAG, "initPlayer() called with: playOnReady = [$playOnReady]")
 
         exoPlayer = ExoPlayer.Builder(context, renderFactory)
             .setTrackSelector(trackSelector)
@@ -421,9 +404,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         UIs.call { obj: PlayerUi -> obj.initPlayer() }
 
         // Disable media tunneling if requested by the user from ExoPlayer settings
-        if (!PreferenceManager.getDefaultSharedPreferences(context).getBoolean(context.getString(R.string.disable_media_tunneling_key), false)) {
+        if (!PreferenceManager.getDefaultSharedPreferences(context).getBoolean(context.getString(R.string.disable_media_tunneling_key), false))
             trackSelector.setParameters(trackSelector.buildUponParameters().setTunnelingEnabled(true))
-        }
     }
 
     //endregion
@@ -432,9 +414,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     ////////////////////////////////////////////////////////////////////////// */
     //region Destroy and recovery
     private fun destroyPlayer() {
-        if (DEBUG) {
-            Log.d(TAG, "destroyPlayer() called")
-        }
+        Logd(TAG, "destroyPlayer() called")
+
         UIs.call { obj: PlayerUi -> obj.destroyPlayer() }
 
         if (!exoPlayerIsNull()) {
@@ -442,18 +423,15 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
 //            exoPlayer?.stop()     // TODO: test
 //            exoPlayer?.release()  // to be release in mediasession
         }
-        if (isProgressLoopRunning) {
-            stopProgressLoop()
-        }
+        if (isProgressLoopRunning) stopProgressLoop()
+
         playQueue?.dispose()
         audioReactor?.dispose()
         playQueueManager?.dispose()
     }
 
     fun destroy() {
-        if (DEBUG) {
-            Log.d(TAG, "destroy() called")
-        }
+        Logd(TAG, "destroy() called")
 
         saveStreamProgressState()
         setRecovery()
@@ -482,10 +460,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
 
     private fun setRecovery(queuePos: Int, windowPos: Long) {
         if (playQueue == null || playQueue!!.size() <= queuePos) return
+        Logd(TAG, "Setting recovery, queue: $queuePos, pos: $windowPos")
 
-        if (DEBUG) {
-            Log.d(TAG, "Setting recovery, queue: $queuePos, pos: $windowPos")
-        }
         playQueue!!.setRecovery(queuePos, windowPos)
     }
 
@@ -497,9 +473,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
 
     // own playback listener
     override fun onPlaybackShutdown() {
-        if (DEBUG) {
-            Log.d(TAG, "onPlaybackShutdown() called")
-        }
+        Logd(TAG, "onPlaybackShutdown() called")
         // destroys the service, which in turn will destroy the player
         service.stopService()
     }
@@ -524,9 +498,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
      * broadcast would not do anything.
      */
     private fun setupBroadcastReceiver() {
-        if (DEBUG) {
-            Log.d(TAG, "setupBroadcastReceiver() called")
-        }
+        Logd(TAG, "setupBroadcastReceiver() called")
 
         broadcastReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
@@ -558,10 +530,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
 
     private fun onBroadcastReceived(intent: Intent?) {
 //        if (intent?.action == null) return
-
-        if (DEBUG) {
-            Log.d(TAG, "onBroadcastReceived() called with: intent = [$intent]")
-        }
+        Logd(TAG, "onBroadcastReceived() called with: intent = [$intent]")
 
         when (intent?.action) {
             AudioManager.ACTION_AUDIO_BECOMING_NOISY -> pause()
@@ -575,9 +544,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
             NotificationConstants.ACTION_SHUFFLE -> toggleShuffleModeEnabled()
             Intent.ACTION_CONFIGURATION_CHANGED -> {
                 assureCorrectAppLanguage(service)
-                if (DEBUG) {
-                    Log.d(TAG, "ACTION_CONFIGURATION_CHANGED received")
-                }
+                Logd(TAG, "ACTION_CONFIGURATION_CHANGED received")
             }
         }
         UIs.call { playerUi: PlayerUi -> playerUi.onBroadcastReceived(intent) }
@@ -586,11 +553,9 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     private fun registerBroadcastReceiver() {
         // Try to unregister current first
         unregisterBroadcastReceiver()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             context.registerReceiver(broadcastReceiver, intentFilter, Context.RECEIVER_NOT_EXPORTED)
-        } else {
-            context.registerReceiver(broadcastReceiver, intentFilter)
-        }
+        else context.registerReceiver(broadcastReceiver, intentFilter)
     }
 
     private fun unregisterBroadcastReceiver() {
@@ -611,32 +576,23 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         // a Picasso target is just a listener for thumbnail loading events
         return object : Target {
             override fun onBitmapLoaded(bitmap: Bitmap, from: LoadedFrom) {
-                if (DEBUG) {
-                    Log.d(TAG,
-                        "Thumbnail - onBitmapLoaded() called with: bitmap = [$bitmap -> ${bitmap.width}x${bitmap.height}], from = [$from]")
-                }
+                Logd(TAG, "Thumbnail - onBitmapLoaded() called with: bitmap = [$bitmap -> ${bitmap.width}x${bitmap.height}], from = [$from]")
                 // there is a new thumbnail, so e.g. the end screen thumbnail needs to change, too.
                 onThumbnailLoaded(bitmap)
             }
-
             override fun onBitmapFailed(e: Exception, errorDrawable: Drawable) {
                 Log.e(TAG, "Thumbnail - onBitmapFailed() called", e)
                 // there is a new thumbnail, so e.g. the end screen thumbnail needs to change, too.
                 onThumbnailLoaded(null)
             }
-
             override fun onPrepareLoad(placeHolderDrawable: Drawable) {
-                if (DEBUG) {
-                    Log.d(TAG, "Thumbnail - onPrepareLoad() called")
-                }
+                Logd(TAG, "Thumbnail - onPrepareLoad() called")
             }
         }
     }
 
     private fun loadCurrentThumbnail(thumbnails: List<Image>) {
-        if (DEBUG) {
-            Log.d(TAG, "Thumbnail - loadCurrentThumbnail() called with thumbnails = [${thumbnails.size}]")
-        }
+        Logd(TAG, "Thumbnail - loadCurrentThumbnail() called with thumbnails = [${thumbnails.size}]")
 
         // first cancel any previous loading
         cancelLoadingCurrentThumbnail()
@@ -750,45 +706,35 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     ////////////////////////////////////////////////////////////////////////// */
     //region Playback states
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-        if (DEBUG) {
-            Log.d(TAG, "ExoPlayer - onPlayWhenReadyChanged() called with: playWhenReady = [$playWhenReady], reason = [$reason]")
-        }
-        val playbackState = if (exoPlayerIsNull()) androidx.media3.common.Player.STATE_IDLE else exoPlayer!!.playbackState
+        Logd(TAG, "ExoPlayer - onPlayWhenReadyChanged() called with: playWhenReady = [$playWhenReady], reason = [$reason]")
+        val playbackState = if (exoPlayerIsNull()) Player.STATE_IDLE else exoPlayer!!.playbackState
         updatePlaybackState(playWhenReady, playbackState)
     }
 
     override fun onPlaybackStateChanged(playbackState: Int) {
-        if (DEBUG) {
-            Log.d(TAG, "ExoPlayer - onPlaybackStateChanged() called with: playbackState = [$playbackState]")
-        }
+        Logd(TAG, "ExoPlayer - onPlaybackStateChanged() called with: playbackState = [$playbackState]")
         updatePlaybackState(playWhenReady, playbackState)
     }
 
     private fun updatePlaybackState(playWhenReady: Boolean, playbackState: Int) {
-        if (DEBUG) {
-            Log.d(TAG, "ExoPlayer - updatePlaybackState() called with: playWhenReady = [$playWhenReady], playbackState = [$playbackState]")
-        }
+        Logd(TAG, "ExoPlayer - updatePlaybackState() called with: playWhenReady = [$playWhenReady], playbackState = [$playbackState]")
 
         if (currentState == STATE_PAUSED_SEEK) {
-            if (DEBUG) {
-                Log.d(TAG, "updatePlaybackState() is currently blocked")
-            }
+            Logd(TAG, "updatePlaybackState() is currently blocked")
             return
         }
 
         when (playbackState) {
-            androidx.media3.common.Player.STATE_IDLE -> isPrepared = false
-            androidx.media3.common.Player.STATE_BUFFERING -> if (isPrepared) {
-                changeState(STATE_BUFFERING)
-            }
-            androidx.media3.common.Player.STATE_READY -> {
+            Player.STATE_IDLE -> isPrepared = false
+            Player.STATE_BUFFERING -> if (isPrepared) changeState(STATE_BUFFERING)
+            Player.STATE_READY -> {
                 if (!isPrepared) {
                     isPrepared = true
                     onPrepared(playWhenReady)
                 }
                 changeState(if (playWhenReady) STATE_PLAYING else STATE_PAUSED)
             }
-            androidx.media3.common.Player.STATE_ENDED -> {
+            Player.STATE_ENDED -> {
                 changeState(STATE_COMPLETED)
                 saveStreamProgressStateCompleted()
                 isPrepared = false
@@ -799,21 +745,15 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     // exoplayer listener
     override fun onIsLoadingChanged(isLoading: Boolean) {
         when {
-            !isLoading && currentState == STATE_PAUSED && isProgressLoopRunning -> {
-                stopProgressLoop()
-            }
-            isLoading && !isProgressLoopRunning -> {
-                startProgressLoop()
-            }
+            !isLoading && currentState == STATE_PAUSED && isProgressLoopRunning -> stopProgressLoop()
+            isLoading && !isProgressLoopRunning -> startProgressLoop()
         }
     }
 
     // own playback listener
     override fun onPlaybackBlock() {
         if (exoPlayerIsNull()) return
-        if (DEBUG) {
-            Log.d(TAG, "Playback - onPlaybackBlock() called")
-        }
+        Logd(TAG, "Playback - onPlaybackBlock() called")
 
         currentItem = null
         currentMetadata = null
@@ -824,24 +764,17 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     // own playback listener
-    override fun onPlaybackUnblock(mediaSource: MediaSource?) {
-        if (DEBUG) {
-            Log.d(TAG, "Playback - onPlaybackUnblock() called")
-        }
-
+    override fun onPlaybackUnblock(mediaSource: MediaSource) {
+        Logd(TAG, "Playback - onPlaybackUnblock() called")
         if (exoPlayerIsNull()) return
 
-        if (currentState == STATE_BLOCKED) {
-            changeState(STATE_BUFFERING)
-        }
-        exoPlayer!!.setMediaSource(mediaSource!!, false)
+        if (currentState == STATE_BLOCKED) changeState(STATE_BUFFERING)
+        exoPlayer!!.setMediaSource(mediaSource, false)
         exoPlayer!!.prepare()
     }
 
     fun changeState(state: Int) {
-        if (DEBUG) {
-            Log.d(TAG, "changeState() called with: state = [$state]")
-        }
+        Logd(TAG, "changeState() called with: state = [$state]")
         currentState = state
         when (state) {
             STATE_BLOCKED -> onBlocked()
@@ -855,124 +788,80 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     private fun onPrepared(playWhenReady: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG, "onPrepared() called with: playWhenReady = [$playWhenReady]")
-        }
-
+        Logd(TAG, "onPrepared() called with: playWhenReady = [$playWhenReady]")
         UIs.call { obj: PlayerUi -> obj.onPrepared() }
 
-        if (playWhenReady && !isMuted) {
-            audioReactor!!.requestAudioFocus()
-        }
+        if (playWhenReady && !isMuted) audioReactor!!.requestAudioFocus()
     }
 
     private fun onBlocked() {
-        if (DEBUG) {
-            Log.d(TAG, "onBlocked() called")
-        }
-        if (!isProgressLoopRunning) {
-            startProgressLoop()
-        }
+        Logd(TAG, "onBlocked() called")
+        if (!isProgressLoopRunning) startProgressLoop()
 
         UIs.call { obj: PlayerUi -> obj.onBlocked() }
     }
 
     private fun onPlaying() {
-        if (DEBUG) {
-            Log.d(TAG, "onPlaying() called")
-        }
-        if (!isProgressLoopRunning) {
-            startProgressLoop()
-        }
-
+        Logd(TAG, "onPlaying() called")
+        if (!isProgressLoopRunning) startProgressLoop()
         UIs.call { obj: PlayerUi -> obj.onPlaying() }
     }
 
     private fun onBuffering() {
-        if (DEBUG) {
-            Log.d(TAG, "onBuffering() called")
-        }
-
+        Logd(TAG, "onBuffering() called")
         UIs.call { obj: PlayerUi -> obj.onBuffering() }
     }
 
     private fun onPaused() {
-        if (DEBUG) {
-            Log.d(TAG, "onPaused() called")
-        }
-
-        if (isProgressLoopRunning) {
-            stopProgressLoop()
-        }
-
+        Logd(TAG, "onPaused() called")
+        if (isProgressLoopRunning) stopProgressLoop()
         UIs.call { obj: PlayerUi -> obj.onPaused() }
     }
 
     private fun onPausedSeek() {
-        if (DEBUG) {
-            Log.d(TAG, "onPausedSeek() called")
-        }
+        Logd(TAG, "onPausedSeek() called")
         UIs.call { obj: PlayerUi -> obj.onPausedSeek() }
     }
 
     private fun onCompleted() {
-        if (DEBUG) {
-            Log.d(TAG, "onCompleted() called" + (if (playQueue == null) ". playQueue is null" else ""))
-        }
+        Logd(TAG, "onCompleted() called" + (if (playQueue == null) ". playQueue is null" else ""))
         if (playQueue == null) return
-
         UIs.call { obj: PlayerUi -> obj.onCompleted() }
 
-        if (playQueue!!.index < playQueue!!.size() - 1) {
-            playQueue!!.offsetIndex(+1)
-        }
-        if (isProgressLoopRunning) {
-            stopProgressLoop()
-        }
+        if (playQueue!!.index < playQueue!!.size() - 1) playQueue!!.offsetIndex(+1)
+        if (isProgressLoopRunning) stopProgressLoop()
     }
 
 
-    var repeatMode: @androidx.media3.common.Player.RepeatMode Int
+    var repeatMode: @Player.RepeatMode Int
         //endregion
-        get() = if (exoPlayerIsNull()) androidx.media3.common.Player.REPEAT_MODE_OFF else exoPlayer!!.repeatMode
+        get() = if (exoPlayerIsNull()) Player.REPEAT_MODE_OFF else exoPlayer!!.repeatMode
         set(repeatMode) {
-            if (!exoPlayerIsNull()) {
-                exoPlayer!!.repeatMode = repeatMode
-            }
+            if (!exoPlayerIsNull()) exoPlayer!!.repeatMode = repeatMode
         }
 
     fun cycleNextRepeatMode() {
         repeatMode = PlayerHelper.nextRepeatMode(repeatMode)
     }
 
-    override fun onRepeatModeChanged(repeatMode: @androidx.media3.common.Player.RepeatMode Int) {
-        if (DEBUG) {
-            Log.d(TAG, "ExoPlayer - onRepeatModeChanged() called with: "
-                    + "repeatMode = [" + repeatMode + "]")
-        }
+    override fun onRepeatModeChanged(repeatMode: @Player.RepeatMode Int) {
+        Logd(TAG, "ExoPlayer - onRepeatModeChanged() called with: repeatMode = [$repeatMode]")
         UIs.call { playerUi: PlayerUi -> playerUi.onRepeatModeChanged(repeatMode) }
         notifyPlaybackUpdateToListeners()
     }
 
     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG, "ExoPlayer - onShuffleModeEnabledChanged() called with: mode = [$shuffleModeEnabled]")
-        }
+        Logd(TAG, "ExoPlayer - onShuffleModeEnabledChanged() called with: mode = [$shuffleModeEnabled]")
 
-        if (shuffleModeEnabled) {
-            playQueue?.shuffle()
-        } else {
-            playQueue?.unshuffle()
-        }
+        if (shuffleModeEnabled) playQueue?.shuffle()
+        else playQueue?.unshuffle()
 
         UIs.call { playerUi: PlayerUi -> playerUi.onShuffleModeEnabledChanged(shuffleModeEnabled) }
         notifyPlaybackUpdateToListeners()
     }
 
     fun toggleShuffleModeEnabled() {
-        if (!exoPlayerIsNull()) {
-            exoPlayer!!.shuffleModeEnabled = !exoPlayer!!.shuffleModeEnabled
-        }
+        if (!exoPlayerIsNull()) exoPlayer!!.shuffleModeEnabled = !exoPlayer!!.shuffleModeEnabled
     }
 
 
@@ -984,18 +873,15 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     fun toggleMute() {
         val wasMuted = isMuted
         exoPlayer!!.volume = (if (wasMuted) 1 else 0).toFloat()
-        if (wasMuted) {
-            audioReactor!!.requestAudioFocus()
-        } else {
-            audioReactor!!.abandonAudioFocus()
-        }
+        if (wasMuted) audioReactor!!.requestAudioFocus()
+        else audioReactor!!.abandonAudioFocus()
+
         UIs.call { playerUi: PlayerUi -> playerUi.onMuteUnmuteChanged(!wasMuted) }
         notifyPlaybackUpdateToListeners()
     }
 
     val isMuted: Boolean
         get() = !exoPlayerIsNull() && exoPlayer!!.volume == 0f
-
 
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
@@ -1006,7 +892,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
      *
      * Listens for event or state changes on ExoPlayer. When any event happens, we check for
      * changes in the currently-playing metadata and update the encapsulating
-     * [Player]. Downstream listeners are also informed.
+     * [PlayerManager]. Downstream listeners are also informed.
      *
      *
      * When the renewed metadata contains any error, it is reported as a notification.
@@ -1017,15 +903,13 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
      * @param events The [androidx.media3.common.Player.Events] that has triggered
      * the player state changes.
      */
-    override fun onEvents(player: androidx.media3.common.Player, events: androidx.media3.common.Player.Events) {
+    override fun onEvents(player: Player, events: Player.Events) {
         super.onEvents(player, events)
         MediaItemTag.from(player.currentMediaItem).ifPresent { tag: MediaItemTag ->
             if (tag === currentMetadata) return@ifPresent  // we still have the same metadata, no need to do anything
 
-            val previousInfo = Optional.ofNullable(currentMetadata)
-                .flatMap { obj: MediaItemTag -> obj.maybeStreamInfo }.orElse(null)
-            val previousAudioTrack = Optional.ofNullable(currentMetadata)
-                .flatMap { obj: MediaItemTag -> obj.maybeAudioTrack }.orElse(null)
+            val previousInfo = Optional.ofNullable(currentMetadata).flatMap { obj: MediaItemTag -> obj.maybeStreamInfo }.orElse(null)
+            val previousAudioTrack = Optional.ofNullable(currentMetadata).flatMap { obj: MediaItemTag -> obj.maybeAudioTrack }.orElse(null)
             currentMetadata = tag
 
             if (!currentMetadata?.errors.isNullOrEmpty()) {
@@ -1035,14 +919,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                 createNotification(context, errorInfo)
             }
             currentMetadata!!.maybeStreamInfo.ifPresent { info: StreamInfo ->
-                if (DEBUG) {
-                    Log.d(TAG, "ExoPlayer - onEvents() update stream info: " + info.name)
-                }
+                Logd(TAG, "ExoPlayer - onEvents() update stream info: " + info.name)
                 when {
-                    previousInfo == null || previousInfo.url != info.url -> {
-                        // only update with the new stream info if it has actually changed
-                        updateMetadataWith(info)
-                    }
+                    // only update with the new stream info if it has actually changed
+                    previousInfo == null || previousInfo.url != info.url -> updateMetadataWith(info)
                     previousAudioTrack == null || tag.maybeAudioTrack
                         .map({ t: MediaItemTag.AudioTrack -> t.selectedAudioStreamIndex != previousAudioTrack.selectedAudioStreamIndex })
                         .orElse(false) -> {
@@ -1054,42 +934,32 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     override fun onTracksChanged(tracks: Tracks) {
-        if (DEBUG) {
-            Log.d(TAG, "ExoPlayer - onTracksChanged(), track group size = ${tracks.groups.size}")
-        }
+        Logd(TAG, "ExoPlayer - onTracksChanged(), track group size = ${tracks.groups.size}")
         UIs.call { playerUi: PlayerUi -> playerUi.onTextTracksChanged(tracks) }
     }
 
     override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
-        if (DEBUG) {
-            Log.d(TAG,
-                "ExoPlayer - playbackParameters(), speed = [${playbackParameters.speed}], pitch = [${playbackParameters.pitch}]")
-        }
+        Logd(TAG, "ExoPlayer - playbackParameters(), speed = [${playbackParameters.speed}], pitch = [${playbackParameters.pitch}]")
         UIs.call { playerUi: PlayerUi -> playerUi.onPlaybackParametersChanged(playbackParameters) }
     }
 
     override fun onPositionDiscontinuity(oldPosition: PositionInfo, newPosition: PositionInfo, discontinuityReason: @DiscontinuityReason Int) {
-        if (DEBUG) {
-            Log.d(TAG,
-                "ExoPlayer - onPositionDiscontinuity() called with oldPositionIndex = [${oldPosition.mediaItemIndex}], oldPositionMs = [${oldPosition.positionMs}], newPositionIndex = [${newPosition.mediaItemIndex}], newPositionMs = [${newPosition.positionMs}], discontinuityReason = [$discontinuityReason]")
-        }
+        Logd(TAG, "ExoPlayer - onPositionDiscontinuity() called with oldPositionIndex = [${oldPosition.mediaItemIndex}], oldPositionMs = [${oldPosition.positionMs}], newPositionIndex = [${newPosition.mediaItemIndex}], newPositionMs = [${newPosition.positionMs}], discontinuityReason = [$discontinuityReason]")
+
         if (playQueue == null) return
 
         // Refresh the playback if there is a transition to the next video
         val newIndex = newPosition.mediaItemIndex
         when (discontinuityReason) {
-            androidx.media3.common.Player.DISCONTINUITY_REASON_AUTO_TRANSITION, androidx.media3.common.Player.DISCONTINUITY_REASON_REMOVE -> {
+            Player.DISCONTINUITY_REASON_AUTO_TRANSITION, Player.DISCONTINUITY_REASON_REMOVE -> {
                 // When player is in single repeat mode and a period transition occurs,
                 // we need to register a view count here since no metadata has changed
-                if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE && newIndex == playQueue!!.index) {
+                if (repeatMode == Player.REPEAT_MODE_ONE && newIndex == playQueue!!.index) {
                     registerStreamViewed()
                 } else {
-                    if (DEBUG) {
-                        Log.d(TAG, "ExoPlayer - onSeekProcessed() called")
-                    }
-                    if (isPrepared) {
-                        saveStreamProgressState()
-                    }
+                    Logd(TAG, "ExoPlayer - onSeekProcessed() called")
+                    if (isPrepared) saveStreamProgressState()
+
                     // Player index may be invalid when playback is blocked
                     if (currentState != STATE_BLOCKED && newIndex != playQueue!!.index) {
                         saveStreamProgressStateCompleted() // current stream has ended
@@ -1097,25 +967,21 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                     }
                 }
             }
-            androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK -> {
-                if (DEBUG) {
-                    Log.d(TAG, "ExoPlayer - onSeekProcessed() called")
-                }
-                if (isPrepared) {
-                    saveStreamProgressState()
-                }
+            Player.DISCONTINUITY_REASON_SEEK -> {
+                Logd(TAG, "ExoPlayer - onSeekProcessed() called")
+                if (isPrepared) saveStreamProgressState()
                 if (currentState != STATE_BLOCKED && newIndex != playQueue!!.index) {
                     saveStreamProgressStateCompleted()
                     playQueue!!.index = newIndex
                 }
             }
-            androidx.media3.common.Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT, androidx.media3.common.Player.DISCONTINUITY_REASON_INTERNAL ->
+            Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT, Player.DISCONTINUITY_REASON_INTERNAL ->
                 if (currentState != STATE_BLOCKED && newIndex != playQueue!!.index) {
                     saveStreamProgressStateCompleted()
                     playQueue!!.index = newIndex
                 }
-            androidx.media3.common.Player.DISCONTINUITY_REASON_SKIP -> {}
-            androidx.media3.common.Player.DISCONTINUITY_REASON_SILENCE_SKIP -> {}
+            Player.DISCONTINUITY_REASON_SKIP -> {}
+            Player.DISCONTINUITY_REASON_SILENCE_SKIP -> {}
         }
     }
 
@@ -1181,31 +1047,33 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                 // switching to the buffering state
                 onBuffering()
             }
-            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE, PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS, PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND, PlaybackException.ERROR_CODE_IO_NO_PERMISSION, PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED, PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE, PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED, PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED, PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED, PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED ->                 // Source errors, signal on playQueue and move on:
+            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE, PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND, PlaybackException.ERROR_CODE_IO_NO_PERMISSION,
+            PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED, PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED, PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED, PlaybackException.ERROR_CODE_PARSING_MANIFEST_UNSUPPORTED ->                 // Source errors, signal on playQueue and move on:
                 if (!exoPlayerIsNull()) playQueue?.error()
-            PlaybackException.ERROR_CODE_TIMEOUT, PlaybackException.ERROR_CODE_IO_UNSPECIFIED, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT, PlaybackException.ERROR_CODE_UNSPECIFIED -> {
+            PlaybackException.ERROR_CODE_TIMEOUT, PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED, PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+            PlaybackException.ERROR_CODE_UNSPECIFIED -> {
                 // Reload playback on unexpected errors:
                 setRecovery()
                 reloadPlayQueueManager()
             }
-            else ->                 // API, remote and renderer errors belong here:
-                onPlaybackShutdown()
+            // API, remote and renderer errors belong here:
+            else -> onPlaybackShutdown()
         }
-        if (!isCatchableException) {
-            createErrorNotification(error)
-        }
+        if (!isCatchableException) createErrorNotification(error)
 
         fragmentListener?.onPlayerError(error, isCatchableException)
     }
 
     private fun createErrorNotification(error: PlaybackException) {
-        val errorInfo = if (currentMetadata == null) {
+        val errorInfo = if (currentMetadata == null)
             ErrorInfo(error, UserAction.PLAY_STREAM, "Player error[type=" + error.errorCodeName + "] occurred, currentMetadata is null")
-        } else {
-            ErrorInfo(error, UserAction.PLAY_STREAM,
-                "Player error[type=" + error.errorCodeName + "] occurred while playing " + currentMetadata!!.streamUrl,
-                currentMetadata!!.serviceId)
-        }
+        else
+            ErrorInfo(error, UserAction.PLAY_STREAM, "Player error[type=${error.errorCodeName}] occurred while playing ${currentMetadata!!.streamUrl}", currentMetadata!!.serviceId)
+
         createNotification(context, errorInfo)
     }
 
@@ -1246,79 +1114,55 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
 
     // own playback listener
     override fun onPlaybackSynchronize(item: PlayQueueItem, wasBlocked: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG,
-                "Playback - onPlaybackSynchronize(was blocked: $wasBlocked) called with item=[${item.title}], url=[${item.url}]")
-        }
+        Logd(TAG, "Playback - onPlaybackSynchronize(was blocked: $wasBlocked) called with item=[${item.title}], url=[${item.url}]")
+
         if (exoPlayerIsNull() || playQueue == null || currentItem === item) return  // nothing to synchronize
 
         val playQueueIndex = playQueue!!.indexOf(item)
         val playlistIndex = exoPlayer!!.currentMediaItemIndex
         val playlistSize = exoPlayer!!.currentTimeline.windowCount
-        val removeThumbnailBeforeSync = currentItem == null || currentItem!!.serviceId != item.serviceId || currentItem!!.url != item.url
+        val removeThumbnailBeforeSync =
+            currentItem == null || currentItem!!.serviceId != item.serviceId || currentItem!!.url != item.url
 
         currentItem = item
 
         when {
-            playQueueIndex != playQueue!!.index -> {
-                // wrong window (this should be impossible, as this method is called with
-                // `item=playQueue.getItem()`, so the index of that item must be equal to `getIndex()`)
-                Log.e(TAG,
-                    "Playback - Play Queue may be not in sync: item index=[$playQueueIndex], queue index=[${playQueue!!.index}]")
-            }
-            playlistSize in 1..playQueueIndex || playQueueIndex < 0 -> {
-                // the queue and the player's timeline are not in sync, since the play queue index
-                // points outside of the timeline
-                Log.e(TAG,
-                    "Playback - Trying to seek to invalid index=[$playQueueIndex] with playlist length=[$playlistSize]")
-            }
+            // wrong window (this should be impossible, as this method is called with
+            // `item=playQueue.getItem()`, so the index of that item must be equal to `getIndex()`)
+            playQueueIndex != playQueue!!.index -> Log.e(TAG, "Playback - Play Queue may be not in sync: item index=[$playQueueIndex], queue index=[${playQueue!!.index}]")
+            // the queue and the player's timeline are not in sync, since the play queue index
+            // points outside of the timeline
+            playlistSize in 1..playQueueIndex || playQueueIndex < 0 -> Log.e(TAG, "Playback - Trying to seek to invalid index=[$playQueueIndex] with playlist length=[$playlistSize]")
+            // either the player needs to be unblocked, or the play queue index has just been
+            // changed and needs to be synchronized, or the player is not playing
             wasBlocked || playlistIndex != playQueueIndex || !isPlaying -> {
-                // either the player needs to be unblocked, or the play queue index has just been
-                // changed and needs to be synchronized, or the player is not playing
-                if (DEBUG) {
-                    Log.d(TAG,
-                        "Playback - Rewinding to correct index=[$playQueueIndex], from=[$playlistIndex], size=[$playlistSize].")
-                }
-
-                if (removeThumbnailBeforeSync) {
-                    // unset the current (now outdated) thumbnail to ensure it is not used during sync
-                    onThumbnailLoaded(null)
-                }
+                Logd(TAG, "Playback - Rewinding to correct index=[$playQueueIndex], from=[$playlistIndex], size=[$playlistSize].")
+                // unset the current (now outdated) thumbnail to ensure it is not used during sync
+                if (removeThumbnailBeforeSync) onThumbnailLoaded(null)
 
                 // sync the player index with the queue index, and seek to the correct position
                 if (item.recoveryPosition != PlayQueueItem.RECOVERY_UNSET) {
                     exoPlayer!!.seekTo(playQueueIndex, item.recoveryPosition)
                     playQueue!!.unsetRecovery(playQueueIndex)
-                } else {
-                    exoPlayer!!.seekToDefaultPosition(playQueueIndex)
-                }
+                } else exoPlayer!!.seekToDefaultPosition(playQueueIndex)
             }
         }
     }
 
     fun seekTo(positionMillis: Long) {
-        if (DEBUG) {
-            Log.d(TAG, "seekBy() called with: position = [$positionMillis]")
-        }
-        if (!exoPlayerIsNull()) {
-            // prevent invalid positions when fast-forwarding/-rewinding
-            exoPlayer!!.seekTo(MathUtils.clamp(positionMillis, 0, exoPlayer!!.duration))
-        }
+        Logd(TAG, "seekBy() called with: position = [$positionMillis]")
+        // prevent invalid positions when fast-forwarding/-rewinding
+        if (!exoPlayerIsNull()) exoPlayer!!.seekTo(MathUtils.clamp(positionMillis, 0, exoPlayer!!.duration))
     }
 
     private fun seekBy(offsetMillis: Long) {
-        if (DEBUG) {
-            Log.d(TAG, "seekBy() called with: offsetMillis = [$offsetMillis]")
-        }
+        Logd(TAG, "seekBy() called with: offsetMillis = [$offsetMillis]")
         seekTo(exoPlayer!!.currentPosition + offsetMillis)
     }
 
     fun seekToDefault() {
-        if (!exoPlayerIsNull()) {
-            exoPlayer!!.seekToDefaultPosition()
-        }
+        if (!exoPlayerIsNull()) exoPlayer!!.seekToDefaultPosition()
     }
-
 
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
@@ -1326,21 +1170,14 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     ////////////////////////////////////////////////////////////////////////// */
     //region Player actions (play, pause, previous, fast-forward, ...)
     fun play() {
-        if (DEBUG) {
-            Log.d(TAG, "play() called")
-        }
+        Logd(TAG, "play() called")
         if (audioReactor == null || playQueue == null || exoPlayerIsNull()) return
 
-        if (!isMuted) {
-            audioReactor!!.requestAudioFocus()
-        }
+        if (!isMuted) audioReactor!!.requestAudioFocus()
 
         if (currentState == STATE_COMPLETED) {
-            if (playQueue!!.index == 0) {
-                seekToDefault()
-            } else {
-                playQueue!!.index = 0
-            }
+            if (playQueue!!.index == 0) seekToDefault()
+            else playQueue!!.index = 0
         }
 
         exoPlayer!!.play()
@@ -1348,9 +1185,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     fun pause() {
-        if (DEBUG) {
-            Log.d(TAG, "pause() called")
-        }
+        Logd(TAG, "pause() called")
         if (audioReactor == null || exoPlayerIsNull()) return
 
         audioReactor!!.abandonAudioFocus()
@@ -1359,22 +1194,14 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     fun playPause() {
-        if (DEBUG) {
-            Log.d(TAG, "onPlayPause() called")
-        }
-
+        Logd(TAG, "onPlayPause() called")
         // When state is completed (replay button is shown) then (re)play and do not pause
-        if (playWhenReady && currentState != STATE_COMPLETED) {
-            pause()
-        } else {
-            play()
-        }
+        if (playWhenReady && currentState != STATE_COMPLETED) pause()
+        else play()
     }
 
     fun playPrevious() {
-        if (DEBUG) {
-            Log.d(TAG, "onPlayPrevious() called")
-        }
+        Logd(TAG, "onPlayPrevious() called")
         if (exoPlayerIsNull() || playQueue == null) return
 
         /* If current playback has run for PLAY_PREV_ACTIVATION_LIMIT_MILLIS milliseconds,
@@ -1391,9 +1218,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     fun playNext() {
-        if (DEBUG) {
-            Log.d(TAG, "onPlayNext() called")
-        }
+        Logd(TAG, "onPlayNext() called")
         if (playQueue == null) return
 
         saveStreamProgressState()
@@ -1402,17 +1227,13 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     fun fastForward() {
-        if (DEBUG) {
-            Log.d(TAG, "fastRewind() called")
-        }
+        Logd(TAG, "fastRewind() called")
         seekBy(PlayerHelper.retrieveSeekDurationFromPreferences(this).toLong())
         triggerProgressUpdate()
     }
 
     fun fastRewind() {
-        if (DEBUG) {
-            Log.d(TAG, "fastRewind() called")
-        }
+        Logd(TAG, "fastRewind() called")
         seekBy(-PlayerHelper.retrieveSeekDurationFromPreferences(this).toLong())
         triggerProgressUpdate()
     }
@@ -1432,30 +1253,22 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     private fun saveStreamProgressState(progressMillis: Long) {
         currentStreamInfo.ifPresent { info: StreamInfo ->
             if (!prefs.getBoolean(context.getString(R.string.enable_watch_history_key), true)) return@ifPresent
+            Logd(TAG, "saveStreamProgressState() called with: progressMillis=$progressMillis, currentMetadata=[${info.name}]")
 
-            if (DEBUG) {
-                Log.d(TAG,
-                    "saveStreamProgressState() called with: progressMillis=$progressMillis, currentMetadata=[${info.name}]")
-            }
             databaseUpdateDisposable.add(recordManager.saveStreamState(info, progressMillis)
                 .observeOn(AndroidSchedulers.mainThread())
-                .doOnError { e: Throwable ->
-                    if (DEBUG) {
-                        e.printStackTrace()
-                    }
-                }
+                .doOnError { e: Throwable -> if (DEBUG) e.printStackTrace() }
                 .onErrorComplete()
                 .subscribe())
         }
     }
 
     fun saveStreamProgressState() {
-        if (exoPlayerIsNull() || currentMetadata == null || playQueue == null || playQueue!!.index != exoPlayer!!.currentMediaItemIndex) {
-            // Make sure play queue and current window index are equal, to prevent saving state for
-            // the wrong stream on discontinuity (e.g. when the stream just changed but the
-            // playQueue index and currentMetadata still haven't updated)
-            return
-        }
+        // Make sure play queue and current window index are equal, to prevent saving state for
+        // the wrong stream on discontinuity (e.g. when the stream just changed but the
+        // playQueue index and currentMetadata still haven't updated)
+        if (exoPlayerIsNull() || currentMetadata == null || playQueue == null || playQueue!!.index != exoPlayer!!.currentMediaItemIndex) return
+
         // Save current position. It will help to restore this position once a user
         // wants to play prev or next stream from the queue
         playQueue!!.setRecovery(playQueue!!.index, exoPlayer!!.contentPosition)
@@ -1467,16 +1280,13 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         currentStreamInfo.ifPresent { info: StreamInfo -> saveStreamProgressState((info.duration + 1) * 1000) }
     }
 
-
     //endregion
     /*//////////////////////////////////////////////////////////////////////////
     // Metadata
     ////////////////////////////////////////////////////////////////////////// */
     //region Metadata
     private fun updateMetadataWith(info: StreamInfo) {
-        if (DEBUG) {
-            Log.d(TAG, "Playback - onMetadataChanged() called, playing: " + info.name)
-        }
+        Logd(TAG, "Playback - onMetadataChanged() called, playing: " + info.name)
         if (exoPlayerIsNull()) return
 
         maybeAutoQueueNextStream(info)
@@ -1496,10 +1306,8 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         get() {
             val timeSeconds = exoPlayer!!.currentPosition / 1000
             var videoUrl = videoUrl
-            if (!isLive && timeSeconds >= 0 && currentMetadata?.serviceId == ServiceList.YouTube.serviceId) {
-                // Timestamp doesn't make sense in a live stream so drop it
-                videoUrl += ("&t=$timeSeconds")
-            }
+            // Timestamp doesn't make sense in a live stream so drop it
+            if (!isLive && timeSeconds >= 0 && currentMetadata?.serviceId == ServiceList.YouTube.serviceId) videoUrl += ("&t=$timeSeconds")
             return videoUrl
         }
 
@@ -1515,16 +1323,12 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     ////////////////////////////////////////////////////////////////////////// */
     //region Play queue, segments and streams
     private fun maybeAutoQueueNextStream(info: StreamInfo) {
-        if (playQueue == null || playQueue!!.index != playQueue!!.size() - 1
-                || repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF
-                || !PlayerHelper.isAutoQueueEnabled(context)) {
-            return
-        }
+        if (playQueue == null || playQueue!!.index != playQueue!!.size() - 1 || repeatMode != Player.REPEAT_MODE_OFF
+                || !PlayerHelper.isAutoQueueEnabled(context)) return
+
         // auto queue when starting playback on the last item when not repeating
         val autoQueue = PlayerHelper.autoQueueOf(info, playQueue!!.streams)
-        if (autoQueue != null) {
-            playQueue!!.append(autoQueue.streams)
-        }
+        if (autoQueue != null) playQueue!!.append(autoQueue.streams)
     }
 
     fun selectQueueItem(item: PlayQueueItem?) {
@@ -1533,11 +1337,9 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         val index = playQueue!!.indexOf(item!!)
         if (index == -1) return
 
-        if (playQueue!!.index == index && exoPlayer!!.currentMediaItemIndex == index) {
-            seekToDefault()
-        } else {
-            saveStreamProgressState()
-        }
+        if (playQueue!!.index == index && exoPlayer!!.currentMediaItemIndex == index) seekToDefault()
+        else saveStreamProgressState()
+
         playQueue!!.index = index
     }
 
@@ -1549,12 +1351,11 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     override fun sourceOf(item: PlayQueueItem?, info: StreamInfo?): MediaSource? {
         if (audioPlayerSelected()) return audioResolver.resolve(info!!)
 
-        if (isAudioOnly && videoResolver.getStreamSourceType().orElse(SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY) == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY) {
-            // If the current info has only video streams with audio and if the stream is played as
-            // audio, we need to use the audio resolver, otherwise the video stream will be played
-            // in background.
+        // If the current info has only video streams with audio and if the stream is played as
+        // audio, we need to use the audio resolver, otherwise the video stream will be played
+        // in background.
+        if (isAudioOnly && videoResolver.getStreamSourceType().orElse(SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY) == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
             return audioResolver.resolve(info!!)
-        }
 
         // Even if the stream is played in background, we need to use the video resolver if the
         // info played is separated video-only and audio-only streams; otherwise, if the audio
@@ -1579,7 +1380,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
             }
             .map { quality: MediaItemTag.Quality -> quality.sortedVideoStreams[quality.selectedVideoStreamIndex] }
 
-    val selectedAudioStream:  Optional<AudioStream?>?
+    val selectedAudioStream: Optional<AudioStream?>?
         get() = Optional.ofNullable<MediaItemTag>(currentMetadata)
             .flatMap { obj: MediaItemTag? -> obj?.maybeAudioTrack }
             .map { it.selectedAudioStream }
@@ -1588,11 +1389,9 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         //endregion
         get() {
             if (exoPlayerIsNull()) return RENDERER_UNAVAILABLE
-
             for (t in 0 until exoPlayer!!.rendererCount) {
                 if (exoPlayer!!.getRendererType(t) == C.TRACK_TYPE_TEXT) return t
             }
-
             return RENDERER_UNAVAILABLE
         }
 
@@ -1604,9 +1403,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     //region Video size
     // exoplayer listener
     override fun onVideoSizeChanged(videoSize: VideoSize) {
-        if (DEBUG) {
-            Log.d(TAG, "onVideoSizeChanged() called with: width / height = [${videoSize.width} / ${videoSize.height} = ${(videoSize.width.toFloat()) / videoSize.height}], unappliedRotationDegrees = [${videoSize.unappliedRotationDegrees}], pixelWidthHeightRatio = [${videoSize.pixelWidthHeightRatio}]")
-        }
+        Logd(TAG, "onVideoSizeChanged() called with: width / height = [${videoSize.width} / ${videoSize.height} = ${(videoSize.width.toFloat()) / videoSize.height}], unappliedRotationDegrees = [${videoSize.unappliedRotationDegrees}], pixelWidthHeightRatio = [${videoSize.pixelWidthHeightRatio}]")
 
         if (videoSize.width > 0 && videoSize.height > 0) UIs.call { playerUi: PlayerUi -> playerUi.onVideoSizeChanged(videoSize) }
     }
@@ -1643,14 +1440,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     fun stopActivityBinding() {
-        if (fragmentListener != null) {
-            fragmentListener!!.onServiceStopped()
-            fragmentListener = null
-        }
-        if (activityListener != null) {
-            activityListener!!.onServiceStopped()
-            activityListener = null
-        }
+        fragmentListener?.onServiceStopped()
+        fragmentListener = null
+        activityListener?.onServiceStopped()
+        activityListener = null
     }
 
     private fun notifyQueueUpdateToListeners() {
@@ -1668,12 +1461,11 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
     }
 
     private fun notifyPlaybackUpdateToListeners() {
-        if (!exoPlayerIsNull() && playQueue != null) {
+        if (!exoPlayerIsNull() && playQueue != null)
             fragmentListener?.onPlaybackUpdate(currentState, repeatMode, playQueue!!.isShuffled, exoPlayer!!.playbackParameters)
-        }
-        if (!exoPlayerIsNull() && playQueue != null) {
+
+        if (!exoPlayerIsNull() && playQueue != null)
             activityListener?.onPlaybackUpdate(currentState, repeatMode, playQueue!!.isShuffled, playbackParameters)
-        }
     }
 
     private fun notifyProgressUpdateToListeners(currentProgress: Int, duration: Int, bufferPercent: Int) {
@@ -1690,16 +1482,12 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         if (playQueue == null || audioPlayerSelected()) return
 
         isAudioOnly = !videoEnabled
-
         currentStreamInfo.ifPresentOrElse({ info: StreamInfo ->
             // In case we don't know the source type, fall back to either video-with-audio, or
             // audio-only source type
             val sourceType = videoResolver.getStreamSourceType().orElse(SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
-
             if (playQueueManagerReloadingNeeded(sourceType, info, videoRendererIndex)) reloadPlayQueueManager()
-
             setRecovery()
-
             // Disable or enable video and subtitles renderers depending of the videoEnabled value
             trackSelector.setParameters(trackSelector.buildUponParameters()
                 .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !videoEnabled)
@@ -1761,12 +1549,10 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         // The content's source is a video with embedded audio and the content has no separated
         // audio stream available: it's probably not needed to reload the play queue manager
         // because the stream source will be probably the same as the current played
+        // It's not needed to reload the play queue manager only if the content's stream type
+        // is a video stream, a live stream or an ended live stream
         if (sourceType == SourceType.VIDEO_WITH_SEPARATED_AUDIO
-                || (sourceType == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY && Utils.isNullOrEmpty(streamInfo.audioStreams))) {
-            // It's not needed to reload the play queue manager only if the content's stream type
-            // is a video stream, a live stream or an ended live stream
-            return !isVideo(streamType)
-        }
+                || (sourceType == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY && Utils.isNullOrEmpty(streamInfo.audioStreams))) return !isVideo(streamType)
 
         // Other cases: the play queue manager reload is needed
         return true
@@ -1799,9 +1585,7 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
                 return !exoPlayerIsNull() && exoPlayer!!.isCurrentMediaItemDynamic
             } catch (e: IndexOutOfBoundsException) {
                 // Why would this even happen =(... but lets log it anyway, better safe than sorry
-                if (DEBUG) {
-                    Log.d(TAG, "player.isCurrentWindowDynamic() failed: ", e)
-                }
+                Logd(TAG, "player.isCurrentWindowDynamic() failed: $e")
                 return false
             }
         }
@@ -1837,14 +1621,6 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
         return Optional.ofNullable(fragmentListener)
     }
 
-    /**
-     * @return the user interfaces connected with the player
-     */
-    // keep the unusual method name
-    fun UIs(): PlayerUiList {
-        return UIs
-    }
-
     private val videoRendererIndex: Int
         /**
          * Get the video renderer index of the current playing stream.
@@ -1860,17 +1636,17 @@ class Player(@JvmField val service: PlayerService) : PlaybackListener, androidx.
             val mappedTrackInfo = trackSelector.currentMappedTrackInfo ?: return RENDERER_UNAVAILABLE
 
             // Check every renderer
-            return IntStream.range(0, mappedTrackInfo.rendererCount) // Check the renderer is a video renderer and has at least one track
-                .filter { i: Int ->
-                    (!mappedTrackInfo.getTrackGroups(i).isEmpty && exoPlayer!!.getRendererType(i) == C.TRACK_TYPE_VIDEO)
-                } // Return the first index found (there is at most one renderer per renderer type)
+            return IntStream.range(0,
+                mappedTrackInfo.rendererCount) // Check the renderer is a video renderer and has at least one track
+                // Return the first index found (there is at most one renderer per renderer type)
+                .filter { i: Int -> (!mappedTrackInfo.getTrackGroups(i).isEmpty && exoPlayer!!.getRendererType(i) == C.TRACK_TYPE_VIDEO) }
                 .findFirst() // No video renderer index with at least one track found: return unavailable index
                 .orElse(RENDERER_UNAVAILABLE)
         } //endregion
 
     companion object {
         const val DEBUG: Boolean = MainActivity.DEBUG
-        val TAG: String = Player::class.java.simpleName
+        val TAG: String = PlayerManager::class.java.simpleName
 
         /*//////////////////////////////////////////////////////////////////////////
     // States

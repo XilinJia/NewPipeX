@@ -52,6 +52,7 @@ abstract class BaseListFragment<I, N>
     // Views
     ////////////////////////////////////////////////////////////////////////// */
     protected lateinit var itemsList: RecyclerView
+
     @JvmField
     protected var infoListAdapter: InfoListAdapter? = null
     private var focusedPosition = -1
@@ -61,10 +62,7 @@ abstract class BaseListFragment<I, N>
     ////////////////////////////////////////////////////////////////////////// */
     override fun onAttach(context: Context) {
         super.onAttach(context)
-
-        if (infoListAdapter == null) {
-            infoListAdapter = InfoListAdapter(context)
-        }
+        if (infoListAdapter == null) infoListAdapter = InfoListAdapter(context)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,9 +74,8 @@ abstract class BaseListFragment<I, N>
 
     override fun onDestroy() {
         super.onDestroy()
-        if (useDefaultStateSaving) {
-            onDestroy(savedState)
-        }
+        if (useDefaultStateSaving) onDestroy(savedState)
+
         PreferenceManager.getDefaultSharedPreferences(requireActivity())
             .unregisterOnSharedPreferenceChangeListener(this)
     }
@@ -87,9 +84,7 @@ abstract class BaseListFragment<I, N>
         super.onResume()
 
         if (updateFlags != 0) {
-            if ((updateFlags and LIST_MODE_UPDATE_FLAG) != 0) {
-                refreshItemViewMode()
-            }
+            if ((updateFlags and LIST_MODE_UPDATE_FLAG) != 0) refreshItemViewMode()
             updateFlags = 0
         }
     }
@@ -109,7 +104,7 @@ abstract class BaseListFragment<I, N>
 
     override fun generateSuffix(): String {
         // Naive solution, but it's good for now (the items don't change)
-        return "." + infoListAdapter!!.itemsList.size + ".list"
+        return ".${infoListAdapter!!.itemsList.size}.list"
     }
 
     private fun getFocusedPosition(): Int {
@@ -149,16 +144,12 @@ abstract class BaseListFragment<I, N>
 
     override fun onSaveInstanceState(bundle: Bundle) {
         super.onSaveInstanceState(bundle)
-        if (useDefaultStateSaving) {
-            savedState = tryToSave(requireActivity().isChangingConfigurations, savedState, bundle, this)
-        }
+        if (useDefaultStateSaving) savedState = tryToSave(requireActivity().isChangingConfigurations, savedState, bundle, this)
     }
 
     override fun onRestoreInstanceState(bundle: Bundle) {
         super.onRestoreInstanceState(bundle)
-        if (useDefaultStateSaving) {
-            savedState = tryToRestore(bundle, this)
-        }
+        if (useDefaultStateSaving) savedState = tryToRestore(bundle, this)
     }
 
     override fun onStop() {
@@ -208,26 +199,24 @@ abstract class BaseListFragment<I, N>
         refreshItemViewMode()
 
         val listHeaderSupplier = listHeaderSupplier
-        if (listHeaderSupplier != null) {
-            infoListAdapter!!.setHeaderSupplier(listHeaderSupplier)
-        }
+        if (listHeaderSupplier != null) infoListAdapter!!.setHeaderSupplier(listHeaderSupplier)
 
         itemsList.setAdapter(infoListAdapter)
     }
 
     protected open fun onItemSelected(selectedItem: InfoItem) {
-        if (DEBUG) {
-            Log.d(TAG, "onItemSelected() called with: selectedItem = [$selectedItem]")
-        }
+
+            Logd(TAG, "onItemSelected() called with: selectedItem = [$selectedItem]")
+
     }
 
-    @OptIn(UnstableApi::class) override fun initListeners() {
+    @OptIn(UnstableApi::class)
+    override fun initListeners() {
         super.initListeners()
         infoListAdapter!!.setOnStreamSelectedListener(object : OnClickGesture<StreamInfoItem> {
             override fun selected(selectedItem: StreamInfoItem) {
                 onStreamSelected(selectedItem)
             }
-
             override fun held(selectedItem: StreamInfoItem) {
                 showInfoItemDialog(selectedItem)
             }
@@ -261,9 +250,8 @@ abstract class BaseListFragment<I, N>
      * Removes all listeners and adds the normal scroll listener to the [.itemsList].
      */
     protected fun useNormalItemListScrollListener() {
-        if (DEBUG) {
-            Log.d(TAG, "useNormalItemListScrollListener called")
-        }
+        Logd(TAG, "useNormalItemListScrollListener called")
+
         itemsList.clearOnScrollListeners()
         itemsList.addOnScrollListener(DefaultItemListOnScrolledDownListener())
     }
@@ -286,9 +274,8 @@ abstract class BaseListFragment<I, N>
      *
      */
     protected fun useInitialItemListLoadScrollListener() {
-        if (DEBUG) {
-            Log.d(TAG, "useInitialItemListLoadScrollListener called")
-        }
+        Logd(TAG, "useInitialItemListLoadScrollListener called")
+
         itemsList.clearOnScrollListeners()
         itemsList.addOnScrollListener(object : DefaultItemListOnScrolledDownListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -318,9 +305,7 @@ abstract class BaseListFragment<I, N>
             }
 
             private fun log(msg: String) {
-                if (DEBUG) {
-                    Log.d(TAG, "initItemListLoadScrollListener - $msg")
-                }
+                Logd(TAG, "initItemListLoadScrollListener - $msg")
             }
         })
     }
@@ -331,17 +316,16 @@ abstract class BaseListFragment<I, N>
         }
     }
 
-    @OptIn(UnstableApi::class) private fun onStreamSelected(selectedItem: StreamInfoItem) {
-        Log.d(TAG, "onStreamSelected: ${selectedItem.name}")
+    @OptIn(UnstableApi::class)
+    private fun onStreamSelected(selectedItem: StreamInfoItem) {
+        Logd(TAG, "onStreamSelected: ${selectedItem.name}")
         onItemSelected(selectedItem)
-        Log.d(TAG, "onItemClick: ${selectedItem.serviceId}, ${selectedItem.url}")
+        Logd(TAG, "onItemClick: ${selectedItem.serviceId}, ${selectedItem.url}")
         openVideoDetailFragment(requireContext(), fM!!, selectedItem.serviceId, selectedItem.url, selectedItem.name, null, false)
     }
 
     protected fun onScrollToBottom() {
-        if (hasMoreItems() && !isLoading.get()) {
-            loadMoreItems()
-        }
+        if (hasMoreItems() && !isLoading.get()) loadMoreItems()
     }
 
     protected open fun showInfoItemDialog(item: StreamInfoItem?) {
@@ -356,9 +340,7 @@ abstract class BaseListFragment<I, N>
     // Menu
     ////////////////////////////////////////////////////////////////////////// */
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
-        }
+        Logd(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
         super.onCreateOptionsMenu(menu, inflater)
         val supportActionBar = activity?.supportActionBar
         supportActionBar?.setDisplayShowTitleEnabled(true)
@@ -411,9 +393,7 @@ abstract class BaseListFragment<I, N>
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String?) {
-        if (getString(R.string.list_view_mode_key) == key) {
-            updateFlags = updateFlags or LIST_MODE_UPDATE_FLAG
-        }
+        if (getString(R.string.list_view_mode_key) == key) updateFlags = updateFlags or LIST_MODE_UPDATE_FLAG
     }
 
     protected open val itemViewMode: ItemViewMode

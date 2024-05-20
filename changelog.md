@@ -91,3 +91,7 @@ There is already an open issue on [androidx.media3](https://github.com/androidx/
 ## 0.26.8
 
 * fixed the issue of  androidx.media3.exoplayer.ExoPlaybackException on Android 9
+
+## 0.26.9
+
+* suppressed Log.d message in release app

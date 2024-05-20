@@ -50,6 +50,7 @@ import org.schabi.newpipe.player.playqueue.PlaylistPlayQueue
 import org.schabi.newpipe.util.ExtractorHelper.getMorePlaylistItems
 import org.schabi.newpipe.util.ExtractorHelper.getPlaylistInfo
 import org.schabi.newpipe.util.Localization.localizeStreamCount
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.openChannelFragment
 import org.schabi.newpipe.util.NavigationHelper.openSettings
 import org.schabi.newpipe.util.NavigationHelper.playOnBackgroundPlayer
@@ -93,10 +94,8 @@ class PlaylistFragment
         remotePlaylistManager = RemotePlaylistManager(getInstance(requireContext()))
     }
 
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        Logd(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_playlist, container, false)
     }
 
@@ -127,8 +126,7 @@ class PlaylistFragment
         val context = context
         try {
             val dialogBuilder = InfoItemDialog.Builder(requireActivity(), context!!, this, item!!)
-            dialogBuilder
-                .setAction(StreamDialogDefaultEntry.START_HERE_ON_BACKGROUND) { f: Fragment?, infoItem: StreamInfoItem? ->
+            dialogBuilder.setAction(StreamDialogDefaultEntry.START_HERE_ON_BACKGROUND) { f: Fragment?, infoItem: StreamInfoItem? ->
                     if (infoItem != null) playOnBackgroundPlayer(context, getPlayQueueStartingAt(infoItem), true)
                 }
                 .create()
@@ -139,10 +137,10 @@ class PlaylistFragment
     }
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: "
+
+            Logd(TAG, "onCreateOptionsMenu() called with: "
                     + "menu = [" + menu + "], inflater = [" + inflater + "]")
-        }
+
         super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.menu_playlist, menu)
 

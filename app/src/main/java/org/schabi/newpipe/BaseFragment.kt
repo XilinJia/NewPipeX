@@ -10,10 +10,12 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import icepick.Icepick
 import icepick.State
+import org.schabi.newpipe.util.Logd
 
 abstract class BaseFragment : Fragment() {
     @JvmField
     protected val TAG: String = javaClass.simpleName + "@" + Integer.toHexString(hashCode())
+
     @JvmField
     protected var activity: AppCompatActivity? = null
 
@@ -40,9 +42,9 @@ abstract class BaseFragment : Fragment() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        if (DEBUG) {
-            Log.d(TAG, "onCreate() called with: savedInstanceState = [$savedInstanceState]")
-        }
+
+        Logd(TAG, "onCreate() called with: savedInstanceState = [$savedInstanceState]")
+
         super.onCreate(savedInstanceState)
         Icepick.restoreInstanceState(this, savedInstanceState)
         if (savedInstanceState != null) {
@@ -53,9 +55,9 @@ abstract class BaseFragment : Fragment() {
 
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
         super.onViewCreated(rootView, savedInstanceState)
-        if (DEBUG) {
-            Log.d(TAG, "onViewCreated() called with: rootView = [$rootView], savedInstanceState = [$savedInstanceState]")
-        }
+
+        Logd(TAG, "onViewCreated() called with: rootView = [$rootView], savedInstanceState = [$savedInstanceState]")
+
         initViews(rootView, savedInstanceState)
         initListeners()
     }
@@ -103,9 +105,9 @@ abstract class BaseFragment : Fragment() {
     ////////////////////////////////////////////////////////////////////////// */
     @SuppressLint("UseRequireInsteadOfGet")
     open fun setTitle(title: String) {
-        if (DEBUG) {
-            Log.d(TAG, "setTitle() called with: title = [$title]")
-        }
+
+        Logd(TAG, "setTitle() called with: title = [$title]")
+
         if (!useAsFrontPage && activity?.supportActionBar != null) {
             activity!!.supportActionBar!!.setDisplayShowTitleEnabled(true)
             activity!!.supportActionBar!!.title = title

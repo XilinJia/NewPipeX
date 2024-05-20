@@ -9,7 +9,7 @@ import androidx.media3.common.text.Cue
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.extractor.stream.StreamInfo
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 
 /**
  * A player UI is a component that can seamlessly connect and disconnect from the [Player] and
@@ -19,8 +19,8 @@ import org.schabi.newpipe.player.Player
 /**
  * @return the player instance this UI was constructed with
  */
-@UnstableApi abstract class PlayerUi protected constructor(internal val player: Player) {
-    internal val context: Context = player.context
+@UnstableApi abstract class PlayerUi protected constructor(internal val playerManager: PlayerManager) {
+    internal val context: Context = playerManager.context
 
     /**
      * Called after the player received an intent and processed it.
@@ -71,14 +71,14 @@ import org.schabi.newpipe.player.Player
 
     /**
      * Broadcasts that the player receives will also be notified to UIs here. If you want to
-     * register new broadcast actions to receive here, add them to [ ][Player.setupBroadcastReceiver].
+     * register new broadcast actions to receive here, add them to [ ][PlayerManager.setupBroadcastReceiver].
      * @param intent the broadcast intent received by the player
      */
     open fun onBroadcastReceived(intent: Intent?) {}
 
     /**
      * Called when stream progress (i.e. the current time in the seekbar) or stream duration change.
-     * Will surely be called every [Player.PROGRESS_LOOP_INTERVAL_MILLIS] while a stream is
+     * Will surely be called every [PlayerManager.PROGRESS_LOOP_INTERVAL_MILLIS] while a stream is
      * playing.
      * @param currentProgress the current progress in milliseconds
      * @param duration        the duration of the stream being played

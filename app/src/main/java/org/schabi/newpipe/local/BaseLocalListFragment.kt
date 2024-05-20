@@ -20,6 +20,7 @@ import org.schabi.newpipe.fragments.list.ListViewContract
 import org.schabi.newpipe.info_list.ItemViewMode
 import org.schabi.newpipe.ktx.animate
 import org.schabi.newpipe.ktx.animateHideRecyclerViewAllowingScrolling
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ThemeHelper.getItemViewMode
 
 /**
@@ -39,8 +40,10 @@ abstract class BaseLocalListFragment<I, N> : BaseStateFragment<I>(), ListViewCon
     OnSharedPreferenceChangeListener {
     private var headerRootBinding: ViewBinding? = null
     private var footerRootBinding: ViewBinding? = null
+
     @JvmField
     protected var itemListAdapter: LocalItemListAdapter? = null
+
     @JvmField
     protected var itemsList: RecyclerView? = null
     private var updateFlags = 0
@@ -130,14 +133,9 @@ abstract class BaseLocalListFragment<I, N> : BaseStateFragment<I>(), ListViewCon
     /*//////////////////////////////////////////////////////////////////////////
     // Lifecycle - Menu
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onCreateOptionsMenu(menu: Menu,
-                                     inflater: MenuInflater
-    ) {
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
-        if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: "
-                    + "menu = [" + menu + "], inflater = [" + inflater + "]")
-        }
+        Logd(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
 
         val supportActionBar = activity!!.supportActionBar ?: return
 

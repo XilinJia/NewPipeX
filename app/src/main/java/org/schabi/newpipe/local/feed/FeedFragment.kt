@@ -76,6 +76,7 @@ import org.schabi.newpipe.local.feed.service.FeedLoadService
 import org.schabi.newpipe.local.subscription.SubscriptionManager
 import org.schabi.newpipe.util.DeviceUtils
 import org.schabi.newpipe.util.Localization
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper
 import org.schabi.newpipe.util.ThemeHelper.getGridSpanCountStreams
 import org.schabi.newpipe.util.ThemeHelper.getItemViewMode
@@ -376,7 +377,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
             if (item is StreamItem && !isRefreshing) {
                 val stream = item.streamWithState.stream
                 val fm = requireActivity().supportFragmentManager
-                Log.d(TAG, "onItemClick: ${stream.serviceId}, ${stream.url}, ${stream.title}")
+                Logd(TAG, "onItemClick: ${stream.serviceId}, ${stream.url}, ${stream.title}")
                 NavigationHelper.openVideoDetailFragment(requireContext(), fm, stream.serviceId, stream.url, stream.title,
                     null, false)
             }

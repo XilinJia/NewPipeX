@@ -17,6 +17,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.fragments.list.BaseListInfoFragment
 import org.schabi.newpipe.info_list.ItemViewMode
 import org.schabi.newpipe.ktx.slideUp
+import org.schabi.newpipe.util.Logd
 import java.util.function.Supplier
 
 class RelatedItemsFragment : BaseListInfoFragment<InfoItem, RelatedItemsInfo>(UserAction.REQUESTED_STREAM), OnSharedPreferenceChangeListener {
@@ -30,10 +31,8 @@ class RelatedItemsFragment : BaseListInfoFragment<InfoItem, RelatedItemsInfo>(Us
     /*//////////////////////////////////////////////////////////////////////////
     // LifeCycle
     ////////////////////////////////////////////////////////////////////////// */
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        Logd(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_related_items, container, false)
     }
 

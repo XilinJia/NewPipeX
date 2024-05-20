@@ -8,8 +8,7 @@ import org.schabi.newpipe.player.mediaitem.MediaItemTag
 
 @UnstableApi class ManagedMediaSourcePlaylist {
     /*isPlaylistAtomic=*/
-    val parentMediaSource: ConcatenatingMediaSource = ConcatenatingMediaSource( false,
-        ShuffleOrder.UnshuffledShuffleOrder(0))
+    val parentMediaSource: ConcatenatingMediaSource = ConcatenatingMediaSource( false, ShuffleOrder.UnshuffledShuffleOrder(0))
 
     /*//////////////////////////////////////////////////////////////////////////
     // MediaSource Delegations

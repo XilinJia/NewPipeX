@@ -24,7 +24,6 @@ import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
 import org.schabi.newpipe.fragments.OnScrollBelowItemsListener
 import org.schabi.newpipe.local.dialog.PlaylistDialog.Companion.showForPlayQueue
-import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerService.LocalBinder
 import org.schabi.newpipe.player.event.PlayerEventListener
 import org.schabi.newpipe.player.helper.PlaybackParameterDialog
@@ -34,6 +33,7 @@ import org.schabi.newpipe.player.playqueue.*
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
 import org.schabi.newpipe.util.Localization.audioTrackName
 import org.schabi.newpipe.util.Localization.getDurationString
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.openSettings
 import org.schabi.newpipe.util.NavigationHelper.playOnBackgroundPlayer
 import org.schabi.newpipe.util.NavigationHelper.playOnMainPlayer
@@ -48,7 +48,7 @@ import kotlin.math.min
 
 @UnstableApi class PlayQueueActivity : AppCompatActivity(), PlayerEventListener, OnSeekBarChangeListener, View.OnClickListener,
     PlaybackParameterDialog.Callback {
-    private var player: Player? = null
+    private var playerManager: PlayerManager? = null
 
     private var serviceBound = false
     private var serviceConnection: ServiceConnection? = null
@@ -92,19 +92,19 @@ import kotlin.math.min
         buildAudioTrackMenu()
         onMaybeMuteChanged()
         // to avoid null reference
-        if (player != null) {
-            onPlaybackParameterChanged(player!!.playbackParameters)
+        if (playerManager != null) {
+            onPlaybackParameterChanged(playerManager!!.playbackParameters)
         }
         return true
     }
 
     // Allow to setup visibility of menuItems
     override fun onPrepareOptionsMenu(m: Menu): Boolean {
-        if (player != null) {
+        if (playerManager != null) {
             menu!!.findItem(R.id.action_switch_popup)
-                .setVisible(!player!!.popupPlayerSelected())
+                .setVisible(!playerManager!!.popupPlayerSelected())
             menu!!.findItem(R.id.action_switch_background)
-                .setVisible(!player!!.audioPlayerSelected())
+                .setVisible(!playerManager!!.audioPlayerSelected())
         }
         return super.onPrepareOptionsMenu(m)
     }
@@ -120,7 +120,7 @@ import kotlin.math.min
                 return true
             }
             R.id.action_append_playlist -> {
-                showForPlayQueue(player!!, supportFragmentManager)
+                showForPlayQueue(playerManager!!, supportFragmentManager)
                 return true
             }
             R.id.action_playback_speed -> {
@@ -128,7 +128,7 @@ import kotlin.math.min
                 return true
             }
             R.id.action_mute -> {
-                player?.toggleMute()
+                playerManager?.toggleMute()
                 return true
             }
             R.id.action_system_audio -> {
@@ -136,21 +136,21 @@ import kotlin.math.min
                 return true
             }
             R.id.action_switch_main -> {
-                player?.setRecovery()
-                playOnMainPlayer(this, player!!.playQueue!!, true)
+                playerManager?.setRecovery()
+                playOnMainPlayer(this, playerManager!!.playQueue!!, true)
                 return true
             }
             R.id.action_switch_popup -> {
-                if (player != null && isPopupEnabledElseAsk(this)) {
-                    player?.setRecovery()
-                    playOnPopupPlayer(this, player!!.playQueue, true)
+                if (playerManager != null && isPopupEnabledElseAsk(this)) {
+                    playerManager?.setRecovery()
+                    playOnPopupPlayer(this, playerManager!!.playQueue, true)
                 }
                 return true
             }
             R.id.action_switch_background -> {
-                if (player != null) {
-                    player?.setRecovery()
-                    playOnBackgroundPlayer(this, player!!.playQueue, true)
+                if (playerManager != null) {
+                    playerManager?.setRecovery()
+                    playOnBackgroundPlayer(this, playerManager!!.playQueue, true)
                 }
                 return true
             }
@@ -184,35 +184,32 @@ import kotlin.math.min
         if (serviceBound) {
             unbindService(serviceConnection!!)
             serviceBound = false
-            player?.removeActivityListener(this)
+            playerManager?.removeActivityListener(this)
 
             onQueueUpdate(null)
             itemTouchHelper?.attachToRecyclerView(null)
 
             itemTouchHelper = null
-            player = null
+            playerManager = null
         }
     }
 
     private fun getServiceConnection(): ServiceConnection {
         return object : ServiceConnection {
             override fun onServiceDisconnected(name: ComponentName) {
-                Log.d(TAG, "Player service is disconnected")
+                Logd(TAG, "Player service is disconnected")
             }
 
             override fun onServiceConnected(name: ComponentName, service: IBinder) {
-                Log.d(TAG, "Player service is connected")
+                Logd(TAG, "Player service is connected")
+                if (service is LocalBinder) playerManager = service.getPlayer()
 
-                if (service is LocalBinder) {
-                    player = service.getPlayer()
-                }
-
-                if (player == null || player!!.playQueue == null || player!!.exoPlayerIsNull()) {
+                if (playerManager == null || playerManager!!.playQueue == null || playerManager!!.exoPlayerIsNull()) {
                     unbind()
                 } else {
-                    onQueueUpdate(player!!.playQueue)
+                    onQueueUpdate(playerManager!!.playQueue)
                     buildComponents()
-                    player?.setActivityListener(this@PlayQueueActivity)
+                    playerManager?.setActivityListener(this@PlayQueueActivity)
                 }
             }
         }
@@ -264,8 +261,8 @@ import kotlin.math.min
         ////////////////////////////////////////////////////////////////////////////
         get() = object : OnScrollBelowItemsListener() {
             override fun onScrolledDown(recyclerView: RecyclerView?) {
-                if (player != null && player!!.playQueue != null && !player!!.playQueue!!.isComplete) {
-                    player!!.playQueue!!.fetch()
+                if (playerManager != null && playerManager!!.playQueue != null && !playerManager!!.playQueue!!.isComplete) {
+                    playerManager!!.playQueue!!.fetch()
                 } else {
                     queueControlBinding!!.playQueue.clearOnScrollListeners()
                 }
@@ -275,12 +272,12 @@ import kotlin.math.min
     private val itemTouchCallback: ItemTouchHelper.SimpleCallback
         get() = object : PlayQueueItemTouchCallback() {
             override fun onMove(sourceIndex: Int, targetIndex: Int) {
-                player?.playQueue?.move(sourceIndex, targetIndex)
+                playerManager?.playQueue?.move(sourceIndex, targetIndex)
             }
 
             override fun onSwiped(index: Int) {
                 if (index != -1) {
-                    player!!.playQueue!!.remove(index)
+                    playerManager!!.playQueue!!.remove(index)
                 }
             }
         }
@@ -288,12 +285,12 @@ import kotlin.math.min
     private val onSelectedListener: PlayQueueItemBuilder.OnSelectedListener
         get() = object : PlayQueueItemBuilder.OnSelectedListener {
             override fun selected(item: PlayQueueItem, view: View) {
-                player?.selectQueueItem(item)
+                playerManager?.selectQueueItem(item)
             }
 
             override fun held(item: PlayQueueItem, view: View) {
-                if (player != null && player!!.playQueue!!.indexOf(item) != -1) {
-                    openPopupMenu(player!!.playQueue!!, item, view, false,
+                if (playerManager != null && playerManager!!.playQueue!!.indexOf(item) != -1) {
+                    openPopupMenu(playerManager!!.playQueue!!, item, view, false,
                         supportFragmentManager, this@PlayQueueActivity)
                 }
             }
@@ -304,9 +301,9 @@ import kotlin.math.min
         }
 
     private fun scrollToSelected() {
-        if (player == null) return
+        if (playerManager == null) return
 
-        val currentPlayingIndex = player!!.playQueue!!.index
+        val currentPlayingIndex = playerManager!!.playQueue!!.index
         val currentVisibleIndex: Int
         if (queueControlBinding!!.playQueue.layoutManager is LinearLayoutManager) {
             val layout =
@@ -328,35 +325,35 @@ import kotlin.math.min
     // Component On-Click Listener
     ////////////////////////////////////////////////////////////////////////////
     override fun onClick(view: View) {
-        if (player == null) return
+        if (playerManager == null) return
 
         when (view.id) {
             queueControlBinding!!.controlRepeat.id -> {
-                player!!.cycleNextRepeatMode()
+                playerManager!!.cycleNextRepeatMode()
             }
             queueControlBinding!!.controlBackward.id -> {
-                player!!.playPrevious()
+                playerManager!!.playPrevious()
             }
             queueControlBinding!!.controlFastRewind.id -> {
-                player!!.fastRewind()
+                playerManager!!.fastRewind()
             }
             queueControlBinding!!.controlPlayPause.id -> {
-                player!!.playPause()
+                playerManager!!.playPause()
             }
             queueControlBinding!!.controlFastForward.id -> {
-                player!!.fastForward()
+                playerManager!!.fastForward()
             }
             queueControlBinding!!.controlForward.id -> {
-                player!!.playNext()
+                playerManager!!.playNext()
             }
             queueControlBinding!!.controlShuffle.id -> {
-                player!!.toggleShuffleModeEnabled()
+                playerManager!!.toggleShuffleModeEnabled()
             }
             queueControlBinding!!.metadata.id -> {
                 scrollToSelected()
             }
             queueControlBinding!!.liveSync.id -> {
-                player!!.seekToDefault()
+                playerManager!!.seekToDefault()
             }
         }
     }
@@ -365,18 +362,18 @@ import kotlin.math.min
     // Playback Parameters
     ////////////////////////////////////////////////////////////////////////////
     private fun openPlaybackParameterDialog() {
-        if (player == null) return
+        if (playerManager == null) return
 
-        PlaybackParameterDialog.newInstance(player!!.playbackSpeed.toDouble(), player!!.playbackPitch.toDouble(),
-            player!!.playbackSkipSilence, this).show(supportFragmentManager, TAG)
+        PlaybackParameterDialog.newInstance(playerManager!!.playbackSpeed.toDouble(), playerManager!!.playbackPitch.toDouble(),
+            playerManager!!.playbackSkipSilence, this).show(supportFragmentManager, TAG)
     }
 
     override fun onPlaybackParameterChanged(playbackTempo: Float, playbackPitch: Float,
                                             playbackSkipSilence: Boolean
     ) {
-        if (player != null) {
-            player!!.setPlaybackParameters(playbackTempo, playbackPitch, playbackSkipSilence)
-            onPlaybackParameterChanged(player!!.playbackParameters)
+        if (playerManager != null) {
+            playerManager!!.setPlaybackParameters(playbackTempo, playbackPitch, playbackSkipSilence)
+            onPlaybackParameterChanged(playerManager!!.playbackParameters)
         }
     }
 
@@ -399,8 +396,8 @@ import kotlin.math.min
     }
 
     override fun onStopTrackingTouch(seekBar: SeekBar) {
-        if (player != null) {
-            player!!.seekTo(seekBar.progress.toLong())
+        if (playerManager != null) {
+            playerManager!!.seekTo(seekBar.progress.toLong())
         }
         queueControlBinding!!.seekDisplay.visibility = View.GONE
         seeking = false
@@ -443,8 +440,8 @@ import kotlin.math.min
             queueControlBinding!!.currentTime.text = getDurationString((currentProgress / 1000).toLong())
         }
 
-        if (player != null) {
-            queueControlBinding!!.liveSync.isClickable = !player!!.isLiveEdge
+        if (playerManager != null) {
+            queueControlBinding!!.liveSync.isClickable = !playerManager!!.isLiveEdge
         }
 
         // this will make sure progressCurrentTime has the same width as progressEndTime
@@ -479,22 +476,22 @@ import kotlin.math.min
     private fun onStateChanged(state: Int) {
         val playPauseButton = queueControlBinding!!.controlPlayPause
         when (state) {
-            Player.STATE_PAUSED -> {
+            PlayerManager.STATE_PAUSED -> {
                 playPauseButton.setImageResource(R.drawable.ic_play_arrow)
                 playPauseButton.contentDescription = getString(R.string.play)
             }
-            Player.STATE_PLAYING -> {
+            PlayerManager.STATE_PLAYING -> {
                 playPauseButton.setImageResource(R.drawable.ic_pause)
                 playPauseButton.contentDescription = getString(R.string.pause)
             }
-            Player.STATE_COMPLETED -> {
+            PlayerManager.STATE_COMPLETED -> {
                 playPauseButton.setImageResource(R.drawable.ic_replay)
                 playPauseButton.contentDescription = getString(R.string.replay)
             }
             else -> {}
         }
         when (state) {
-            Player.STATE_PAUSED, Player.STATE_PLAYING, Player.STATE_COMPLETED -> {
+            PlayerManager.STATE_PAUSED, PlayerManager.STATE_PLAYING, PlayerManager.STATE_COMPLETED -> {
                 queueControlBinding!!.controlPlayPause.isClickable = true
                 queueControlBinding!!.controlPlayPause.visibility = View.VISIBLE
                 queueControlBinding!!.controlProgressBar.visibility = View.GONE
@@ -521,23 +518,23 @@ import kotlin.math.min
     }
 
     private fun onPlaybackParameterChanged(parameters: PlaybackParameters?) {
-        if (parameters != null && menu != null && player != null) {
+        if (parameters != null && menu != null && playerManager != null) {
             val item = menu!!.findItem(R.id.action_playback_speed)
             item.setTitle(PlayerHelper.formatSpeed(parameters.speed.toDouble()))
         }
     }
 
     private fun onMaybeMuteChanged() {
-        if (menu != null && player != null) {
+        if (menu != null && playerManager != null) {
             val item = menu!!.findItem(R.id.action_mute)
 
             //Change the mute-button item in ActionBar
             //1) Text change:
-            item.setTitle(if (player!!.isMuted) R.string.unmute else R.string.mute)
+            item.setTitle(if (playerManager!!.isMuted) R.string.unmute else R.string.mute)
 
             //2) Icon change accordingly to current App Theme
             // using rootView.getContext() because getApplicationContext() didn't work
-            item.setIcon(if (player!!.isMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
+            item.setIcon(if (playerManager!!.isMuted) R.drawable.ic_volume_off else R.drawable.ic_volume_up)
         }
     }
 
@@ -549,12 +546,12 @@ import kotlin.math.min
         if (menu == null) return
 
         val audioTrackSelector = menu!!.findItem(R.id.action_audio_track)
-        val availableStreams = Optional.ofNullable<Player>(player)
-            .map<MediaItemTag>(Player::currentMetadata)
+        val availableStreams = Optional.ofNullable<PlayerManager>(playerManager)
+            .map<MediaItemTag>(PlayerManager::currentMetadata)
             .flatMap<MediaItemTag.AudioTrack> { obj: MediaItemTag -> obj.maybeAudioTrack }
             .map<List<AudioStream>?>(Function<MediaItemTag.AudioTrack, List<AudioStream>?> { it.audioStreams })
             .orElse(null)
-        val selectedAudioStream = Optional.ofNullable(player).flatMap(Player::selectedAudioStream)
+        val selectedAudioStream = Optional.ofNullable(playerManager).flatMap(PlayerManager::selectedAudioStream)
 
         if (availableStreams == null || availableStreams.size < 2 || selectedAudioStream.isEmpty) {
             audioTrackSelector.setVisible(false)
@@ -583,15 +580,15 @@ import kotlin.math.min
      * @param itemId index of the selected item
      */
     private fun onAudioTrackClick(itemId: Int) {
-        if (player!!.currentMetadata == null) return
+        if (playerManager!!.currentMetadata == null) return
 
-        player!!.currentMetadata!!.maybeAudioTrack.ifPresent { audioTrack: MediaItemTag.AudioTrack ->
+        playerManager!!.currentMetadata!!.maybeAudioTrack.ifPresent { audioTrack: MediaItemTag.AudioTrack ->
             val availableStreams = audioTrack.audioStreams
             val selectedStreamIndex = audioTrack.selectedAudioStreamIndex
             if (selectedStreamIndex == itemId || availableStreams.size <= itemId) return@ifPresent
 
             val newAudioTrack = availableStreams[itemId].audioTrackId
-            player!!.setAudioTrack(newAudioTrack)
+            playerManager!!.setAudioTrack(newAudioTrack)
         }
     }
 

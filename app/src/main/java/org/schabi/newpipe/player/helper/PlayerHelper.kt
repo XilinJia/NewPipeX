@@ -30,6 +30,7 @@ import org.schabi.newpipe.player.playqueue.PlayQueue
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue
 import org.schabi.newpipe.util.ListHelper.isMeteredNetwork
+import org.schabi.newpipe.util.Logd
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.*
@@ -178,17 +179,11 @@ import java.util.concurrent.TimeUnit
     @MinimizeMode
     fun getMinimizeOnExitAction(context: Context): Int {
         val action = getPreferences(context).getString(context.getString(R.string.minimize_on_exit_key), "")
-        Log.d("PlayerHelper", "getMinimizeOnExitAction: action: $action")
+        Logd("PlayerHelper", "getMinimizeOnExitAction: action: $action")
         return when (action) {
-            context.getString(R.string.minimize_on_exit_popup_key) -> {
-                MinimizeMode.MINIMIZE_ON_EXIT_MODE_POPUP
-            }
-            context.getString(R.string.minimize_on_exit_none_key) -> {
-                MinimizeMode.MINIMIZE_ON_EXIT_MODE_NONE
-            }
-            else -> {
-                MinimizeMode.MINIMIZE_ON_EXIT_MODE_BACKGROUND // default
-            }
+            context.getString(R.string.minimize_on_exit_popup_key) -> MinimizeMode.MINIMIZE_ON_EXIT_MODE_POPUP
+            context.getString(R.string.minimize_on_exit_none_key) -> MinimizeMode.MINIMIZE_ON_EXIT_MODE_NONE
+            else -> MinimizeMode.MINIMIZE_ON_EXIT_MODE_BACKGROUND // default
         }
     }
 
@@ -196,15 +191,9 @@ import java.util.concurrent.TimeUnit
     fun getAutoplayType(context: Context): Int {
         val type = getPreferences(context).getString(context.getString(R.string.autoplay_key), "")
         return when (type) {
-            context.getString(R.string.autoplay_always_key) -> {
-                AutoplayType.AUTOPLAY_TYPE_ALWAYS
-            }
-            context.getString(R.string.autoplay_never_key) -> {
-                AutoplayType.AUTOPLAY_TYPE_NEVER
-            }
-            else -> {
-                AutoplayType.AUTOPLAY_TYPE_WIFI // default
-            }
+            context.getString(R.string.autoplay_always_key) -> AutoplayType.AUTOPLAY_TYPE_ALWAYS
+            context.getString(R.string.autoplay_never_key) -> AutoplayType.AUTOPLAY_TYPE_NEVER
+            else -> AutoplayType.AUTOPLAY_TYPE_WIFI // default
         }
     }
 
@@ -300,8 +289,7 @@ import java.util.concurrent.TimeUnit
     fun getProgressiveLoadIntervalBytes(context: Context): Int {
         val preferredIntervalBytes = getPreferences(context).getString(context.getString(R.string.progressive_load_interval_key), context.getString(R.string.progressive_load_interval_default_value))
 
-        if (context.getString(R.string.progressive_load_interval_exoplayer_default_value) == preferredIntervalBytes)
-            return ProgressiveMediaSource.DEFAULT_LOADING_CHECK_INTERVAL_BYTES
+        if (context.getString(R.string.progressive_load_interval_exoplayer_default_value) == preferredIntervalBytes) return ProgressiveMediaSource.DEFAULT_LOADING_CHECK_INTERVAL_BYTES
 
         // Keeping the same KiB unit used by ProgressiveMediaSource
         return preferredIntervalBytes!!.toInt() * 1024
@@ -336,12 +324,12 @@ import java.util.concurrent.TimeUnit
         }
     }
 
-    fun retrieveResizeModeFromPrefs(player: org.schabi.newpipe.player.Player): @AspectRatioFrameLayout.ResizeMode Int {
-        return player.prefs.getInt(player.context.getString(R.string.last_resize_mode), AspectRatioFrameLayout.RESIZE_MODE_FIT)
+    fun retrieveResizeModeFromPrefs(playerManager: org.schabi.newpipe.player.PlayerManager): @AspectRatioFrameLayout.ResizeMode Int {
+        return playerManager.prefs.getInt(playerManager.context.getString(R.string.last_resize_mode), AspectRatioFrameLayout.RESIZE_MODE_FIT)
     }
 
     @SuppressLint("SwitchIntDef") // only fit, fill and zoom are supported by NewPipe
-    fun nextResizeModeAndSaveToPrefs(player: org.schabi.newpipe.player.Player, resizeMode: @AspectRatioFrameLayout.ResizeMode Int): @AspectRatioFrameLayout.ResizeMode Int {
+    fun nextResizeModeAndSaveToPrefs(playerManager: org.schabi.newpipe.player.PlayerManager, resizeMode: @AspectRatioFrameLayout.ResizeMode Int): @AspectRatioFrameLayout.ResizeMode Int {
         val newResizeMode = when (resizeMode) {
             AspectRatioFrameLayout.RESIZE_MODE_FIT -> AspectRatioFrameLayout.RESIZE_MODE_FILL
             AspectRatioFrameLayout.RESIZE_MODE_FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
@@ -349,23 +337,23 @@ import java.util.concurrent.TimeUnit
             else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
         // save the new resize mode so it can be restored in a future session
-        player.prefs.edit().putInt(player.context.getString(R.string.last_resize_mode), newResizeMode).apply()
+        playerManager.prefs.edit().putInt(playerManager.context.getString(R.string.last_resize_mode), newResizeMode).apply()
         return newResizeMode
     }
 
-    fun retrievePlaybackParametersFromPrefs(player: org.schabi.newpipe.player.Player): PlaybackParameters {
-        val speed = player.prefs.getFloat(player.context.getString(
-            R.string.playback_speed_key), player.playbackSpeed)
-        val pitch = player.prefs.getFloat(player.context.getString(
-            R.string.playback_pitch_key), player.playbackPitch)
+    fun retrievePlaybackParametersFromPrefs(playerManager: org.schabi.newpipe.player.PlayerManager): PlaybackParameters {
+        val speed = playerManager.prefs.getFloat(playerManager.context.getString(
+            R.string.playback_speed_key), playerManager.playbackSpeed)
+        val pitch = playerManager.prefs.getFloat(playerManager.context.getString(
+            R.string.playback_pitch_key), playerManager.playbackPitch)
         return PlaybackParameters(speed, pitch)
     }
 
-    fun savePlaybackParametersToPrefs(player: org.schabi.newpipe.player.Player, speed: Float, pitch: Float, skipSilence: Boolean) {
-        player.prefs.edit()
-            .putFloat(player.context.getString(R.string.playback_speed_key), speed)
-            .putFloat(player.context.getString(R.string.playback_pitch_key), pitch)
-            .putBoolean(player.context.getString(R.string.playback_skip_silence_key), skipSilence)
+    fun savePlaybackParametersToPrefs(playerManager: org.schabi.newpipe.player.PlayerManager, speed: Float, pitch: Float, skipSilence: Boolean) {
+        playerManager.prefs.edit()
+            .putFloat(playerManager.context.getString(R.string.playback_speed_key), speed)
+            .putFloat(playerManager.context.getString(R.string.playback_pitch_key), pitch)
+            .putBoolean(playerManager.context.getString(R.string.playback_skip_silence_key), skipSilence)
             .apply()
     }
 
@@ -373,8 +361,8 @@ import java.util.concurrent.TimeUnit
         return width / (16.0f / 9.0f) // Respect the 16:9 ratio that most videos have
     }
 
-    fun retrieveSeekDurationFromPreferences(player: org.schabi.newpipe.player.Player): Int {
-        return Objects.requireNonNull(player.prefs.getString(player.context.getString(R.string.seek_duration_key), player.context.getString(R.string.seek_duration_default_value)))!!.toInt()
+    fun retrieveSeekDurationFromPreferences(playerManager: org.schabi.newpipe.player.PlayerManager): Int {
+        return Objects.requireNonNull(playerManager.prefs.getString(playerManager.context.getString(R.string.seek_duration_key), playerManager.context.getString(R.string.seek_duration_default_value)))!!.toInt()
     }
 
     @Retention(AnnotationRetention.SOURCE)

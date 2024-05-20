@@ -7,6 +7,7 @@ import androidx.collection.SparseArrayCompat
 import com.google.common.base.Stopwatch
 import org.schabi.newpipe.extractor.stream.Frameset
 import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHelper.SeekbarPreviewThumbnailType
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.image.PicassoHelper.loadSeekbarThumbnailPreview
 import java.util.*
 import java.util.concurrent.Executors
@@ -42,23 +43,22 @@ class SeekbarPreviewThumbnailHolder {
     }
 
     private fun resetFromAsync(seekbarPreviewType: Int, framesets: List<Frameset?>, updateRequestIdentifier: UUID) {
-        Log.d(TAG, "Clearing seekbarPreviewData")
+        Logd(TAG, "Clearing seekbarPreviewData")
         synchronized(seekbarPreviewData) {
             seekbarPreviewData.clear()
         }
 
         if (seekbarPreviewType == SeekbarPreviewThumbnailType.NONE) {
-            Log.d(TAG, "Not processing seekbarPreviewData due to settings")
+            Logd(TAG, "Not processing seekbarPreviewData due to settings")
             return
         }
 
         val frameset = getFrameSetForType(framesets, seekbarPreviewType)
         if (frameset == null) {
-            Log.d(TAG, "No frameset was found to fill seekbarPreviewData")
+            Logd(TAG, "No frameset was found to fill seekbarPreviewData")
             return
         }
-
-        Log.d(TAG, "Frameset quality info: [width=${frameset.frameWidth}, heigh=${frameset.frameHeight}]")
+        Logd(TAG, "Frameset quality info: [width=${frameset.frameWidth}, heigh=${frameset.frameHeight}]")
 
         // Abort method execution if we are not the latest request
         if (!isRequestIdentifierCurrent(updateRequestIdentifier)) return
@@ -70,12 +70,12 @@ class SeekbarPreviewThumbnailHolder {
                                    seekbarPreviewType: Int
     ): Frameset? {
         if (seekbarPreviewType == SeekbarPreviewThumbnailType.HIGH_QUALITY) {
-            Log.d(TAG, "Strategy for seekbarPreviewData: high quality")
+            Logd(TAG, "Strategy for seekbarPreviewData: high quality")
             return framesets.stream()
                 .max(Comparator.comparingInt { fs: Frameset? -> fs!!.frameHeight * fs.frameWidth })
                 .orElse(null)
         } else {
-            Log.d(TAG, "Strategy for seekbarPreviewData: low quality")
+            Logd(TAG, "Strategy for seekbarPreviewData: low quality")
             return framesets.stream()
                 .min(Comparator.comparingInt { fs: Frameset? -> fs!!.frameHeight * fs.frameWidth })
                 .orElse(null)
@@ -83,7 +83,7 @@ class SeekbarPreviewThumbnailHolder {
     }
 
     private fun generateDataFrom(frameset: Frameset, updateRequestIdentifier: UUID) {
-        Log.d(TAG, "Starting generation of seekbarPreviewData")
+        Logd(TAG, "Starting generation of seekbarPreviewData")
         val sw = if (Log.isLoggable(TAG, Log.DEBUG)) Stopwatch.createStarted() else null
 
         var currentPosMs = 0
@@ -127,13 +127,13 @@ class SeekbarPreviewThumbnailHolder {
                     seekbarPreviewData.putAll(generatedDataForUrl)
                 }
             } else {
-                Log.d(TAG, "Aborted of generation of seekbarPreviewData")
+                Logd(TAG, "Aborted of generation of seekbarPreviewData")
                 break
             }
         }
 
         if (sw != null) {
-            Log.d(TAG, "Generation of seekbarPreviewData took " + sw.stop())
+            Logd(TAG, "Generation of seekbarPreviewData took " + sw.stop())
         }
     }
 
@@ -145,14 +145,14 @@ class SeekbarPreviewThumbnailHolder {
 
         val sw = if (Log.isLoggable(TAG, Log.DEBUG)) Stopwatch.createStarted() else null
         try {
-            Log.d(TAG, "Downloading bitmap for seekbarPreview from '$url'")
+            Logd(TAG, "Downloading bitmap for seekbarPreview from '$url'")
 
             // Gets the bitmap within the timeout of 15 seconds imposed by default by OkHttpClient
             // Ensure that your are not running on the main-Thread this will otherwise hang
             val bitmap = loadSeekbarThumbnailPreview(url).get()
 
             if (sw != null) {
-                Log.d(TAG, "Download of bitmap for seekbarPreview from '$url' took ${sw.stop()}")
+                Logd(TAG, "Download of bitmap for seekbarPreview from '$url' took ${sw.stop()}")
             }
 
             return bitmap

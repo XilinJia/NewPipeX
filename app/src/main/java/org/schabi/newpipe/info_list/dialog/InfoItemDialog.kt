@@ -20,6 +20,7 @@ import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.info_list.dialog.StreamDialogEntry.StreamDialogEntryAction
 import org.schabi.newpipe.player.helper.PlayerHolder
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.StreamTypeUtil.isAudio
 import org.schabi.newpipe.util.StreamTypeUtil.isLiveStream
 import org.schabi.newpipe.util.external_communication.KoreUtils.shouldShowPlayWithKodi
@@ -185,10 +186,7 @@ class InfoItemDialog private constructor(activity: Activity,
          */
         init {
             if (activity == null || context == null || context.resources == null) {
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "activity, context or resources is null: activity = "
-                            + activity + ", context = " + context)
-                }
+                Logd(TAG, "activity, context or resources is null: activity = $activity, context = $context")
                 throw IllegalArgumentException("activity, context or resources is null")
             }
             this.activity = activity
@@ -196,9 +194,7 @@ class InfoItemDialog private constructor(activity: Activity,
             this.fragment = fragment
             this.infoItem = infoItem
             this.addDefaultEntriesAutomatically = addDefaultEntriesAutomatically
-            if (addDefaultEntriesAutomatically) {
-                addDefaultBeginningEntries()
-            }
+            if (addDefaultEntriesAutomatically) addDefaultBeginningEntries()
         }
 
         /**
@@ -254,10 +250,7 @@ class InfoItemDialog private constructor(activity: Activity,
             val holder = PlayerHolder.instance
             if (holder?.isPlayQueueReady == true) {
                 addEntry(StreamDialogDefaultEntry.ENQUEUE)
-
-                if (holder.queuePosition < holder.queueSize - 1) {
-                    addEntry(StreamDialogDefaultEntry.ENQUEUE_NEXT)
-                }
+                if (holder.queuePosition < holder.queueSize - 1) addEntry(StreamDialogDefaultEntry.ENQUEUE_NEXT)
             }
             return this
         }
@@ -270,9 +263,7 @@ class InfoItemDialog private constructor(activity: Activity,
          */
         fun addStartHereEntries(): Builder {
             addEntry(StreamDialogDefaultEntry.START_HERE_ON_BACKGROUND)
-            if (!isAudio(infoItem.streamType)) {
-                addEntry(StreamDialogDefaultEntry.START_HERE_ON_POPUP)
-            }
+            if (!isAudio(infoItem.streamType)) addEntry(StreamDialogDefaultEntry.START_HERE_ON_POPUP)
             return this
         }
 

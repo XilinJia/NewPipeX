@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import org.schabi.newpipe.MainActivity
+import org.schabi.newpipe.util.Logd
 
 object Migrations {
     /////////////////////////////////////////////////////////////////////////////
@@ -26,9 +27,7 @@ object Migrations {
 
     val MIGRATION_1_2: Migration = object : Migration(DB_VER_1, DB_VER_2) {
         override fun migrate(database: SupportSQLiteDatabase) {
-            if (DEBUG) {
-                Log.d(TAG, "Start migrating database")
-            }
+            Logd(TAG, "Start migrating database")
 
             /*
              * Unfortunately these queries must be hardcoded due to the possibility of
@@ -105,9 +104,9 @@ object Migrations {
 
             database.execSQL("DROP TABLE IF EXISTS watch_history")
 
-            if (DEBUG) {
-                Log.d(TAG, "Stop migrating database")
-            }
+
+                Logd(TAG, "Stop migrating database")
+
         }
     }
 

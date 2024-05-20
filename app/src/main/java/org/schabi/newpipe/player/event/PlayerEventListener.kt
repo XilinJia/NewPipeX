@@ -6,9 +6,7 @@ import org.schabi.newpipe.player.playqueue.PlayQueue
 
 interface PlayerEventListener {
     fun onQueueUpdate(queue: PlayQueue?)
-    fun onPlaybackUpdate(state: Int, repeatMode: Int, shuffled: Boolean,
-                         parameters: PlaybackParameters?
-    )
+    fun onPlaybackUpdate(state: Int, repeatMode: Int, shuffled: Boolean, parameters: PlaybackParameters?)
 
     fun onProgressUpdate(currentProgress: Int, duration: Int, bufferPercent: Int)
     fun onMetadataUpdate(info: StreamInfo?, queue: PlayQueue?)

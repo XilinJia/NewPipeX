@@ -29,6 +29,7 @@ import org.schabi.newpipe.extractor.Image.ResolutionLevel
 import org.schabi.newpipe.extractor.StreamingService
 import org.schabi.newpipe.extractor.stream.Description
 import org.schabi.newpipe.extractor.utils.Utils
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.openSearchFragment
 import org.schabi.newpipe.util.external_communication.ShareUtils.copyToClipboard
 import org.schabi.newpipe.util.external_communication.ShareUtils.openUrlInBrowser
@@ -43,11 +44,9 @@ abstract class BaseDescriptionFragment : BaseFragment() {
     @JvmField
     protected var binding: FragmentDescriptionBinding? = null
 
-    override fun onCreateView(inflater: LayoutInflater,
-                              container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         binding = FragmentDescriptionBinding.inflate(inflater, container, false)
-        Log.d(TAG, "onCreateView")
+        Logd(TAG, "onCreateView")
         setupDescription()
         setupMetadata(inflater, binding!!.detailMetadataLayout)
         addTagsMetadataItem(inflater, binding!!.detailMetadataLayout)
@@ -112,12 +111,9 @@ abstract class BaseDescriptionFragment : BaseFragment() {
         disableDescriptionSelection()
 
         binding!!.detailSelectDescriptionButton.setOnClickListener { v: View? ->
-            if (binding!!.detailDescriptionNoteView.visibility == View.VISIBLE) {
-                disableDescriptionSelection()
-            } else {
-                // enable selection only when button is clicked to prevent flickering
-                enableDescriptionSelection()
-            }
+            if (binding!!.detailDescriptionNoteView.visibility == View.VISIBLE) disableDescriptionSelection()
+            // enable selection only when button is clicked to prevent flickering
+            else enableDescriptionSelection()
         }
     }
 
@@ -150,11 +146,7 @@ abstract class BaseDescriptionFragment : BaseFragment() {
         binding!!.detailSelectDescriptionButton.setImageResource(R.drawable.ic_select_all)
     }
 
-    protected fun addMetadataItem(inflater: LayoutInflater?,
-                                  layout: LinearLayout,
-                                  linkifyContent: Boolean,
-                                  @StringRes type: Int,
-                                  content: String?) {
+    protected fun addMetadataItem(inflater: LayoutInflater?, layout: LinearLayout, linkifyContent: Boolean, @StringRes type: Int, content: String?) {
         if (Utils.isBlank(content)) return
 
         val itemBinding = ItemMetadataBinding.inflate(inflater!!, layout, false)
@@ -165,12 +157,10 @@ abstract class BaseDescriptionFragment : BaseFragment() {
             true
         }
 
-        if (linkifyContent) {
+        if (linkifyContent)
             fromPlainText(itemBinding.metadataContentView, content!!, null, null,
                 descriptionDisposables, SET_LINK_MOVEMENT_METHOD as Consumer<TextView?>?)
-        } else {
-            itemBinding.metadataContentView.text = content
-        }
+        else itemBinding.metadataContentView.text = content
 
         itemBinding.metadataContentView.isClickable = true
 
@@ -181,10 +171,7 @@ abstract class BaseDescriptionFragment : BaseFragment() {
         return if (heightOrWidth < 0) getString(R.string.question_mark) else heightOrWidth.toString()
     }
 
-    protected fun addImagesMetadataItem(inflater: LayoutInflater?,
-                                        layout: LinearLayout,
-                                        @StringRes type: Int,
-                                        images: List<Image>) {
+    protected fun addImagesMetadataItem(inflater: LayoutInflater?, layout: LinearLayout, @StringRes type: Int, images: List<Image>) {
         val preferredImageUrl = choosePreferredImage(images) ?: return  // null will be returned in case there is no image
 
         val itemBinding = ItemMetadataBinding.inflate(inflater!!, layout, false)

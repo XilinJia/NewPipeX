@@ -2,6 +2,7 @@ package org.schabi.newpipe
 
 import android.app.Application
 import android.content.Context
+import android.os.StrictMode
 import android.util.Log
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationManagerCompat
@@ -62,12 +63,22 @@ open class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
-
         app = this
 
         if (ProcessPhoenix.isPhoenixProcess(this)) {
             Log.i(TAG, "This is a phoenix process! Aborting initialization of App[onCreate]")
             return
+        }
+
+        if (BuildConfig.DEBUG) {
+            val builder: StrictMode.VmPolicy.Builder = StrictMode.VmPolicy.Builder()
+                .detectLeakedSqlLiteObjects()
+                .penaltyLog()
+                .penaltyDropBox()
+                .detectActivityLeaks()
+                .detectLeakedClosableObjects()
+                .detectLeakedRegistrationObjects()
+            StrictMode.setVmPolicy(builder.build())
         }
 
         // Initialize settings first because others inits can use its values

@@ -22,6 +22,7 @@ import org.schabi.newpipe.util.ExtractorHelper.getKioskInfo
 import org.schabi.newpipe.util.ExtractorHelper.getMoreKioskItems
 import org.schabi.newpipe.util.KioskTranslator.getTranslatedKioskName
 import org.schabi.newpipe.util.Localization.getPreferredContentCountry
+import org.schabi.newpipe.util.Logd
 
 /**
  * Created by Christian Schabesberger on 23.09.17.
@@ -87,7 +88,7 @@ open class KioskFragment : BaseListInfoFragment<StreamInfoItem, KioskInfo>(UserA
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+        Logd(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_kiosk, container, false)
     }
 

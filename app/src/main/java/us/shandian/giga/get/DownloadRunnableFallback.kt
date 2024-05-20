@@ -3,6 +3,7 @@ package us.shandian.giga.get
 import android.util.Log
 import org.schabi.newpipe.BuildConfig
 import org.schabi.newpipe.streams.io.SharpStream
+import org.schabi.newpipe.util.Logd
 import us.shandian.giga.util.Utility
 import java.io.IOException
 import java.io.InputStream
@@ -36,9 +37,7 @@ class DownloadRunnableFallback internal constructor(private val mMission: Downlo
         val done: Boolean
         var start = mMission.fallbackResumeOffset
 
-        if (BuildConfig.DEBUG && !mMission.unknownLength && start > 0) {
-            Log.i(TAG, "Resuming a single-thread download at $start")
-        }
+        if (!mMission.unknownLength && start > 0) Logd(TAG, "Resuming a single-thread download at $start")
 
         try {
             val rangeStart = if ((mMission.unknownLength || start < 1)) -1 else start

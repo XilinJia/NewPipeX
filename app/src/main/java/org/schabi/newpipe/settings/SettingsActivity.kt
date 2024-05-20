@@ -25,6 +25,7 @@ import org.schabi.newpipe.util.DeviceUtils.isTv
 import org.schabi.newpipe.util.KeyboardUtil.hideKeyboard
 import org.schabi.newpipe.util.KeyboardUtil.showKeyboard
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ReleaseVersionUtil.isReleaseApk
 import org.schabi.newpipe.util.ThemeHelper.getSettingsThemeStyle
 import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
@@ -245,9 +246,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
 
         // Hide debug preferences in RELEASE build variant
         if (DEBUG) {
-            SettingsResourceRegistry.instance
-                .getEntryByPreferencesResId(R.xml.debug_settings)
-                ?.setSearchable(true)
+            SettingsResourceRegistry.instance.getEntryByPreferencesResId(R.xml.debug_settings)?.setSearchable(true)
         }
     }
 
@@ -270,10 +269,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
     var isSearchActive: Boolean = false
         get() = searchContainer!!.visibility == View.VISIBLE
         set(active) {
-            if (DEBUG) {
-                Log.d(TAG, "setSearchActive called active=$active")
-            }
-
+            Logd(TAG, "setSearchActive called active=$active")
             // Ignore if search is already in correct state
             if (field == active) return
 
@@ -294,11 +290,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
                 showKeyboard(this, searchEditText)
             } else if (searchFragment != null) {
                 hideSearchFragment()
-                supportFragmentManager
-                    .popBackStack(
-                        PreferenceSearchFragment.NAME,
-                        FragmentManager.POP_BACK_STACK_INCLUSIVE)
-
+                supportFragmentManager.popBackStack(PreferenceSearchFragment.NAME, FragmentManager.POP_BACK_STACK_INCLUSIVE)
                 hideKeyboard(this, searchEditText)
             }
 
@@ -315,23 +307,18 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
     }
 
     override fun onSearchResultClicked(result: PreferenceSearchItem) {
-        if (DEBUG) {
-            Log.d(TAG, "onSearchResultClicked called result=$result")
-        }
+        Logd(TAG, "onSearchResultClicked called result=$result")
 
         // Hide the search
         isSearchActive = false
 
         // -- Highlight the result --
         // Find out which fragment class we need
-        val targetedFragmentClass =
-            SettingsResourceRegistry.instance
-                .getFragmentClass(result.searchIndexItemResId)
+        val targetedFragmentClass = SettingsResourceRegistry.instance.getFragmentClass(result.searchIndexItemResId)
 
         if (targetedFragmentClass == null) {
             // This should never happen
-            Log.w(TAG, "Unable to locate fragment class for resId="
-                    + result.searchIndexItemResId)
+            Log.w(TAG, "Unable to locate fragment class for resId=${result.searchIndexItemResId}")
             return
         }
 

@@ -27,6 +27,7 @@ import org.schabi.newpipe.settings.tabs.Tab
 import org.schabi.newpipe.settings.tabs.TabsManager
 import org.schabi.newpipe.settings.tabs.TabsManager.Companion.getManager
 import org.schabi.newpipe.settings.tabs.TabsManager.SavedTabsChangeListener
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.openSearchFragment
 import org.schabi.newpipe.util.ServiceHelper.getSelectedServiceId
 import org.schabi.newpipe.util.ThemeHelper.resolveColorFromAttr
@@ -54,14 +55,9 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
         setHasOptionsMenu(true)
         tabsManager = getManager(requireActivity())
         tabsManager!!.setSavedTabsListener {
-            if (DEBUG) {
-                Log.d(TAG, "TabsManager.SavedTabsChangeListener: onTabsChanged called, isResumed = $isResumed")
-            }
-            if (isResumed) {
-                setupTabs()
-            } else {
-                hasTabsChanged = true
-            }
+            Logd(TAG, "TabsManager.SavedTabsChangeListener: onTabsChanged called, isResumed = $isResumed")
+            if (isResumed) setupTabs()
+            else hasTabsChanged = true
         }
 
         prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
@@ -72,7 +68,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        Log.d(TAG, "onCreateView")
+        Logd(TAG, "onCreateView")
         return inflater.inflate(R.layout.fragment_main, container, false)
     }
 
@@ -123,9 +119,7 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
     ////////////////////////////////////////////////////////////////////////// */
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
-        if (DEBUG) {
-            Log.d(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
-        }
+        Logd(TAG, "onCreateOptionsMenu() called with: menu = [$menu], inflater = [$inflater]")
         inflater.inflate(R.menu.menu_main_fragment, menu)
 
         val supportActionBar = activity?.supportActionBar
@@ -151,9 +145,8 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
         tabsList.clear()
         tabsList.addAll(tabsManager!!.tabs)
 
-        if (pagerAdapter == null || !pagerAdapter!!.sameTabs(tabsList)) {
+        if (pagerAdapter == null || !pagerAdapter!!.sameTabs(tabsList))
             pagerAdapter = SelectedTabsPagerAdapter(requireContext(), childFragmentManager, tabsList)
-        }
 
         binding!!.pager.adapter = null
         binding!!.pager.adapter = pagerAdapter
@@ -214,18 +207,14 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
     }
 
     override fun onTabSelected(selectedTab: TabLayout.Tab) {
-        if (DEBUG) {
-            Log.d(TAG, "onTabSelected() called with: selectedTab = [$selectedTab]")
-        }
+        Logd(TAG, "onTabSelected() called with: selectedTab = [$selectedTab]")
         updateTitleForTab(selectedTab.position)
     }
 
     override fun onTabUnselected(tab: TabLayout.Tab) {}
 
     override fun onTabReselected(tab: TabLayout.Tab) {
-        if (DEBUG) {
-            Log.d(TAG, "onTabReselected() called with: tab = [$tab]")
-        }
+        Logd(TAG, "onTabReselected() called with: tab = [$tab]")
         updateTitleForTab(tab.position)
     }
 
@@ -254,13 +243,8 @@ class MainFragment : BaseFragment(), OnTabSelectedListener {
                 return BlankFragment()
             }
 
-            if (fragment is BaseFragment) {
-                fragment.useAsFrontPage(true)
-            }
-
-            if (fragment is LocalPlaylistFragment) {
-                localPlaylistFragments.add(fragment)
-            }
+            if (fragment is BaseFragment) fragment.useAsFrontPage(true)
+            if (fragment is LocalPlaylistFragment) localPlaylistFragments.add(fragment)
 
             return fragment
         }

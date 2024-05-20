@@ -36,6 +36,7 @@ import org.schabi.newpipe.extractor.subscription.SubscriptionItem
 import org.schabi.newpipe.local.subscription.services.ImportExportJsonHelper.writeTo
 import org.schabi.newpipe.streams.io.SharpOutputStream
 import org.schabi.newpipe.streams.io.StoredFileHelper
+import org.schabi.newpipe.util.Logd
 import java.io.IOException
 import java.io.OutputStream
 
@@ -102,9 +103,7 @@ class SubscriptionsExportService : BaseImportExportService() {
             }
 
             override fun onNext(file: StoredFileHelper) {
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "startExport() success: file = $file")
-                }
+                Logd(TAG, "startExport() success: file = $file")
             }
 
             override fun onError(error: Throwable) {

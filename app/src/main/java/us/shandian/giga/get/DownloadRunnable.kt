@@ -3,6 +3,7 @@ package us.shandian.giga.get
 import android.util.Log
 import org.schabi.newpipe.BuildConfig
 import org.schabi.newpipe.streams.io.SharpStream
+import org.schabi.newpipe.util.Logd
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.nio.channels.ClosedByInterruptException
@@ -39,14 +40,12 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
             if (!retry) block = mMission.acquireBlock()
 
             if (block == null) {
-                if (BuildConfig.DEBUG) Log.d(TAG, "$mId:no more blocks left, exiting")
+                Logd(TAG, "$mId:no more blocks left, exiting")
                 break
             }
 
-            if (BuildConfig.DEBUG) {
-                if (retry) Log.d(TAG, "$mId:retry block at position=${block.position} from the start")
-                else Log.d(TAG, "$mId:acquired block at position=${block.position} done=${block.done}")
-            }
+            if (retry) Logd(TAG, "$mId:retry block at position=${block.position} from the start")
+            else Logd(TAG, "$mId:acquired block at position=${block.position} done=${block.done}")
 
             var start = block.position.toLong() * DownloadMission.BLOCK_SIZE
             var end = start + DownloadMission.BLOCK_SIZE - 1
@@ -99,8 +98,8 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
                         mMission.notifyProgress(len.toLong())
                     }
                 }
-                if (BuildConfig.DEBUG && mMission.running) {
-                    Log.d(TAG, mId.toString() + ":position " + block.position + " stopped " + start + "/" + end)
+                if (mMission.running) {
+                    Logd(TAG, mId.toString() + ":position " + block.position + " stopped " + start + "/" + end)
                 }
             } catch (e: Exception) {
                 if (!mMission.running || e is ClosedByInterruptException) break
@@ -128,21 +127,14 @@ class DownloadRunnable internal constructor(mission: DownloadMission, private va
         }
 
         f.close()
-
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "thread $mId exited from main download loop")
-        }
+        Logd(TAG, "thread $mId exited from main download loop")
 
         if (mMission.errCode == DownloadMission.ERROR_NOTHING && mMission.running) {
-            if (BuildConfig.DEBUG) {
-                Log.d(TAG, "no error has happened, notifying")
-            }
+            Logd(TAG, "no error has happened, notifying")
             mMission.notifyFinished()
         }
 
-        if (BuildConfig.DEBUG && !mMission.running) {
-            Log.d(TAG, "The mission has been paused. Passing.")
-        }
+        if (!mMission.running) Logd(TAG, "The mission has been paused. Passing.")
     }
 
     override fun interrupt() {

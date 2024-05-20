@@ -15,6 +15,7 @@ import org.schabi.newpipe.BuildConfig
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.extractor.Image
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.image.ImageStrategy
 import org.schabi.newpipe.util.image.PicassoHelper
 import java.io.File
@@ -394,14 +395,10 @@ object ShareUtils {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fileOutputStream)
             fileOutputStream.close()
 
-            val clipData = ClipData.newUri(applicationContext.contentResolver, "",
-                FileProvider.getUriForFile(applicationContext,
-                    BuildConfig.APPLICATION_ID + ".provider",
-                    thumbnailPreviewFile))
+            val clipData = ClipData.newUri(applicationContext.contentResolver, "", FileProvider.getUriForFile(applicationContext,
+                BuildConfig.APPLICATION_ID + ".provider", thumbnailPreviewFile))
 
-            if (MainActivity.DEBUG) {
-                Log.d(TAG, "ClipData successfully generated for Android share sheet: $clipData")
-            }
+                Logd(TAG, "ClipData successfully generated for Android share sheet: $clipData")
             return clipData
         } catch (e: Exception) {
             Log.w(TAG, "Error when setting preview image for share sheet", e)

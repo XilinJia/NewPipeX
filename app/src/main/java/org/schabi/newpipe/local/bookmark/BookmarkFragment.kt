@@ -28,6 +28,7 @@ import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.local.BaseLocalListFragment
 import org.schabi.newpipe.local.playlist.LocalPlaylistManager
 import org.schabi.newpipe.local.playlist.RemotePlaylistManager
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.openLocalPlaylistFragment
 import org.schabi.newpipe.util.NavigationHelper.openPlaylistFragment
 import org.schabi.newpipe.util.OnClickGesture
@@ -298,23 +299,14 @@ class BookmarkFragment : BaseLocalListFragment<List<PlaylistLocalItem>, Void>() 
     }
 
     private fun changeLocalPlaylistName(id: Long, name: String) {
-        if (localPlaylistManager == null) {
-            return
-        }
-
-        if (DEBUG) {
-            Log.d(TAG, "Updating playlist id=[" + id + "] "
-                    + "with new name=[" + name + "] items")
-        }
+        if (localPlaylistManager == null) return
+        Logd(TAG, "Updating playlist id=[$id] with new name=[$name] items")
 
         localPlaylistManager!!.renamePlaylist(id, name)
         val disposable = localPlaylistManager!!.renamePlaylist(id, name)
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({ longs: Int? -> }, { throwable: Throwable? ->
-                showError(
-                    ErrorInfo(throwable!!,
-                        UserAction.REQUESTED_BOOKMARK,
-                        "Changing playlist name"))
+                showError(ErrorInfo(throwable!!, UserAction.REQUESTED_BOOKMARK, "Changing playlist name"))
             })
         disposables!!.add(disposable)
     }

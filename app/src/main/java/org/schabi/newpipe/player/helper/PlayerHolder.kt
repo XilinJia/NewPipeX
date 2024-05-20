@@ -14,22 +14,24 @@ import androidx.media3.common.util.UnstableApi
 import org.schabi.newpipe.App.Companion.getApp
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.extractor.stream.StreamInfo
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerService.LocalBinder
 import org.schabi.newpipe.player.PlayerType
 import org.schabi.newpipe.player.event.PlayerServiceEventListener
 import org.schabi.newpipe.player.event.PlayerServiceExtendedEventListener
 import org.schabi.newpipe.player.playqueue.PlayQueue
+import org.schabi.newpipe.util.Logd
 
-@OptIn(UnstableApi::class) class PlayerHolder private constructor() {
+@OptIn(UnstableApi::class)
+class PlayerHolder private constructor() {
     private var listener: PlayerServiceExtendedEventListener? = null
 
     private val serviceConnection = PlayerServiceConnection()
     var isBound: Boolean = false
         private set
     private var playerService: PlayerService? = null
-    private var player: Player? = null
+    private var playerManager: PlayerManager? = null
 
     val type: PlayerType?
         /**
@@ -39,18 +41,18 @@ import org.schabi.newpipe.player.playqueue.PlayQueue
          * @return Current PlayerType
          */
         get() {
-            if (player == null) return null
-            return player!!.playerType
+            if (playerManager == null) return null
+            return playerManager!!.playerType
         }
 
     val isPlaying: Boolean
         get() {
-            if (player == null) return false
-            return player!!.isPlaying
+            if (playerManager == null) return false
+            return playerManager!!.isPlaying
         }
 
     val isPlayerOpen: Boolean
-        get() = player != null
+        get() = playerManager != null
 
     val isPlayQueueReady: Boolean
         /**
@@ -58,19 +60,19 @@ import org.schabi.newpipe.player.playqueue.PlayQueue
          * the stream long press menu) when there actually is a play queue to manipulate.
          * @return true only if the player is open and its play queue is ready (i.e. it is not null)
          */
-        get() = player != null && player!!.playQueue != null
+        get() = playerManager != null && playerManager!!.playQueue != null
 
     val queueSize: Int
         get() {
             // player play queue might be null e.g. while player is starting
-            if (player?.playQueue == null) return 0
-            return player!!.playQueue!!.size()
+            if (playerManager?.playQueue == null) return 0
+            return playerManager!!.playQueue!!.size()
         }
 
     val queuePosition: Int
         get() {
-            if (player?.playQueue == null) return 0
-            return player!!.playQueue!!.index
+            if (playerManager?.playQueue == null) return 0
+            return playerManager!!.playQueue!!.index
         }
 
     fun setListener(newListener: PlayerServiceExtendedEventListener?) {
@@ -79,8 +81,8 @@ import org.schabi.newpipe.player.playqueue.PlayQueue
         if (listener == null) return
 
         // Force reload data from service
-        if (player != null) {
-            listener!!.onServiceConnected(player, playerService, false)
+        if (playerManager != null) {
+            listener!!.onServiceConnected(playerManager, playerService, false)
             startPlayerListener()
         }
     }
@@ -119,60 +121,49 @@ import org.schabi.newpipe.player.playqueue.PlayQueue
         }
 
         override fun onServiceDisconnected(compName: ComponentName) {
-            if (DEBUG) {
-                Log.d(TAG, "Player service is disconnected")
-            }
-
+            Logd(TAG, "Player service is disconnected")
             val context: Context = commonContext
             unbind(context)
         }
 
         override fun onServiceConnected(compName: ComponentName, service: IBinder) {
-            if (DEBUG) {
-                Log.d(TAG, "Player service is connected")
-            }
+            Logd(TAG, "Player service is connected")
             val localBinder = service as LocalBinder
 
             playerService = localBinder.service
-            player = localBinder.getPlayer()
-            listener?.onServiceConnected(player, playerService, playAfterConnect)
+            playerManager = localBinder.getPlayer()
+            listener?.onServiceConnected(playerManager, playerService, playAfterConnect)
             startPlayerListener()
         }
     }
 
     private fun bind(context: Context) {
-        if (DEBUG) {
-            Log.d(TAG, "bind() called")
-        }
-
+        Logd(TAG, "bind() called")
         val serviceIntent = Intent(context, PlayerService::class.java)
         isBound = context.bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
-        if (!isBound) {
-            context.unbindService(serviceConnection)
-        }
+        if (!isBound) context.unbindService(serviceConnection)
     }
 
     private fun unbind(context: Context) {
-        if (DEBUG) {
-            Log.d(TAG, "unbind() called")
-        }
-
+        Logd(TAG, "unbind() called")
         if (isBound) {
             context.unbindService(serviceConnection)
             isBound = false
             stopPlayerListener()
             playerService = null
-            player = null
+            playerManager = null
             listener?.onServiceDisconnected()
         }
     }
 
-    @OptIn(UnstableApi::class) private fun startPlayerListener() {
-        player?.setFragmentListener(internalListener)
+    @OptIn(UnstableApi::class)
+    private fun startPlayerListener() {
+        playerManager?.setFragmentListener(internalListener)
     }
 
-    @OptIn(UnstableApi::class) private fun stopPlayerListener() {
-        player?.removeFragmentListener(internalListener)
+    @OptIn(UnstableApi::class)
+    private fun stopPlayerListener() {
+        playerManager?.removeFragmentListener(internalListener)
     }
 
     private val internalListener: PlayerServiceEventListener = object : PlayerServiceEventListener {

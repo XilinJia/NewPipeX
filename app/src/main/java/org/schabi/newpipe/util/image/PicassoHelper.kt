@@ -17,6 +17,7 @@ import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.extractor.Image
 import org.schabi.newpipe.extractor.utils.Utils
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.image.ImageStrategy.choosePreferredImage
 import org.schabi.newpipe.util.image.ImageStrategy.shouldLoadImages
 import java.io.File
@@ -137,9 +138,7 @@ object PicassoHelper {
         return loadThumbnail(images)
             .transform(object : Transformation {
                 override fun transform(source: Bitmap): Bitmap {
-                    if (MainActivity.DEBUG) {
-                        Log.d(TAG, "Thumbnail - transform() called")
-                    }
+                    Logd(TAG, "Thumbnail - transform() called")
 
                     val notificationThumbnailWidth = min(
                         context.resources

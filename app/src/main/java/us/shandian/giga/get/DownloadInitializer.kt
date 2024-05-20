@@ -3,6 +3,7 @@ package us.shandian.giga.get
 import android.text.TextUtils
 import android.util.Log
 import org.schabi.newpipe.BuildConfig
+import org.schabi.newpipe.util.Logd
 import us.shandian.giga.util.Utility
 import java.io.IOException
 import java.io.InterruptedIOException
@@ -86,10 +87,7 @@ class DownloadInitializer internal constructor(private val mMission: DownloadMis
                     mMission.blocks = IntArray(0)
                     mMission.length = 0
                     mMission.unknownLength = true
-
-                    if (BuildConfig.DEBUG) {
-                        Log.d(TAG, "falling back (unknown length)")
-                    }
+                    Logd(TAG, "falling back (unknown length)")
                 } else {
                     // Open again
                     mConn = mMission.openConnection(true, mMission.length - 10, mMission.length)
@@ -110,18 +108,12 @@ class DownloadInitializer internal constructor(private val mMission: DownloadMis
                                 mMission.blocks = IntArray(0)
                                 mMission.unknownLength = false
                             }
-
-                            if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "http response code = " + mConn!!.getResponseCode())
-                            }
+                            Logd(TAG, "http response code = " + mConn!!.getResponseCode())
                         } else {
                             // Fallback to single thread
                             mMission.blocks = IntArray(0)
                             mMission.unknownLength = false
-
-                            if (BuildConfig.DEBUG) {
-                                Log.d(TAG, "falling back due http response code = " + mConn?.getResponseCode())
-                            }
+                            Logd(TAG, "falling back due http response code = " + mConn?.getResponseCode())
                         }
                     }
 

@@ -133,11 +133,17 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
     private var mimeTmp: String? = null
 
     private val requestDownloadSaveAsLauncher = registerForActivityResult<Intent, ActivityResult>(
-        ActivityResultContracts.StartActivityForResult()) { result: ActivityResult -> this.requestDownloadSaveAsResult(result) }
+        ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+        this.requestDownloadSaveAsResult(result)
+    }
     private val requestDownloadPickAudioFolderLauncher = registerForActivityResult<Intent, ActivityResult>(
-        ActivityResultContracts.StartActivityForResult()) { result: ActivityResult -> this.requestDownloadPickAudioFolderResult(result) }
+        ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+        this.requestDownloadPickAudioFolderResult(result)
+    }
     private val requestDownloadPickVideoFolderLauncher = registerForActivityResult<Intent, ActivityResult>(
-        ActivityResultContracts.StartActivityForResult()) { result: ActivityResult -> this.requestDownloadPickVideoFolderResult(result) }
+        ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+        this.requestDownloadPickVideoFolderResult(result)
+    }
 
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -193,10 +199,10 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
     ////////////////////////////////////////////////////////////////////////// */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (DEBUG) {
-            Log.d(TAG, "onCreate() called with: "
-                    + "savedInstanceState = [" + savedInstanceState + "]")
-        }
+
+        Logd(TAG, "onCreate() called with: "
+                + "savedInstanceState = [" + savedInstanceState + "]")
+
 
         if (!checkStoragePermissions(requireActivity(), PermissionHelper.DOWNLOAD_DIALOG_REQUEST_CODE)) {
             dismiss()
@@ -272,11 +278,11 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
                               container: ViewGroup?,
                               savedInstanceState: Bundle?
     ): View? {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateView() called with: "
-                    + "inflater = [" + inflater + "], container = [" + container + "], "
-                    + "savedInstanceState = [" + savedInstanceState + "]")
-        }
+
+        Logd(TAG, "onCreateView() called with: "
+                + "inflater = [" + inflater + "], container = [" + container + "], "
+                + "savedInstanceState = [" + savedInstanceState + "]")
+
         return inflater.inflate(R.layout.download_dialog, container)
     }
 
@@ -322,9 +328,9 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
     }
 
     private fun initToolbar(toolbar: Toolbar) {
-        if (DEBUG) {
-            Log.d(TAG, "initToolbar() called with: toolbar = [$toolbar]")
-        }
+
+        Logd(TAG, "initToolbar() called with: toolbar = [$toolbar]")
+
 
         toolbar.setTitle(R.string.download_dialog_title)
         toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
@@ -554,10 +560,10 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
     // Listeners
     ////////////////////////////////////////////////////////////////////////// */
     override fun onCheckedChanged(group: RadioGroup, @IdRes checkedId: Int) {
-        if (DEBUG) {
-            Log.d(TAG, "onCheckedChanged() called with: "
-                    + "group = [" + group + "], checkedId = [" + checkedId + "]")
-        }
+
+        Logd(TAG, "onCheckedChanged() called with: "
+                + "group = [" + group + "], checkedId = [" + checkedId + "]")
+
         var flag = true
 
         when (checkedId) {
@@ -576,11 +582,10 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
                                 position: Int,
                                 id: Long
     ) {
-        if (DEBUG) {
-            Log.d(TAG, "onItemSelected() called with: "
-                    + "parent = [" + parent + "], view = [" + view + "], "
-                    + "position = [" + position + "], id = [" + id + "]")
-        }
+
+        Logd(TAG, "onItemSelected() called with: "
+                + "parent = [" + parent + "], view = [" + view + "], "
+                + "position = [" + position + "], id = [" + id + "]")
 
         when (parent.id) {
             R.id.quality_spinner -> {
@@ -624,9 +629,12 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
                 }
                 R.id.subtitle_button -> {
                     if (subtitleStreamsAdapter != null) {
-                        val setSubtitleLanguageCode = subtitleStreamsAdapter!!.getItem(selectedSubtitleIndex).languageTag
+                        val setSubtitleLanguageCode =
+                            subtitleStreamsAdapter!!.getItem(selectedSubtitleIndex).languageTag
                         // this will reset the cursor position, which is bad UX, but it can't be avoided
-                        dialogBinding!!.fileName.setText(getString(R.string.caption_file_name, fileName, setSubtitleLanguageCode))
+                        dialogBinding!!.fileName.setText(getString(R.string.caption_file_name,
+                            fileName,
+                            setSubtitleLanguageCode))
                     }
                 }
             }
@@ -1056,7 +1064,8 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
             R.id.video_button -> {
                 kind = 'v'
                 selectedStream = videoStreamsAdapter!!.getItem(selectedVideoIndex)
-                val secondary = videoStreamsAdapter!!.allSecondary[wrappedVideoStreams!!.streamsList.indexOf(selectedStream)]
+                val secondary =
+                    videoStreamsAdapter!!.allSecondary[wrappedVideoStreams!!.streamsList.indexOf(selectedStream)]
 
                 if (secondary != null) {
                     secondaryStream = secondary.stream
@@ -1104,7 +1113,16 @@ class DownloadDialog : DialogFragment, RadioGroup.OnCheckedChangeListener, Adapt
             recoveryInfo = listOf(MissionRecoveryInfo(selectedStream), MissionRecoveryInfo(secondaryStream))
         }
 
-        startMission(requireContext(), urls, storage, kind, threads, currentInfo!!.url, psName, psArgs, nearLength, ArrayList(recoveryInfo))
+        startMission(requireContext(),
+            urls,
+            storage,
+            kind,
+            threads,
+            currentInfo!!.url,
+            psName,
+            psArgs,
+            nearLength,
+            ArrayList(recoveryInfo))
 
         Toast.makeText(context, getString(R.string.download_has_started), Toast.LENGTH_SHORT).show()
 

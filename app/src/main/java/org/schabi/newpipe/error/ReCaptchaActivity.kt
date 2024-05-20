@@ -18,6 +18,7 @@ import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.ActivityRecaptchaBinding
 import org.schabi.newpipe.extractor.utils.Utils
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ThemeHelper.setTheme
 import java.io.UnsupportedEncodingException
 
@@ -63,13 +64,8 @@ class ReCaptchaActivity : AppCompatActivity() {
         webSettings.userAgentString = DownloaderImpl.USER_AGENT
 
         recaptchaBinding!!.reCaptchaWebView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView,
-                                                  request: WebResourceRequest
-            ): Boolean {
-                if (MainActivity.DEBUG) {
-                    Log.d(TAG, "shouldOverrideUrlLoading: url=" + request.url.toString())
-                }
-
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                Logd(TAG, "shouldOverrideUrlLoading: url=${request.url}")
                 handleCookiesFromUrl(request.url.toString())
                 return false
             }
@@ -117,9 +113,7 @@ class ReCaptchaActivity : AppCompatActivity() {
     private fun saveCookiesAndFinish() {
         // try to get cookies of unclosed page
         handleCookiesFromUrl(recaptchaBinding!!.reCaptchaWebView.url)
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "saveCookiesAndFinish: foundCookies=$foundCookies")
-        }
+        Logd(TAG, "saveCookiesAndFinish: foundCookies=$foundCookies")
 
         if (!foundCookies.isEmpty()) {
             // save cookies to preferences
@@ -143,13 +137,8 @@ class ReCaptchaActivity : AppCompatActivity() {
 
 
     private fun handleCookiesFromUrl(url: String?) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "handleCookiesFromUrl: url=" + (url ?: "null"))
-        }
-
-        if (url == null) {
-            return
-        }
+        Logd(TAG, "handleCookiesFromUrl: url=" + (url ?: "null"))
+        if (url == null) return
 
         val cookies = CookieManager.getInstance().getCookie(url)
         handleCookies(cookies)
@@ -164,54 +153,36 @@ class ReCaptchaActivity : AppCompatActivity() {
                 abuseCookie = Utils.decodeUrlUtf8(abuseCookie)
                 handleCookies(abuseCookie)
             } catch (e: UnsupportedEncodingException) {
-                if (MainActivity.DEBUG) {
                     e.printStackTrace()
-                    Log.d(TAG, "handleCookiesFromUrl: invalid google abuse starting at "
-                            + abuseStart + " and ending at " + abuseEnd + " for url " + url)
-                }
+                    Logd(TAG, "handleCookiesFromUrl: invalid google abuse starting at $abuseStart and ending at $abuseEnd for url $url")
             } catch (e: StringIndexOutOfBoundsException) {
-                if (MainActivity.DEBUG) {
                     e.printStackTrace()
-                    Log.d(TAG, "handleCookiesFromUrl: invalid google abuse starting at "
-                            + abuseStart + " and ending at " + abuseEnd + " for url " + url)
-                }
+                    Logd(TAG, "handleCookiesFromUrl: invalid google abuse starting at $abuseStart and ending at $abuseEnd for url $url")
             }
         }
     }
 
     private fun handleCookies(cookies: String?) {
-        if (MainActivity.DEBUG) {
-            Log.d(TAG, "handleCookies: cookies=" + (cookies ?: "null"))
-        }
-
-        if (cookies == null) {
-            return
-        }
+        Logd(TAG, "handleCookies: cookies=" + (cookies ?: "null"))
+        if (cookies == null) return
 
         addYoutubeCookies(cookies)
         // add here methods to extract cookies for other services
     }
 
     private fun addYoutubeCookies(cookies: String) {
-        if (cookies.contains("s_gl=") || cookies.contains("goojf=")
-                || cookies.contains("VISITOR_INFO1_LIVE=")
-                || cookies.contains("GOOGLE_ABUSE_EXEMPTION=")) {
-            // youtube seems to also need the other cookies:
-            addCookie(cookies)
-        }
+        // youtube seems to also need the other cookies:
+        if (cookies.contains("s_gl=") || cookies.contains("goojf=") || cookies.contains("VISITOR_INFO1_LIVE=")
+                || cookies.contains("GOOGLE_ABUSE_EXEMPTION=")) addCookie(cookies)
     }
 
     private fun addCookie(cookie: String) {
-        if (foundCookies.contains(cookie)) {
-            return
-        }
+        if (foundCookies.contains(cookie)) return
 
-        foundCookies += if (foundCookies.isEmpty() || foundCookies.endsWith("; ")) {
-            cookie
-        } else if (foundCookies.endsWith(";")) {
-            " $cookie"
-        } else {
-            "; $cookie"
+        foundCookies += when {
+            foundCookies.isEmpty() || foundCookies.endsWith("; ") -> cookie
+            foundCookies.endsWith(";") -> " $cookie"
+            else -> "; $cookie"
         }
     }
 
@@ -223,12 +194,10 @@ class ReCaptchaActivity : AppCompatActivity() {
         const val RECAPTCHA_COOKIES_KEY: String = "recaptcha_cookies"
 
         fun sanitizeRecaptchaUrl(url: String?): String {
-            return if (url == null || url.trim { it <= ' ' }.isEmpty()) {
-                YT_URL // YouTube is the most likely service to have thrown a recaptcha
-            } else {
-                // remove "pbj=1" parameter from YouYube urls, as it makes the page JSON and not HTML
-                url.replace("&pbj=1", "").replace("pbj=1&", "").replace("?pbj=1", "")
-            }
+            // YouTube is the most likely service to have thrown a recaptcha
+            return if (url == null || url.trim { it <= ' ' }.isEmpty()) YT_URL
+            // remove "pbj=1" parameter from YouYube urls, as it makes the page JSON and not HTML
+            else url.replace("&pbj=1", "").replace("pbj=1&", "").replace("?pbj=1", "")
         }
     }
 }

@@ -195,9 +195,7 @@ object ExtractorHelper {
         checkServiceId(serviceId)
         return Maybe.defer<I> {
             val info = CACHE.getFromKey(serviceId, url, infoType) as? I
-            if (MainActivity.DEBUG) {
-                Log.d(TAG, "loadFromCache() called, info > $info")
-            }
+            Logd(TAG, "loadFromCache() called, info > $info")
 
             // Only return info if it's not null (it is cached)
             if (info != null) Maybe.just<I>(info)

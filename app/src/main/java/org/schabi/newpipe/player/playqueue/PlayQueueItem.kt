@@ -9,11 +9,15 @@ import org.schabi.newpipe.extractor.stream.StreamType
 import org.schabi.newpipe.util.ExtractorHelper.getStreamInfo
 import java.io.Serializable
 
-class PlayQueueItem private constructor(name: String?, url: String?,
-                                        @JvmField val serviceId: Int, @JvmField val duration: Long,
-                                        @JvmField val thumbnails: List<Image>, uploader: String?,
-                                        val uploaderUrl: String, val streamType: StreamType
-) : Serializable {
+class PlayQueueItem private constructor(name: String?,
+                                        url: String?,
+                                        @JvmField val serviceId: Int,
+                                        @JvmField val duration: Long,
+                                        @JvmField val thumbnails: List<Image>,
+                                        uploader: String?,
+                                        val uploaderUrl: String,
+                                        val streamType: StreamType) : Serializable {
+
     @JvmField
     val title: String
     @JvmField
@@ -36,9 +40,7 @@ class PlayQueueItem private constructor(name: String?, url: String?,
     internal constructor(info: StreamInfo) : this(info.name, info.url, info.serviceId, info.duration,
         info.thumbnails, info.uploaderName,
         info.uploaderUrl, info.streamType) {
-        if (info.startPosition > 0) {
-            recoveryPosition = info.startPosition * 1000
-        }
+        if (info.startPosition > 0) recoveryPosition = info.startPosition * 1000
     }
 
     internal constructor(item: StreamInfoItem) : this(item.name, item.url, item.serviceId, item.duration,

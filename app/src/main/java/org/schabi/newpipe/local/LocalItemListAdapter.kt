@@ -14,6 +14,7 @@ import org.schabi.newpipe.local.history.HistoryRecordManager
 import org.schabi.newpipe.local.holder.*
 import org.schabi.newpipe.util.FallbackViewHolder
 import org.schabi.newpipe.util.Localization.getPreferredLocale
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.OnClickGesture
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -58,33 +59,19 @@ class LocalItemListAdapter(context: Context?) : RecyclerView.Adapter<RecyclerVie
     }
 
     fun addItems(data: List<LocalItem>?) {
-        if (data == null) {
-            return
-        }
-        if (DEBUG) {
-            Log.d(TAG, "addItems() before > localItems.size() = "
-                    + itemsList.size + ", data.size() = " + data.size)
-        }
+        if (data == null) return
+        Logd(TAG, "addItems() before > localItems.size() = ${itemsList.size}, data.size() = ${data.size}")
 
         val offsetStart = sizeConsideringHeader()
         itemsList.addAll(data)
+        Logd(TAG, "addItems() after > offsetStart = $offsetStart, localItems.size() = ${itemsList.size}, header = $header, footer = $footer, showFooter = $showFooter")
 
-        if (DEBUG) {
-            Log.d(TAG, "addItems() after > offsetStart = " + offsetStart + ", "
-                    + "localItems.size() = " + itemsList.size + ", "
-                    + "header = " + header + ", footer = " + footer + ", "
-                    + "showFooter = " + showFooter)
-        }
         notifyItemRangeInserted(offsetStart, data.size)
 
         if (footer != null && showFooter) {
             val footerNow = sizeConsideringHeader()
             notifyItemMoved(offsetStart, footerNow)
-
-            if (DEBUG) {
-                Log.d(TAG, "addItems() footer from " + offsetStart
-                        + " to " + footerNow)
-            }
+            Logd(TAG, "addItems() footer from $offsetStart to $footerNow")
         }
     }
 
@@ -110,12 +97,8 @@ class LocalItemListAdapter(context: Context?) : RecyclerView.Adapter<RecyclerVie
         val actualFrom = adapterOffsetWithoutHeader(fromAdapterPosition)
         val actualTo = adapterOffsetWithoutHeader(toAdapterPosition)
 
-        if (actualFrom < 0 || actualTo < 0) {
-            return false
-        }
-        if (actualFrom >= itemsList.size || actualTo >= itemsList.size) {
-            return false
-        }
+        if (actualFrom < 0 || actualTo < 0) return false
+        if (actualFrom >= itemsList.size || actualTo >= itemsList.size) return false
 
         itemsList.add(actualTo, itemsList.removeAt(actualFrom))
         notifyItemMoved(fromAdapterPosition, toAdapterPosition)
@@ -147,9 +130,9 @@ class LocalItemListAdapter(context: Context?) : RecyclerView.Adapter<RecyclerVie
     }
 
     fun showFooter(show: Boolean) {
-        if (DEBUG) {
-            Log.d(TAG, "showFooter() called with: show = [$show]")
-        }
+
+        Logd(TAG, "showFooter() called with: show = [$show]")
+
         if (show == showFooter) {
             return
         }
@@ -179,20 +162,20 @@ class LocalItemListAdapter(context: Context?) : RecyclerView.Adapter<RecyclerVie
             count++
         }
 
-        if (DEBUG) {
-            Log.d(TAG, "getItemCount() called, count = " + count + ", "
-                    + "localItems.size() = " + itemsList.size + ", "
-                    + "header = " + header + ", footer = " + footer + ", "
-                    + "showFooter = " + showFooter)
-        }
+
+        Logd(TAG, "getItemCount() called, count = " + count + ", "
+                + "localItems.size() = " + itemsList.size + ", "
+                + "header = " + header + ", footer = " + footer + ", "
+                + "showFooter = " + showFooter)
+
         return count
     }
 
     override fun getItemViewType(position: Int): Int {
         var position = position
-        if (DEBUG) {
-            Log.d(TAG, "getItemViewType() called with: position = [$position]")
-        }
+
+        Logd(TAG, "getItemViewType() called with: position = [$position]")
+
 
         if (header != null && position == 0) {
             return HEADER_TYPE
@@ -243,10 +226,10 @@ class LocalItemListAdapter(context: Context?) : RecyclerView.Adapter<RecyclerVie
     override fun onCreateViewHolder(parent: ViewGroup,
                                     type: Int
     ): RecyclerView.ViewHolder {
-        if (DEBUG) {
-            Log.d(TAG, "onCreateViewHolder() called with: "
-                    + "parent = [" + parent + "], type = [" + type + "]")
-        }
+
+        Logd(TAG, "onCreateViewHolder() called with: "
+                + "parent = [" + parent + "], type = [" + type + "]")
+
         when (type) {
             HEADER_TYPE -> return HeaderFooterHolder(header!!)
             FOOTER_TYPE -> return HeaderFooterHolder(footer!!)
@@ -271,11 +254,11 @@ class LocalItemListAdapter(context: Context?) : RecyclerView.Adapter<RecyclerVie
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         var position = position
-        if (DEBUG) {
-            Log.d(TAG, "onBindViewHolder() called with: "
-                    + "holder = [" + holder.javaClass.simpleName + "], "
-                    + "position = [" + position + "]")
-        }
+
+        Logd(TAG, "onBindViewHolder() called with: "
+                + "holder = [" + holder.javaClass.simpleName + "], "
+                + "position = [" + position + "]")
+
 
         if (holder is LocalItemHolder) {
             // If header isn't null, offset the items by -1

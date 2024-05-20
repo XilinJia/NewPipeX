@@ -5,6 +5,7 @@ import android.util.Log
 import org.schabi.newpipe.MainActivity.Companion.DEBUG
 import org.schabi.newpipe.streams.io.SharpOutputStream
 import org.schabi.newpipe.streams.io.StoredFileHelper
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ZipHelper
 import java.io.IOException
 import java.io.ObjectInputStream
@@ -36,9 +37,7 @@ class ContentSettingsManager(private val fileLocator: NewPipeFileLocator) {
                         output.flush()
                     }
                 } catch (e: IOException) {
-                    if (DEBUG) {
-                        Log.e(TAG, "Unable to exportDatabase", e)
-                    }
+                    Logd(TAG, "Unable to exportDatabase $e")
                 }
 
                 ZipHelper.addFileToZip(outZip, fileLocator.settings.path, "newpipe.settings")
@@ -86,21 +85,11 @@ class ContentSettingsManager(private val fileLocator: NewPipeFileLocator) {
                 val entries = input.readObject() as Map<String, *>
                 for ((key, value) in entries) {
                     when (value) {
-                        is Boolean -> {
-                            preferenceEditor.putBoolean(key, value)
-                        }
-                        is Float -> {
-                            preferenceEditor.putFloat(key, value)
-                        }
-                        is Int -> {
-                            preferenceEditor.putInt(key, value)
-                        }
-                        is Long -> {
-                            preferenceEditor.putLong(key, value)
-                        }
-                        is String -> {
-                            preferenceEditor.putString(key, value)
-                        }
+                        is Boolean -> preferenceEditor.putBoolean(key, value)
+                        is Float -> preferenceEditor.putFloat(key, value)
+                        is Int -> preferenceEditor.putInt(key, value)
+                        is Long -> preferenceEditor.putLong(key, value)
+                        is String -> preferenceEditor.putString(key, value)
                         is Set<*> -> {
                             // There are currently only Sets with type String possible
                             @Suppress("UNCHECKED_CAST")
@@ -111,13 +100,9 @@ class ContentSettingsManager(private val fileLocator: NewPipeFileLocator) {
                 preferenceEditor.commit()
             }
         } catch (e: IOException) {
-            if (DEBUG) {
-                Log.e(TAG, "Unable to loadSharedPreferences", e)
-            }
+            Log.e(TAG, "Unable to loadSharedPreferences", e)
         } catch (e: ClassNotFoundException) {
-            if (DEBUG) {
-                Log.e(TAG, "Unable to loadSharedPreferences", e)
-            }
+            Log.e(TAG, "Unable to loadSharedPreferences", e)
         }
     }
 }

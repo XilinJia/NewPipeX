@@ -1,21 +1,5 @@
 package org.schabi.newpipe.player.mediasession
 
-import android.net.Uri
-import android.os.Bundle
-import android.os.ResultReceiver
-import android.support.v4.media.MediaDescriptionCompat
-import android.support.v4.media.MediaMetadataCompat
-import android.support.v4.media.session.PlaybackStateCompat
-import androidx.media3.session.MediaSession
-import androidx.media3.common.ForwardingPlayer
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.common.util.Util
-import org.schabi.newpipe.player.Player
-import org.schabi.newpipe.player.playqueue.PlayQueue
-import org.schabi.newpipe.util.image.ImageStrategy.choosePreferredImage
-import java.util.*
-import kotlin.math.min
-
 //@UnstableApi class PlayQueueNavigator(private val mediaSession: MediaSession, private val player: Player) : ForwardingPlayer {
 //    private var activeQueueItemId: Long
 //

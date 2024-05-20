@@ -47,7 +47,7 @@ import org.schabi.newpipe.local.playlist.LocalPlaylistFragment
 import org.schabi.newpipe.local.subscription.SubscriptionFragment
 import org.schabi.newpipe.local.subscription.SubscriptionsImportFragment
 import org.schabi.newpipe.player.PlayQueueActivity
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.PlayerService
 import org.schabi.newpipe.player.PlayerType
 import org.schabi.newpipe.player.helper.PlayerHelper
@@ -78,11 +78,11 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         if (playQueue != null) {
             val cacheKey = SerializedCache.instance.put(playQueue, PlayQueue::class.java)
             if (cacheKey != null) {
-                intent.putExtra(Player.PLAY_QUEUE_KEY, cacheKey)
+                intent.putExtra(PlayerManager.PLAY_QUEUE_KEY, cacheKey)
             }
         }
-        intent.putExtra(Player.PLAYER_TYPE, PlayerType.MAIN.valueForIntent())
-        intent.putExtra(Player.RESUME_PLAYBACK, resumePlayback)
+        intent.putExtra(PlayerManager.PLAYER_TYPE, PlayerType.MAIN.valueForIntent())
+        intent.putExtra(PlayerManager.RESUME_PLAYBACK, resumePlayback)
 
         return intent
     }
@@ -90,7 +90,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun <T> getPlayerIntent(context: Context, targetClazz: Class<T>, playQueue: PlayQueue?, resumePlayback: Boolean, playWhenReady: Boolean): Intent {
         return getPlayerIntent(context, targetClazz, playQueue, resumePlayback)
-            .putExtra(Player.PLAY_WHEN_READY, playWhenReady)
+            .putExtra(PlayerManager.PLAY_WHEN_READY, playWhenReady)
     }
 
     fun <T> getPlayerEnqueueIntent(context: Context, targetClazz: Class<T>, playQueue: PlayQueue?): Intent {
@@ -101,12 +101,12 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         //   slightly different behaviour than the normal play action: the latter resumes playback,
         //   the former doesn't. (note that enqueue can be triggered when nothing is playing only
         //   by long pressing the video detail fragment, playlist or channel controls
-        return getPlayerIntent(context, targetClazz, playQueue, false).putExtra(Player.ENQUEUE, true)
+        return getPlayerIntent(context, targetClazz, playQueue, false).putExtra(PlayerManager.ENQUEUE, true)
     }
 
     fun <T> getPlayerEnqueueNextIntent(context: Context, targetClazz: Class<T>, playQueue: PlayQueue?): Intent {
         // see comment in `getPlayerEnqueueIntent` as to why `resumePlayback` is false
-        return getPlayerIntent(context, targetClazz, playQueue, false).putExtra(Player.ENQUEUE_NEXT, true)
+        return getPlayerIntent(context, targetClazz, playQueue, false).putExtra(PlayerManager.ENQUEUE_NEXT, true)
     }
 
     /* PLAY */
@@ -133,7 +133,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         Toast.makeText(context, R.string.popup_playing_toast, Toast.LENGTH_SHORT).show()
 
         val intent = getPlayerIntent(context, PlayerService::class.java, queue, resumePlayback)
-        intent.putExtra(Player.PLAYER_TYPE, PlayerType.POPUP.valueForIntent())
+        intent.putExtra(PlayerManager.PLAYER_TYPE, PlayerType.POPUP.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
     }
 
@@ -142,7 +142,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         Toast.makeText(context, R.string.background_player_playing_toast, Toast.LENGTH_SHORT).show()
 
         val intent = getPlayerIntent(context, PlayerService::class.java, queue, resumePlayback)
-        intent.putExtra(Player.PLAYER_TYPE, PlayerType.AUDIO.valueForIntent())
+        intent.putExtra(PlayerManager.PLAYER_TYPE, PlayerType.AUDIO.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
     }
 
@@ -154,7 +154,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         Toast.makeText(context, R.string.enqueued, Toast.LENGTH_SHORT).show()
         val intent = getPlayerEnqueueIntent(context, PlayerService::class.java, queue)
 
-        intent.putExtra(Player.PLAYER_TYPE, playerType.valueForIntent())
+        intent.putExtra(PlayerManager.PLAYER_TYPE, playerType.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
     }
 
@@ -179,7 +179,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         }
         Toast.makeText(context, R.string.enqueued_next, Toast.LENGTH_SHORT).show()
         val intent = getPlayerEnqueueNextIntent(context, PlayerService::class.java, queue)
-        intent.putExtra(Player.PLAYER_TYPE, playerType.valueForIntent())
+        intent.putExtra(PlayerManager.PLAYER_TYPE, playerType.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
     }
 
@@ -312,11 +312,9 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
 
     @JvmStatic
     fun tryGotoSearchFragment(fragmentManager: FragmentManager): Boolean {
-        if (MainActivity.DEBUG) {
             for (i in 0 until fragmentManager.backStackEntryCount) {
-                Log.d("NavigationHelper", "tryGoToSearchFragment() [$i] = [${fragmentManager.getBackStackEntryAt(i)}]")
+                Logd("NavigationHelper", "tryGoToSearchFragment() [$i] = [${fragmentManager.getBackStackEntryAt(i)}]")
             }
-        }
 
         return fragmentManager.popBackStackImmediate(SEARCH_FRAGMENT_TAG, 0)
     }
@@ -351,7 +349,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     fun openVideoDetailFragment(context: Context, fragmentManager: FragmentManager, serviceId: Int, url: String?, title: String, playQueue: PlayQueue?, switchingPlayers: Boolean) {
         val autoPlay: Boolean
         val playerType = PlayerHolder.instance?.type
-        Log.d(TAG, "openVideoDetailFragment: $playerType")
+        Logd(TAG, "openVideoDetailFragment: $playerType")
         autoPlay = when {
             // no player open
             playerType == null -> PlayerHelper.isAutoplayAllowedByUser(context)
@@ -521,7 +519,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         if (playQueue != null) {
             val cacheKey = SerializedCache.instance.put(playQueue, PlayQueue::class.java)
             if (cacheKey != null) {
-                intent.putExtra(Player.PLAY_QUEUE_KEY, cacheKey)
+                intent.putExtra(PlayerManager.PLAY_QUEUE_KEY, cacheKey)
             }
         }
         context.startActivity(intent)

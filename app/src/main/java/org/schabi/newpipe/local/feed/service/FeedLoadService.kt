@@ -39,6 +39,7 @@ import org.schabi.newpipe.App
 import org.schabi.newpipe.MainActivity.Companion.DEBUG
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
+import org.schabi.newpipe.util.Logd
 import us.shandian.giga.service.DownloadManagerService
 import java.util.concurrent.TimeUnit
 
@@ -70,22 +71,9 @@ class FeedLoadService : Service() {
         feedLoadManager = FeedLoadManager(this)
     }
 
-    override fun onStartCommand(
-            intent: Intent?,
-            flags: Int,
-            startId: Int,
-    ): Int {
-        if (DEBUG) {
-            Log.d(
-                TAG,
-                "onStartCommand() called with: intent = [" + intent + "]," +
-                        " flags = [" + flags + "], startId = [" + startId + "]",
-            )
-        }
-
-        if (intent == null || loadingDisposable != null) {
-            return START_NOT_STICKY
-        }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Logd(TAG, "onStartCommand() called with: intent = [$intent], flags = [$flags], startId = [$startId]")
+        if (intent == null || loadingDisposable != null) return START_NOT_STICKY
 
         setupNotification()
         setupBroadcastReceiver()
@@ -146,9 +134,7 @@ class FeedLoadService : Service() {
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
     private fun createNotification(): NotificationCompat.Builder {
-        val cancelActionIntent =
-            PendingIntentCompat
-                .getBroadcast(this, NOTIFICATION_ID, Intent(ACTION_CANCEL), 0, false)
+        val cancelActionIntent = PendingIntentCompat.getBroadcast(this, NOTIFICATION_ID, Intent(ACTION_CANCEL), 0, false)
 
         return NotificationCompat.Builder(this, getString(R.string.notification_channel_id))
             .setOngoing(true)
@@ -165,8 +151,7 @@ class FeedLoadService : Service() {
 
         val throttleAfterFirstEmission =
             Function { flow: Flowable<FeedLoadState> ->
-                flow.take(1).concatWith(flow.skip(1)
-                    .throttleLatest(NOTIFICATION_SAMPLING_PERIOD.toLong(), TimeUnit.MILLISECONDS))
+                flow.take(1).concatWith(flow.skip(1).throttleLatest(NOTIFICATION_SAMPLING_PERIOD.toLong(), TimeUnit.MILLISECONDS))
             }
 
         notificationDisposable =
@@ -199,8 +184,7 @@ class FeedLoadService : Service() {
             }
         }
 
-        if (ActivityCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
             // here to request the missing permissions, and then overriding
@@ -225,11 +209,8 @@ class FeedLoadService : Service() {
                 if (intent?.action == ACTION_CANCEL) feedLoadManager.cancel()
             }
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(broadcastReceiver, IntentFilter(ACTION_CANCEL), RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(broadcastReceiver, IntentFilter(ACTION_CANCEL))
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(broadcastReceiver, IntentFilter(ACTION_CANCEL), RECEIVER_NOT_EXPORTED)
+        else registerReceiver(broadcastReceiver, IntentFilter(ACTION_CANCEL))
     }
 
     // /////////////////////////////////////////////////////////////////////////

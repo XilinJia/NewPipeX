@@ -1,13 +1,10 @@
 package org.schabi.newpipe.player.event
 
-import org.schabi.newpipe.player.Player
+import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.PlayerService
 
 interface PlayerServiceExtendedEventListener : PlayerServiceEventListener {
-    fun onServiceConnected(player: Player?,
-                           playerService: PlayerService?,
-                           playAfterConnect: Boolean
-    )
+    fun onServiceConnected(playerManager: PlayerManager?, playerService: PlayerService?, playAfterConnect: Boolean)
 
     fun onServiceDisconnected()
 }

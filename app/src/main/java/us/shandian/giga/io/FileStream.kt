@@ -101,7 +101,7 @@ class FileStream : SharpStream {
     @Throws(IOException::class)
     override fun write(buffer: ByteArray?, offset: Int, count: Int) {
         if (buffer == null || buffer.isEmpty() || count <= 0) return
-//        Log.d("FileStream", "${buffer.size} $offset $count ${buffer.size-offset}")
+//        Logd("FileStream", "${buffer.size} $offset $count ${buffer.size-offset}")
         source!!.write(buffer, offset, min(count, buffer.size-offset))
     }
 

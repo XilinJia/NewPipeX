@@ -27,6 +27,7 @@ import org.schabi.newpipe.player.mediasource.ManagedMediaSourcePlaylist
 import org.schabi.newpipe.player.playqueue.PlayQueue
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
 import org.schabi.newpipe.player.playqueue.events.*
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ServiceHelper.getCacheExpirationMillis
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -34,8 +35,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
 
-@UnstableApi class MediaSourceManager private constructor(listener: PlaybackListener, playQueue: PlayQueue,
-                                             loadDebounceMillis: Long, playbackNearEndGapMillis: Long, progressUpdateIntervalMillis: Long) {
+@UnstableApi
+class MediaSourceManager private constructor(listener: PlaybackListener, playQueue: PlayQueue, loadDebounceMillis: Long,
+                                             playbackNearEndGapMillis: Long, progressUpdateIntervalMillis: Long) {
 
     private val TAG = "MediaSourceManager@" + hashCode()
 
@@ -88,8 +90,8 @@ import kotlin.math.min
     private val removeMediaSourceHandler = Handler()
 
     constructor(listener: PlaybackListener, playQueue: PlayQueue)
-            : this(listener, playQueue, 400L,  /*playbackNearEndGapMillis=*/
-        TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),  /*progressUpdateIntervalMillis*/
+            : this(listener, playQueue, 400L,
+        TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),
         TimeUnit.MILLISECONDS.convert(2, TimeUnit.SECONDS))
 
     init {
@@ -118,9 +120,7 @@ import kotlin.math.min
 
         this.loadingItems = Collections.synchronizedSet(ArraySet())
 
-        playQueue.broadcastReceiver!!
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(reactor)
+        playQueue.broadcastReceiver?.observeOn(AndroidSchedulers.mainThread())?.subscribe(reactor)
     }
 
     /*//////////////////////////////////////////////////////////////////////////
@@ -130,10 +130,7 @@ import kotlin.math.min
      * Dispose the manager and releases all message buses and loaders.
      */
     fun dispose() {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "close() called.")
-        }
-
+        Logd(TAG, "close() called.")
         debouncedSignal.onComplete()
         debouncedLoader.dispose()
 
@@ -151,16 +148,11 @@ import kotlin.math.min
                 playQueueReactor = d
                 playQueueReactor.request(1)
             }
-
             override fun onNext(playQueueMessage: PlayQueueEvent) {
                 onPlayQueueChanged(playQueueMessage)
             }
-
-            override fun onError(e: Throwable) {
-            }
-
-            override fun onComplete() {
-            }
+            override fun onError(e: Throwable) {}
+            override fun onComplete() {}
         }
 
     private fun onPlayQueueChanged(event: PlayQueueEvent) {
@@ -230,29 +222,20 @@ import kotlin.math.min
         }
 
     private fun maybeBlock() {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "maybeBlock() called.")
-        }
-
+        Logd(TAG, "maybeBlock() called.")
         if (isBlocked.get()) return
-
         playbackListener.onPlaybackBlock()
         resetSources()
-
         isBlocked.set(true)
     }
 
     private fun maybeUnblock(): Boolean {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "maybeUnblock() called.")
-        }
-
+        Logd(TAG, "maybeUnblock() called.")
         if (isBlocked.get()) {
             isBlocked.set(false)
             playbackListener.onPlaybackUnblock(playlist.parentMediaSource)
             return true
         }
-
         return false
     }
 
@@ -260,13 +243,9 @@ import kotlin.math.min
     // Metadata Synchronization
     ////////////////////////////////////////////////////////////////////////// */
     private fun maybeSync(wasBlocked: Boolean) {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "maybeSync() called.")
-        }
-
+        Logd(TAG, "maybeSync() called.")
         val currentItem = playQueue.item
         if (isBlocked.get() || currentItem == null) return
-
         playbackListener.onPlaybackSynchronize(currentItem, wasBlocked)
     }
 
@@ -282,8 +261,7 @@ import kotlin.math.min
         /*//////////////////////////////////////////////////////////////////////////
     // MediaSource Loading
     ////////////////////////////////////////////////////////////////////////// */
-        get() = Observable.interval(progressUpdateIntervalMillis,
-            TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
+        get() = Observable.interval(progressUpdateIntervalMillis, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
             .filter { ignored: Long? -> playbackListener.isApproachingPlaybackEdge(playbackNearEndGapMillis) }
 
     private fun getDebouncedLoader(): Disposable {
@@ -299,9 +277,7 @@ import kotlin.math.min
     }
 
     private fun loadImmediate() {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "MediaSource - loadImmediate() called")
-        }
+        Logd(TAG, "MediaSource - loadImmediate() called")
         val itemsToLoad = getItemsToLoad(playQueue) ?: return
 
         // Evict the previous items being loaded to free up memory, before start loading new ones
@@ -314,16 +290,11 @@ import kotlin.math.min
     }
 
     private fun maybeLoadItem(item: PlayQueueItem) {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "maybeLoadItem() called.")
-        }
+        Logd(TAG, "maybeLoadItem() called.")
         if (playQueue.indexOf(item) >= playlist.size()) return
 
         if (!loadingItems.contains(item) && isCorrectionNeeded(item)) {
-            if (PlayQueue.DEBUG) {
-                Log.d(TAG, "MediaSource - Loading=[${item.title}] with url=[${item.url}]")
-            }
-
+            Logd(TAG, "MediaSource - Loading=[${item.title}] with url=[${item.url}]")
             loadingItems.add(item)
             val loader = getLoadedMediaSource(item)
                 .observeOn(AndroidSchedulers.mainThread()) /* No exception handling since getLoadedMediaSource guarantees nonnull return */
@@ -335,8 +306,7 @@ import kotlin.math.min
     private fun getLoadedMediaSource(stream: PlayQueueItem): Single<ManagedMediaSource> {
         return stream.stream
             .map { streamInfo: StreamInfo ->
-                Optional
-                    .ofNullable(playbackListener.sourceOf(stream, streamInfo))
+                Optional.ofNullable(playbackListener.sourceOf(stream, streamInfo))
                     .flatMap<ManagedMediaSource> { source: MediaSource ->
                         MediaItemTag.from(source.mediaItem)
                             .map { tag: MediaItemTag? ->
@@ -351,9 +321,8 @@ import kotlin.math.min
                     }
             }
             .onErrorReturn { throwable: Throwable? ->
-                if (throwable is ExtractionException) {
-                    return@onErrorReturn FailedMediaSource.of(stream, StreamInfoLoadException(throwable))
-                }
+                if (throwable is ExtractionException) return@onErrorReturn FailedMediaSource.of(stream, StreamInfoLoadException(throwable))
+
                 // Non-source related error expected here (e.g. network),
                 // should allow retry shortly after the error.
                 val allowRetryIn = TimeUnit.MILLISECONDS.convert(3, TimeUnit.SECONDS)
@@ -362,18 +331,13 @@ import kotlin.math.min
     }
 
     private fun onMediaSourceReceived(item: PlayQueueItem, mediaSource: ManagedMediaSource) {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "MediaSource - Loaded=[${item.title}] with url=[${item.url}]")
-        }
-
+        Logd(TAG, "MediaSource - Loaded=[${item.title}] with url=[${item.url}]")
         loadingItems.remove(item)
 
         val itemIndex = playQueue.indexOf(item)
         // Only update the playlist timeline for items at the current index or after.
         if (isCorrectionNeeded(item)) {
-            if (PlayQueue.DEBUG) {
-                Log.d(TAG, "MediaSource - Updating index=[$itemIndex] with title=[${item.title}] at url=[${item.url}]")
-            }
+            Logd(TAG, "MediaSource - Updating index=[$itemIndex] with title=[${item.title}] at url=[${item.url}]")
             playlist.update(itemIndex, mediaSource, removeMediaSourceHandler) { this.maybeSynchronizePlayer() }
         }
     }
@@ -422,16 +386,12 @@ import kotlin.math.min
             return
         }
 
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "MediaSource - Reloading currently playing, index=[$currentIndex], item=[${currentItem.title}]")
-        }
+        Logd(TAG, "MediaSource - Reloading currently playing, index=[$currentIndex], item=[${currentItem.title}]")
         playlist.invalidate(currentIndex, removeMediaSourceHandler) { this.loadImmediate() }
     }
 
     private fun maybeClearLoaders() {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "MediaSource - maybeClearLoaders() called.")
-        }
+        Logd(TAG, "MediaSource - maybeClearLoaders() called.")
         if (!loadingItems.contains(playQueue.item) && loaderReactor.size() > MAXIMUM_LOADER_SIZE) {
             loaderReactor.clear()
             loadingItems.clear()
@@ -442,16 +402,12 @@ import kotlin.math.min
     // MediaSource Playlist Helpers
     ////////////////////////////////////////////////////////////////////////// */
     private fun resetSources() {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "resetSources() called.")
-        }
+        Logd(TAG, "resetSources() called.")
         playlist = ManagedMediaSourcePlaylist()
     }
 
     private fun populateSources() {
-        if (PlayQueue.DEBUG) {
-            Log.d(TAG, "populateSources() called.")
-        }
+        Logd(TAG, "populateSources() called.")
         while (playlist.size() < playQueue.size()) {
             playlist.expand()
         }
@@ -501,9 +457,8 @@ import kotlin.math.min
 
             // Do a round robin
             val excess = rightLimit - playQueue.size()
-            if (excess >= 0) {
-                neighbors.addAll(playQueue.streams.subList(0, min(playQueue.size().toDouble(), excess.toDouble()).toInt()))
-            }
+            if (excess >= 0) neighbors.addAll(playQueue.streams.subList(0, min(playQueue.size().toDouble(), excess.toDouble()).toInt()))
+
             neighbors.remove(currentItem)
 
             return ItemsToLoad(currentItem, neighbors)
