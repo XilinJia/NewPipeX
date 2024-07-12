@@ -22,8 +22,8 @@ android {
         minSdk 24
         //noinspection EditedTargetSdkVersion
         targetSdk 34
-        versionCode 1004
-        versionName "0.26.9"
+        versionCode 1005
+        versionName "0.26.10"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -122,7 +122,6 @@ android {
 ext {
 //    checkstyleVersion = '10.12.7'
 
-    androidxLifecycleVersion = '2.7.0'
     androidxRoomVersion = '2.6.1'
     androidxWorkVersion = '2.9.0'
 
@@ -213,7 +212,7 @@ dependencies {
     // name and the commit hash with the commit hash of the (pushed) commit you want to test
     // This works thanks to JitPack: https://jitpack.io/
     implementation 'com.github.TeamNewPipe:nanojson:1d9e1aea9049fc9f85e68b43ba39fe7be1c1f751'
-    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.23.1'
+    implementation 'com.github.TeamNewPipe:NewPipeExtractor:v0.24.1'
     implementation 'com.github.TeamNewPipe:NoNonsense-FilePicker:5.0.0'
 
 /** Checkstyle **/
@@ -227,14 +226,14 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:${kotlin_version}"
 
 /** AndroidX **/
-    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.cardview:cardview:1.0.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.documentfile:documentfile:1.0.1'
-    implementation 'androidx.fragment:fragment-ktx:1.6.2'
-    implementation "androidx.lifecycle:lifecycle-livedata-ktx:${androidxLifecycleVersion}"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:${androidxLifecycleVersion}"
+    implementation 'androidx.fragment:fragment-ktx:1.8.1'
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.8.3"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3"
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'androidx.media:media:1.7.0'
     implementation 'androidx.preference:preference-ktx:1.2.1'
@@ -245,10 +244,10 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     // Newer version specified to prevent accessibility regressions with RecyclerView, see:
     // https://developer.android.com/jetpack/androidx/releases/viewpager2#1.1.0-alpha01
-    implementation 'androidx.viewpager2:viewpager2:1.1.0-beta02'
+    implementation 'androidx.viewpager2:viewpager2:1.1.0'
     implementation "androidx.work:work-runtime-ktx:${androidxWorkVersion}"
     implementation "androidx.work:work-rxjava3:${androidxWorkVersion}"
-    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'com.google.android.material:material:1.12.0'
 
 /** Third-party libraries **/
     // Instance state boilerplate elimination
@@ -317,8 +316,8 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.10.0'
 
-    androidTestImplementation "androidx.test.ext:junit:1.1.5"
-    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "androidx.test.ext:junit:1.2.1"
+    androidTestImplementation "androidx.test:runner:1.6.1"
     androidTestImplementation "androidx.room:room-testing:${androidxRoomVersion}"
     androidTestImplementation 'org.assertj:assertj-core:3.25.2'
 }

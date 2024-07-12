@@ -96,3 +96,9 @@ There is already an open issue on [androidx.media3](https://github.com/androidx/
 
 * suppressed Log.d message in release app
 * changed kapt to ksp
+
+## 0.26.10
+
+* upgraded Kotlin to 2.0.0
+* updated various dependencies
+* NewPipeExtractor is updated to v0.24.1 to fix video play problem

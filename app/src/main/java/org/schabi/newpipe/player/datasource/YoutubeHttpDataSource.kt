@@ -32,7 +32,7 @@ import java.util.*
 import java.util.zip.GZIPInputStream
 import kotlin.math.min
 
-/**
+ /**
  * An [HttpDataSource] that uses Android's [HttpURLConnection], based on
  * [com.google.android.exoplayer2.upstream.DefaultHttpDataSource], for YouTube streams.
  *
@@ -787,11 +787,11 @@ import kotlin.math.min
             return headers
         }
 
-        override fun containsKey(key: String): Boolean {
-            return key == null && super.containsKey(key)
+        override fun containsKey(key: String?): Boolean {
+            return key != null && super.containsKey(key)
         }
 
-        override fun get(key: String): List<String>? {
+        override fun get(key: String?): List<String>? {
             return if (key == null) null else super.get(key)
         }
 
@@ -809,7 +809,7 @@ import kotlin.math.min
             return super.isEmpty() || (super.size == 1 && super.containsKey(null.toString()))
         }
 
-        override fun containsValue(value: List<String>): Boolean {
+        override fun containsValue(value: List<String>?): Boolean {
             return super.standardContainsValue(value)
         }
 

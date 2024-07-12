@@ -209,7 +209,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
         // Add it to the searcher
         SettingsResourceRegistry.instance.allEntries.stream()
             .filter { it?.isSearchable?:false }
-            .map<Int>(Function<SettingRegistryEntry?, Int> { it.preferencesResId })
+            .map<Int>(Function<SettingRegistryEntry?, Int> { it?.preferencesResId })
             .map<List<PreferenceSearchItem>> { resId: Int? ->
                 parser.parse(resId!!)
             }
