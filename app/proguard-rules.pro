@@ -7,7 +7,9 @@
 -keep class org.schabi.newpipe.extractor.timeago.patterns.** { *; }
 -keep class org.mozilla.javascript.** { *; }
 -keep class org.mozilla.classfile.ClassFileWriter
+-keep class java.beans.**
 -dontwarn org.mozilla.javascript.tools.**
+-dontwarn java.beans.**
 
 ## Rules for ExoPlayer
 #-keep class com.google.android.exoplayer2.** { *; }
