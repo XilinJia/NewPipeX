@@ -127,6 +127,23 @@ import java.util.function.Predicate
     private var alertDialogChoice: AlertDialog? = null
     private var dismissListener: FragmentManager.FragmentLifecycleCallbacks? = null
 
+    protected val themeWrapperContext: Context
+        get() = ContextThemeWrapper(this, if (isLightThemeSelected(this)) R.style.LightTheme else R.style.DarkTheme)
+
+    private val persistFragment: PersistentFragment
+        get() {
+            val fm = supportFragmentManager
+            var persistFragment =
+                fm.findFragmentByTag("PERSIST_FRAGMENT") as PersistentFragment?
+            if (persistFragment == null) {
+                persistFragment = PersistentFragment()
+                fm.beginTransaction()
+                    .add(persistFragment, "PERSIST_FRAGMENT")
+                    .commitNow()
+            }
+            return persistFragment
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setDayNightMode(this)
         setTheme(if (isLightThemeSelected(this)) R.style.RouterActivityThemeLight else R.style.RouterActivityThemeDark)
@@ -468,8 +485,6 @@ import java.util.function.Predicate
         return returnedItems
     }
 
-    protected val themeWrapperContext: Context
-        get() = ContextThemeWrapper(this, if (isLightThemeSelected(this)) R.style.LightTheme else R.style.DarkTheme)
 
     private fun setDialogButtonsState(dialog: AlertDialog, state: Boolean) {
         val negativeButton = dialog.getButton(DialogInterface.BUTTON_NEGATIVE)
@@ -729,20 +744,6 @@ import java.util.function.Predicate
     private fun openDownloadDialog() {
         persistFragment.openDownloadDialog(currentServiceId, currentUrl)
     }
-
-    private val persistFragment: PersistentFragment
-        get() {
-            val fm = supportFragmentManager
-            var persistFragment =
-                fm.findFragmentByTag("PERSIST_FRAGMENT") as PersistentFragment?
-            if (persistFragment == null) {
-                persistFragment = PersistentFragment()
-                fm.beginTransaction()
-                    .add(persistFragment, "PERSIST_FRAGMENT")
-                    .commitNow()
-            }
-            return persistFragment
-        }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)

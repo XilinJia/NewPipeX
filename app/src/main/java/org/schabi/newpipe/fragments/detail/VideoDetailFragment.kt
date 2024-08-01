@@ -225,6 +225,49 @@ class VideoDetailFragment
     private var playerManager: PlayerManager? = null
     private val playerHolder: PlayerHolder = PlayerHolder.instance!!
 
+    private val isExternalPlayerEnabled: Boolean
+        get() = PreferenceManager.getDefaultSharedPreferences(requireContext())
+            .getBoolean(getString(R.string.use_external_video_player_key), false)
+
+    private val isAutoplayEnabled: Boolean
+        // This method overrides default behaviour when setAutoPlay() is called.
+        get() = (autoPlayEnabled && !isExternalPlayerEnabled && (!isPlayerAvailable || playerManager!!.videoPlayerSelected()))
+                && bottomSheetState != BottomSheetBehavior.STATE_HIDDEN && PlayerHelper.isAutoplayAllowedByUser(
+            requireContext())
+
+    private val preDrawListener: ViewTreeObserver.OnPreDrawListener = object : ViewTreeObserver.OnPreDrawListener {
+        override fun onPreDraw(): Boolean {
+            val metrics = resources.displayMetrics
+
+            if (view != null) {
+                val act = requireActivity()
+                val height = (if (isInMultiWindow(act as AppCompatActivity)) requireView() else act.window.decorView).height
+                setHeightThumbnail(height, metrics)
+                view!!.viewTreeObserver.removeOnPreDrawListener(this)
+            }
+            return false
+        }
+    }
+
+    private val isFullscreen: Boolean
+        get() = isPlayerAvailable && playerManager!!.UIs.get(VideoPlayerUi::class.java)
+            .map { obj: VideoPlayerUi -> obj.isFullscreen }.orElse(false)
+
+    val isPlayerAvailable: Boolean
+        // helpers to check the state of player and playerService
+        get() = playerManager != null
+
+    val isPlayerServiceAvailable: Boolean
+        get() = playerService != null
+
+    val isPlayerAndPlayerServiceAvailable: Boolean
+        get() = playerManager != null && playerService != null
+
+    val root: Optional<View>
+        get() = Optional.ofNullable(playerManager)
+            .flatMap { playerManager1: PlayerManager -> playerManager1.UIs.get(VideoPlayerUi::class.java) }
+            .map { playerUi: VideoPlayerUi -> playerUi.binding.root }
+
     /*//////////////////////////////////////////////////////////////////////////
     // Service management
     ////////////////////////////////////////////////////////////////////////// */
@@ -987,16 +1030,6 @@ class VideoDetailFragment
             ))
     }
 
-    private val isExternalPlayerEnabled: Boolean
-        get() = PreferenceManager.getDefaultSharedPreferences(requireContext())
-            .getBoolean(getString(R.string.use_external_video_player_key), false)
-
-    private val isAutoplayEnabled: Boolean
-        // This method overrides default behaviour when setAutoPlay() is called.
-        get() = (autoPlayEnabled && !isExternalPlayerEnabled && (!isPlayerAvailable || playerManager!!.videoPlayerSelected()))
-                && bottomSheetState != BottomSheetBehavior.STATE_HIDDEN && PlayerHelper.isAutoplayAllowedByUser(
-            requireContext())
-
     private fun tryAddVideoPlayerView() {
         if (isPlayerAvailable && view != null) {
             // Setup the surface view height, so that it fits the video correctly; this is done also
@@ -1033,20 +1066,6 @@ class VideoDetailFragment
 
         binding.playerPlaceholder.layoutParams.height = FrameLayout.LayoutParams.MATCH_PARENT
         binding.playerPlaceholder.requestLayout()
-    }
-
-    private val preDrawListener: ViewTreeObserver.OnPreDrawListener = object : ViewTreeObserver.OnPreDrawListener {
-        override fun onPreDraw(): Boolean {
-            val metrics = resources.displayMetrics
-
-            if (view != null) {
-                val act = requireActivity()
-                val height = (if (isInMultiWindow(act as AppCompatActivity)) requireView() else act.window.decorView).height
-                setHeightThumbnail(height, metrics)
-                view!!.viewTreeObserver.removeOnPreDrawListener(this)
-            }
-            return false
-        }
     }
 
     /**
@@ -1577,10 +1596,6 @@ class VideoDetailFragment
         if (isFullscreen && bottomSheetBehavior!!.state == BottomSheetBehavior.STATE_EXPANDED) hideSystemUi()
     }
 
-    private val isFullscreen: Boolean
-        get() = isPlayerAvailable && playerManager!!.UIs.get(VideoPlayerUi::class.java)
-            .map { obj: VideoPlayerUi -> obj.isFullscreen }.orElse(false)
-
     private fun playerIsNotStopped(): Boolean {
         return isPlayerAvailable && !playerManager!!.isStopped
     }
@@ -1932,21 +1947,6 @@ class VideoDetailFragment
         binding.overlayPlayPauseButton.isClickable = enable
         binding.overlayCloseButton.isClickable = enable
     }
-
-    val isPlayerAvailable: Boolean
-        // helpers to check the state of player and playerService
-        get() = playerManager != null
-
-    val isPlayerServiceAvailable: Boolean
-        get() = playerService != null
-
-    val isPlayerAndPlayerServiceAvailable: Boolean
-        get() = playerManager != null && playerService != null
-
-    val root: Optional<View>
-        get() = Optional.ofNullable(playerManager)
-            .flatMap { playerManager1: PlayerManager -> playerManager1.UIs.get(VideoPlayerUi::class.java) }
-            .map { playerUi: VideoPlayerUi -> playerUi.binding.root }
 
     private fun updateBottomSheetState(newState: Int) {
         bottomSheetState = newState

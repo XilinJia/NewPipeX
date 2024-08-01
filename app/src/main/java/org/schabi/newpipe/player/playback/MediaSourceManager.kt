@@ -89,6 +89,51 @@ class MediaSourceManager private constructor(listener: PlaybackListener, playQue
 
     private val removeMediaSourceHandler = Handler()
 
+    private val reactor: Subscriber<PlayQueueEvent>
+        /*//////////////////////////////////////////////////////////////////////////
+    // Event Reactor
+    ////////////////////////////////////////////////////////////////////////// */
+        get() = object : Subscriber<PlayQueueEvent> {
+            override fun onSubscribe(d: Subscription) {
+                playQueueReactor.cancel()
+                playQueueReactor = d
+                playQueueReactor.request(1)
+            }
+            override fun onNext(playQueueMessage: PlayQueueEvent) {
+                onPlayQueueChanged(playQueueMessage)
+            }
+            override fun onError(e: Throwable) {}
+            override fun onComplete() {}
+        }
+
+    private val isPlayQueueReady: Boolean
+        /*//////////////////////////////////////////////////////////////////////////
+    // Playback Locking
+    ////////////////////////////////////////////////////////////////////////// */
+        get() {
+            val isWindowLoaded = playQueue.size() - playQueue.index > WINDOW_SIZE
+            return playQueue.isComplete || isWindowLoaded
+        }
+
+    private val isPlaybackReady: Boolean
+        get() {
+            if (playlist.size() != playQueue.size()) return false
+
+            val mediaSource = playlist[playQueue.index]
+            val playQueueItem = playQueue.item
+            if (mediaSource == null || playQueueItem == null) return false
+
+            return mediaSource.isStreamEqual(playQueueItem)
+        }
+
+    private val edgeIntervalSignal: Observable<Long>
+        /*//////////////////////////////////////////////////////////////////////////
+        // MediaSource Loading
+        ////////////////////////////////////////////////////////////////////////// */
+        get() = Observable.interval(progressUpdateIntervalMillis, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
+            .filter { ignored: Long? -> playbackListener.isApproachingPlaybackEdge(playbackNearEndGapMillis) }
+
+
     constructor(listener: PlaybackListener, playQueue: PlayQueue)
             : this(listener, playQueue, 400L,
         TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS),
@@ -138,23 +183,6 @@ class MediaSourceManager private constructor(listener: PlaybackListener, playQue
         loaderReactor.dispose()
     }
 
-    private val reactor: Subscriber<PlayQueueEvent>
-        /*//////////////////////////////////////////////////////////////////////////
-    // Event Reactor
-    ////////////////////////////////////////////////////////////////////////// */
-        get() = object : Subscriber<PlayQueueEvent> {
-            override fun onSubscribe(d: Subscription) {
-                playQueueReactor.cancel()
-                playQueueReactor = d
-                playQueueReactor.request(1)
-            }
-            override fun onNext(playQueueMessage: PlayQueueEvent) {
-                onPlayQueueChanged(playQueueMessage)
-            }
-            override fun onError(e: Throwable) {}
-            override fun onComplete() {}
-        }
-
     private fun onPlayQueueChanged(event: PlayQueueEvent) {
         if (playQueue.isEmpty && playQueue.isComplete) {
             playbackListener.onPlaybackShutdown()
@@ -201,26 +229,6 @@ class MediaSourceManager private constructor(listener: PlaybackListener, playQue
         playQueueReactor.request(1)
     }
 
-    private val isPlayQueueReady: Boolean
-        /*//////////////////////////////////////////////////////////////////////////
-    // Playback Locking
-    ////////////////////////////////////////////////////////////////////////// */
-        get() {
-            val isWindowLoaded = playQueue.size() - playQueue.index > WINDOW_SIZE
-            return playQueue.isComplete || isWindowLoaded
-        }
-
-    private val isPlaybackReady: Boolean
-        get() {
-            if (playlist.size() != playQueue.size()) return false
-
-            val mediaSource = playlist[playQueue.index]
-            val playQueueItem = playQueue.item
-            if (mediaSource == null || playQueueItem == null) return false
-
-            return mediaSource.isStreamEqual(playQueueItem)
-        }
-
     private fun maybeBlock() {
         Logd(TAG, "maybeBlock() called.")
         if (isBlocked.get()) return
@@ -256,13 +264,6 @@ class MediaSourceManager private constructor(listener: PlaybackListener, playQue
             maybeSync(isBlockReleased)
         }
     }
-
-    private val edgeIntervalSignal: Observable<Long>
-        /*//////////////////////////////////////////////////////////////////////////
-        // MediaSource Loading
-        ////////////////////////////////////////////////////////////////////////// */
-        get() = Observable.interval(progressUpdateIntervalMillis, TimeUnit.MILLISECONDS, AndroidSchedulers.mainThread())
-            .filter { ignored: Long? -> playbackListener.isApproachingPlaybackEdge(playbackNearEndGapMillis) }
 
     private fun getDebouncedLoader(): Disposable {
         return debouncedSignal.mergeWith(nearEndIntervalSignal)

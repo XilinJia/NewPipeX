@@ -1,3 +1,8 @@
+## 0.26.12
+
+* fixed null pointer bug in time conversion that prevent some new installs
+* revert back to media3 1.3.1 for support of legacy subtitle formats used in some feeds
+
 ## 0.26.11
 
 * updated various dependencies

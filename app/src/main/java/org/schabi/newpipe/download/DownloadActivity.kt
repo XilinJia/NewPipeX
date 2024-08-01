@@ -17,6 +17,7 @@ import us.shandian.giga.service.DownloadManagerService
 import us.shandian.giga.ui.fragment.MissionsFragment
 
 class DownloadActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Service
         val i = Intent()
@@ -28,8 +29,7 @@ class DownloadActivity : AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
 
-        val downloaderBinding =
-            ActivityDownloaderBinding.inflate(layoutInflater)
+        val downloaderBinding = ActivityDownloaderBinding.inflate(layoutInflater)
         setContentView(downloaderBinding.root)
 
         setSupportActionBar(downloaderBinding.toolbarLayout.toolbar)
@@ -49,9 +49,7 @@ class DownloadActivity : AppCompatActivity() {
                 }
             })
 
-        if (isTv(this)) {
-            setupFocusObserver(this)
-        }
+        if (isTv(this)) setupFocusObserver(this)
     }
 
     private fun updateFragments() {

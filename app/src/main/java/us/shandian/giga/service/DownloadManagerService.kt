@@ -78,7 +78,6 @@ class DownloadManagerService : Service() {
 
     private var mOpenDownloadList: PendingIntent? = null
 
-
     /**
      * notify media scanner on downloaded media file ...
      *
@@ -121,7 +120,6 @@ class DownloadManagerService : Service() {
             override fun onAvailable(network: Network) {
                 handleConnectivityState(false)
             }
-
             override fun onLost(network: Network) {
                 handleConnectivityState(false)
             }

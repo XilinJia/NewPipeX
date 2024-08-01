@@ -80,9 +80,6 @@ import kotlin.math.max
 //TODO try to remove and replace everything with context
 @UnstableApi
 class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Player.Listener {
-    /*//////////////////////////////////////////////////////////////////////////
-    // Playback
-    ////////////////////////////////////////////////////////////////////////// */
     // play queue might be null e.g. while player is starting
     var playQueue: PlayQueue? = null
         private set
@@ -96,9 +93,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     var thumbnail: Bitmap? = null
         private set
 
-    /*//////////////////////////////////////////////////////////////////////////
-    // Player
-    ////////////////////////////////////////////////////////////////////////// */
     var exoPlayer: ExoPlayer? = null
         private set
     var audioReactor: AudioReactor? = null
@@ -112,9 +106,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     private val videoResolver: VideoPlaybackResolver
     private val audioResolver: AudioPlaybackResolver
 
-    /*//////////////////////////////////////////////////////////////////////////
-   // Player states
-   ////////////////////////////////////////////////////////////////////////// */
     var playerType: PlayerType = PlayerType.MAIN
         private set
     var currentState: Int = STATE_PREFLIGHT
@@ -126,9 +117,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         private set
     private var isPrepared = false
 
-    /*//////////////////////////////////////////////////////////////////////////
-    // UIs, listeners and disposables
-    ////////////////////////////////////////////////////////////////////////// */
     // keep the unusual member name
     val UIs: PlayerUiList
 
@@ -146,9 +134,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     // which would otherwise be garbage collected since Picasso holds weak references to targets.
     private val currentThumbnailTarget: Target
 
-    /*//////////////////////////////////////////////////////////////////////////
-    // Utils
-    ////////////////////////////////////////////////////////////////////////// */
     @JvmField
     val context: Context = service
 
@@ -156,10 +141,167 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     val prefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
     private val recordManager = HistoryRecordManager(context)
 
-    /*//////////////////////////////////////////////////////////////////////////
-    // Constructor
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Constructor
+    var playbackSpeed: Float
+        //endregion
+        get() = playbackParameters.speed
+        set(speed) {
+            setPlaybackParameters(speed, playbackPitch, playbackSkipSilence)
+        }
+
+    val playbackPitch: Float
+        get() = playbackParameters.pitch
+
+    val playbackSkipSilence: Boolean
+        get() = !exoPlayerIsNull() && exoPlayer!!.skipSilenceEnabled
+
+    val playbackParameters: PlaybackParameters
+        get() {
+            if (exoPlayerIsNull()) return PlaybackParameters.DEFAULT
+            return exoPlayer!!.playbackParameters
+        }
+
+    private val qualityResolver: QualityResolver
+        get() = object : QualityResolver {
+            override fun getDefaultResolutionIndex(sortedVideos: List<VideoStream>?): Int {
+                return when {
+                    sortedVideos == null -> 0
+                    videoPlayerSelected() -> getDefaultResolutionIndex(context, sortedVideos)
+                    else -> getPopupDefaultResolutionIndex(context, sortedVideos)
+                }
+            }
+
+            override fun getOverrideResolutionIndex(sortedVideos: List<VideoStream>?, playbackQuality: String?): Int {
+                return when {
+                    sortedVideos == null -> 0
+                    videoPlayerSelected() -> getResolutionIndex(context, sortedVideos, playbackQuality)
+                    else -> getPopupResolutionIndex(context, sortedVideos, playbackQuality)
+                }
+            }
+        }
+
+    val selectedVideoStream: Optional<VideoStream>
+        get() = Optional.ofNullable(currentMetadata)
+            .flatMap { obj: MediaItemTag -> obj.maybeQuality }
+            .filter { quality: MediaItemTag.Quality ->
+                val selectedStreamIndex = quality.selectedVideoStreamIndex
+                (selectedStreamIndex >= 0 && selectedStreamIndex < quality.sortedVideoStreams.size)
+            }
+            .map { quality: MediaItemTag.Quality -> quality.sortedVideoStreams[quality.selectedVideoStreamIndex] }
+
+    val selectedAudioStream: Optional<AudioStream?>?
+        get() = Optional.ofNullable<MediaItemTag>(currentMetadata)
+            .flatMap { obj: MediaItemTag? -> obj?.maybeAudioTrack }
+            .map { it.selectedAudioStream }
+
+    val captionRendererIndex: Int
+        //endregion
+        get() {
+            if (exoPlayerIsNull()) return RENDERER_UNAVAILABLE
+            for (t in 0 until exoPlayer!!.rendererCount) {
+                if (exoPlayer!!.getRendererType(t) == C.TRACK_TYPE_TEXT) return t
+            }
+            return RENDERER_UNAVAILABLE
+        }
+
+    val currentStreamInfo: Optional<StreamInfo>
+        //endregion
+        get() = Optional.ofNullable(currentMetadata).flatMap { obj: MediaItemTag -> obj.maybeStreamInfo }
+
+    val isStopped: Boolean
+        get() = exoPlayerIsNull() || exoPlayer!!.playbackState == ExoPlayer.STATE_IDLE
+
+    val isPlaying: Boolean
+        get() = !exoPlayerIsNull() && exoPlayer!!.isPlaying
+
+    val playWhenReady: Boolean
+        get() = !exoPlayerIsNull() && exoPlayer!!.playWhenReady
+
+    val isLoading: Boolean
+        get() = !exoPlayerIsNull() && exoPlayer!!.isLoading
+
+    private val isLive: Boolean
+        get() {
+            try {
+                return !exoPlayerIsNull() && exoPlayer!!.isCurrentMediaItemDynamic
+            } catch (e: IndexOutOfBoundsException) {
+                // Why would this even happen =(... but lets log it anyway, better safe than sorry
+                Logd(TAG, "player.isCurrentWindowDynamic() failed: $e")
+                return false
+            }
+        }
+
+    private val videoRendererIndex: Int
+        /**
+         * Get the video renderer index of the current playing stream.
+         *
+         *
+         * This method returns the video renderer index of the current
+         * [MappingTrackSelector.MappedTrackInfo] or [.RENDERER_UNAVAILABLE] if the current
+         * [MappingTrackSelector.MappedTrackInfo] is null or if there is no video renderer index.
+         *
+         * @return the video renderer index or [.RENDERER_UNAVAILABLE] if it cannot be get
+         */
+        get() {
+            val mappedTrackInfo = trackSelector.currentMappedTrackInfo ?: return RENDERER_UNAVAILABLE
+
+            // Check every renderer
+            return IntStream.range(0,
+                mappedTrackInfo.rendererCount) // Check the renderer is a video renderer and has at least one track
+                // Return the first index found (there is at most one renderer per renderer type)
+                .filter { i: Int -> (!mappedTrackInfo.getTrackGroups(i).isEmpty && exoPlayer!!.getRendererType(i) == C.TRACK_TYPE_VIDEO) }
+                .findFirst() // No video renderer index with at least one track found: return unavailable index
+                .orElse(RENDERER_UNAVAILABLE)
+        } //endregion
+
+    val isProgressLoopRunning: Boolean
+        get() = progressUpdateDisposable.get() != null
+
+    var repeatMode: @Player.RepeatMode Int
+        //endregion
+        get() = if (exoPlayerIsNull()) Player.REPEAT_MODE_OFF else exoPlayer!!.repeatMode
+        set(repeatMode) {
+            if (!exoPlayerIsNull()) exoPlayer!!.repeatMode = repeatMode
+        }
+
+    val isMuted: Boolean
+        get() = !exoPlayerIsNull() && exoPlayer!!.volume == 0f
+
+    val isLiveEdge: Boolean
+        /**
+         * Checks if the current playback is a livestream AND is playing at or beyond the live edge.
+         *
+         * @return whether the livestream is playing at or beyond the edge
+         */
+        get() {
+            if (exoPlayerIsNull() || !isLive) return false
+
+            val currentTimeline = exoPlayer!!.currentTimeline
+            val currentWindowIndex = exoPlayer!!.currentMediaItemIndex
+            if (currentTimeline.isEmpty || currentWindowIndex < 0 || currentWindowIndex >= currentTimeline.windowCount) return false
+
+            val timelineWindow = Timeline.Window()
+            currentTimeline.getWindow(currentWindowIndex, timelineWindow)
+            return timelineWindow.defaultPositionMs <= exoPlayer!!.currentPosition
+        }
+
+    val videoUrl: String
+        get() = currentMetadata?.streamUrl ?: context.getString(R.string.unknown_content)
+
+    val videoUrlAtCurrentTime: String
+        get() {
+            val timeSeconds = exoPlayer!!.currentPosition / 1000
+            var videoUrl = videoUrl
+            // Timestamp doesn't make sense in a live stream so drop it
+            if (!isLive && timeSeconds >= 0 && currentMetadata?.serviceId == ServiceList.YouTube.serviceId) videoUrl += ("&t=$timeSeconds")
+            return videoUrl
+        }
+
+    val videoTitle: String
+        get() = currentMetadata?.title ?: context.getString(R.string.unknown_content)
+
+    val uploaderName: String
+        get() = currentMetadata?.uploaderName ?: context.getString(R.string.unknown_content)
+
     init {
         setupBroadcastReceiver()
 
@@ -185,31 +327,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         UIs = PlayerUiList(MediaSessionPlayerUi(this), NotificationPlayerUi(this))
     }
 
-    private val qualityResolver: QualityResolver
-        get() = object : QualityResolver {
-            override fun getDefaultResolutionIndex(sortedVideos: List<VideoStream>?): Int {
-                return when {
-                    sortedVideos == null -> 0
-                    videoPlayerSelected() -> getDefaultResolutionIndex(context, sortedVideos)
-                    else -> getPopupDefaultResolutionIndex(context, sortedVideos)
-                }
-            }
-
-            override fun getOverrideResolutionIndex(sortedVideos: List<VideoStream>?, playbackQuality: String?): Int {
-                return when {
-                    sortedVideos == null -> 0
-                    videoPlayerSelected() -> getResolutionIndex(context, sortedVideos, playbackQuality)
-                    else -> getPopupResolutionIndex(context, sortedVideos, playbackQuality)
-                }
-            }
-        }
-
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Playback initialization via intent
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Playback initialization via intent
     fun handleIntent(intent: Intent) {
         // fail fast if no play queue was provided
         val queueCache = intent.getStringExtra(PLAY_QUEUE_KEY) ?: return
@@ -408,11 +525,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
             trackSelector.setParameters(trackSelector.buildUponParameters().setTunnelingEnabled(true))
     }
 
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Destroy and recovery
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Destroy and recovery
     private fun destroyPlayer() {
         Logd(TAG, "destroyPlayer() called")
 
@@ -485,12 +597,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         UIs.call { obj: PlayerUi -> obj.smoothStopForImmediateReusing() }
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Broadcast receiver
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Broadcast receiver
     /**
      * This function prepares the broadcast receiver and is called only in the constructor.
      * Therefore if you want any PlayerUi to receive a broadcast action, you should add it here,
@@ -566,12 +672,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         }
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Thumbnail loading
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Thumbnail loading
     private fun getCurrentThumbnailTarget(): Target {
         // a Picasso target is just a listener for thumbnail loading events
         return object : Target {
@@ -623,26 +723,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         }
     }
 
-
-    var playbackSpeed: Float
-        //endregion
-        get() = playbackParameters.speed
-        set(speed) {
-            setPlaybackParameters(speed, playbackPitch, playbackSkipSilence)
-        }
-
-    val playbackPitch: Float
-        get() = playbackParameters.pitch
-
-    val playbackSkipSilence: Boolean
-        get() = !exoPlayerIsNull() && exoPlayer!!.skipSilenceEnabled
-
-    val playbackParameters: PlaybackParameters
-        get() {
-            if (exoPlayerIsNull()) return PlaybackParameters.DEFAULT
-            return exoPlayer!!.playbackParameters
-        }
-
     /**
      * Sets the playback parameters of the player, and also saves them to shared preferences.
      * Speed and pitch are rounded up to 2 decimal places before being used or saved.
@@ -660,12 +740,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         exoPlayer!!.skipSilenceEnabled = skipSilence
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Progress loop and updates
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Progress loop and updates
     private fun onUpdateProgress(currentProgress: Int, duration: Int, bufferPercent: Int) {
         if (isPrepared) {
             UIs.call { ui: PlayerUi -> ui.onUpdateProgress(currentProgress, duration, bufferPercent) }
@@ -680,9 +754,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     private fun stopProgressLoop() {
         progressUpdateDisposable.set(null)
     }
-
-    val isProgressLoopRunning: Boolean
-        get() = progressUpdateDisposable.get() != null
 
     fun triggerProgressUpdate() {
         if (exoPlayerIsNull()) return
@@ -699,12 +770,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
                 { error: Throwable? -> Log.e(TAG, "Progress update failure: ", error) })
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Playback states
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Playback states
     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
         Logd(TAG, "ExoPlayer - onPlayWhenReadyChanged() called with: playWhenReady = [$playWhenReady], reason = [$reason]")
         val playbackState = if (exoPlayerIsNull()) Player.STATE_IDLE else exoPlayer!!.playbackState
@@ -832,14 +897,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         if (isProgressLoopRunning) stopProgressLoop()
     }
 
-
-    var repeatMode: @Player.RepeatMode Int
-        //endregion
-        get() = if (exoPlayerIsNull()) Player.REPEAT_MODE_OFF else exoPlayer!!.repeatMode
-        set(repeatMode) {
-            if (!exoPlayerIsNull()) exoPlayer!!.repeatMode = repeatMode
-        }
-
     fun cycleNextRepeatMode() {
         repeatMode = PlayerHelper.nextRepeatMode(repeatMode)
     }
@@ -864,12 +921,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         if (!exoPlayerIsNull()) exoPlayer!!.shuffleModeEnabled = !exoPlayer!!.shuffleModeEnabled
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Mute / Unmute
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Mute / Unmute
     fun toggleMute() {
         val wasMuted = isMuted
         exoPlayer!!.volume = (if (wasMuted) 1 else 0).toFloat()
@@ -880,25 +931,13 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         notifyPlaybackUpdateToListeners()
     }
 
-    val isMuted: Boolean
-        get() = !exoPlayerIsNull() && exoPlayer!!.volume == 0f
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // ExoPlayer listeners (that didn't fit in other categories)
-    ////////////////////////////////////////////////////////////////////////// */
-    //region ExoPlayer listeners (that didn't fit in other categories)
     /**
-     *
      * Listens for event or state changes on ExoPlayer. When any event happens, we check for
      * changes in the currently-playing metadata and update the encapsulating
      * [PlayerManager]. Downstream listeners are also informed.
-     *
-     *
      * When the renewed metadata contains any error, it is reported as a notification.
      * This is done because not all source resolution errors are [PlaybackException], which
      * are also captured by [ExoPlayer] and stops the playback.
-     *
      * @param player The [androidx.media3.common.Player] whose state changed.
      * @param events The [androidx.media3.common.Player.Events] that has triggered
      * the player state changes.
@@ -993,12 +1032,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         UIs.call { playerUi: PlayerUi -> playerUi.onCues(cueGroup.cues) }
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Errors
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Errors
     /**
      * Process exceptions produced by [ExoPlayer][com.google.android.exoplayer2.ExoPlayer].
      *
@@ -1078,12 +1111,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     }
 
 
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Playback position and seek
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Playback position and seek
-    // own playback listener (this is a getter)
     override fun isApproachingPlaybackEdge(timeToEndMillis: Long): Boolean {
         // If live, then not near playback edge
         // If not playing, then not approaching playback edge
@@ -1093,24 +1120,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         val currentDurationMillis = exoPlayer!!.duration
         return currentDurationMillis - currentPositionMillis < timeToEndMillis
     }
-
-    val isLiveEdge: Boolean
-        /**
-         * Checks if the current playback is a livestream AND is playing at or beyond the live edge.
-         *
-         * @return whether the livestream is playing at or beyond the edge
-         */
-        get() {
-            if (exoPlayerIsNull() || !isLive) return false
-
-            val currentTimeline = exoPlayer!!.currentTimeline
-            val currentWindowIndex = exoPlayer!!.currentMediaItemIndex
-            if (currentTimeline.isEmpty || currentWindowIndex < 0 || currentWindowIndex >= currentTimeline.windowCount) return false
-
-            val timelineWindow = Timeline.Window()
-            currentTimeline.getWindow(currentWindowIndex, timelineWindow)
-            return timelineWindow.defaultPositionMs <= exoPlayer!!.currentPosition
-        }
 
     // own playback listener
     override fun onPlaybackSynchronize(item: PlayQueueItem, wasBlocked: Boolean) {
@@ -1164,11 +1173,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         if (!exoPlayerIsNull()) exoPlayer!!.seekToDefaultPosition()
     }
 
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Player actions (play, pause, previous, fast-forward, ...)
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Player actions (play, pause, previous, fast-forward, ...)
     fun play() {
         Logd(TAG, "play() called")
         if (audioReactor == null || playQueue == null || exoPlayerIsNull()) return
@@ -1238,12 +1242,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         triggerProgressUpdate()
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // StreamInfo history: views and progress
-    ////////////////////////////////////////////////////////////////////////// */
-    //region StreamInfo history: views and progress
     private fun registerStreamViewed() {
         currentStreamInfo.ifPresent { info: StreamInfo? ->
             databaseUpdateDisposable.add(recordManager.onViewed(info).onErrorComplete().subscribe())
@@ -1280,11 +1278,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         currentStreamInfo.ifPresent { info: StreamInfo -> saveStreamProgressState((info.duration + 1) * 1000) }
     }
 
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Metadata
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Metadata
     private fun updateMetadataWith(info: StreamInfo) {
         Logd(TAG, "Playback - onMetadataChanged() called, playing: " + info.name)
         if (exoPlayerIsNull()) return
@@ -1299,29 +1292,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         UIs.call { playerUi: PlayerUi -> playerUi.onMetadataChanged(info) }
     }
 
-    val videoUrl: String
-        get() = currentMetadata?.streamUrl ?: context.getString(R.string.unknown_content)
-
-    val videoUrlAtCurrentTime: String
-        get() {
-            val timeSeconds = exoPlayer!!.currentPosition / 1000
-            var videoUrl = videoUrl
-            // Timestamp doesn't make sense in a live stream so drop it
-            if (!isLive && timeSeconds >= 0 && currentMetadata?.serviceId == ServiceList.YouTube.serviceId) videoUrl += ("&t=$timeSeconds")
-            return videoUrl
-        }
-
-    val videoTitle: String
-        get() = currentMetadata?.title ?: context.getString(R.string.unknown_content)
-
-    val uploaderName: String
-        get() = currentMetadata?.uploaderName ?: context.getString(R.string.unknown_content)
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Play queue, segments and streams
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Play queue, segments and streams
     private fun maybeAutoQueueNextStream(info: StreamInfo) {
         if (playQueue == null || playQueue!!.index != playQueue!!.size() - 1 || repeatMode != Player.REPEAT_MODE_OFF
                 || !PlayerHelper.isAutoQueueEnabled(context)) return
@@ -1371,49 +1341,12 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         loadController.disablePreloadingOfCurrentTrack()
     }
 
-    val selectedVideoStream: Optional<VideoStream>
-        get() = Optional.ofNullable(currentMetadata)
-            .flatMap { obj: MediaItemTag -> obj.maybeQuality }
-            .filter { quality: MediaItemTag.Quality ->
-                val selectedStreamIndex = quality.selectedVideoStreamIndex
-                (selectedStreamIndex >= 0 && selectedStreamIndex < quality.sortedVideoStreams.size)
-            }
-            .map { quality: MediaItemTag.Quality -> quality.sortedVideoStreams[quality.selectedVideoStreamIndex] }
-
-    val selectedAudioStream: Optional<AudioStream?>?
-        get() = Optional.ofNullable<MediaItemTag>(currentMetadata)
-            .flatMap { obj: MediaItemTag? -> obj?.maybeAudioTrack }
-            .map { it.selectedAudioStream }
-
-    val captionRendererIndex: Int
-        //endregion
-        get() {
-            if (exoPlayerIsNull()) return RENDERER_UNAVAILABLE
-            for (t in 0 until exoPlayer!!.rendererCount) {
-                if (exoPlayer!!.getRendererType(t) == C.TRACK_TYPE_TEXT) return t
-            }
-            return RENDERER_UNAVAILABLE
-        }
-
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Video size
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Video size
-    // exoplayer listener
     override fun onVideoSizeChanged(videoSize: VideoSize) {
         Logd(TAG, "onVideoSizeChanged() called with: width / height = [${videoSize.width} / ${videoSize.height} = ${(videoSize.width.toFloat()) / videoSize.height}], unappliedRotationDegrees = [${videoSize.unappliedRotationDegrees}], pixelWidthHeightRatio = [${videoSize.pixelWidthHeightRatio}]")
 
         if (videoSize.width > 0 && videoSize.height > 0) UIs.call { playerUi: PlayerUi -> playerUi.onVideoSizeChanged(videoSize) }
     }
 
-
-    //endregion
-    /*//////////////////////////////////////////////////////////////////////////
-    // Activity / fragment binding
-    ////////////////////////////////////////////////////////////////////////// */
-    //region Activity / fragment binding
     fun setFragmentListener(listener: PlayerServiceEventListener?) {
         fragmentListener = listener
         UIs.call { obj: PlayerUi -> obj.onFragmentListenerSet() }
@@ -1558,37 +1491,9 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         return true
     }
 
-
-    val currentStreamInfo: Optional<StreamInfo>
-        //endregion
-        get() = Optional.ofNullable(currentMetadata).flatMap { obj: MediaItemTag -> obj.maybeStreamInfo }
-
     fun exoPlayerIsNull(): Boolean {
         return exoPlayer == null
     }
-
-    val isStopped: Boolean
-        get() = exoPlayerIsNull() || exoPlayer!!.playbackState == ExoPlayer.STATE_IDLE
-
-    val isPlaying: Boolean
-        get() = !exoPlayerIsNull() && exoPlayer!!.isPlaying
-
-    val playWhenReady: Boolean
-        get() = !exoPlayerIsNull() && exoPlayer!!.playWhenReady
-
-    val isLoading: Boolean
-        get() = !exoPlayerIsNull() && exoPlayer!!.isLoading
-
-    private val isLive: Boolean
-        get() {
-            try {
-                return !exoPlayerIsNull() && exoPlayer!!.isCurrentMediaItemDynamic
-            } catch (e: IndexOutOfBoundsException) {
-                // Why would this even happen =(... but lets log it anyway, better safe than sorry
-                Logd(TAG, "player.isCurrentWindowDynamic() failed: $e")
-                return false
-            }
-        }
 
     fun setPlaybackQuality(quality: String?) {
         saveStreamProgressState()
@@ -1620,29 +1525,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     fun getFragmentListener(): Optional<PlayerServiceEventListener> {
         return Optional.ofNullable(fragmentListener)
     }
-
-    private val videoRendererIndex: Int
-        /**
-         * Get the video renderer index of the current playing stream.
-         *
-         *
-         * This method returns the video renderer index of the current
-         * [MappingTrackSelector.MappedTrackInfo] or [.RENDERER_UNAVAILABLE] if the current
-         * [MappingTrackSelector.MappedTrackInfo] is null or if there is no video renderer index.
-         *
-         * @return the video renderer index or [.RENDERER_UNAVAILABLE] if it cannot be get
-         */
-        get() {
-            val mappedTrackInfo = trackSelector.currentMappedTrackInfo ?: return RENDERER_UNAVAILABLE
-
-            // Check every renderer
-            return IntStream.range(0,
-                mappedTrackInfo.rendererCount) // Check the renderer is a video renderer and has at least one track
-                // Return the first index found (there is at most one renderer per renderer type)
-                .filter { i: Int -> (!mappedTrackInfo.getTrackGroups(i).isEmpty && exoPlayer!!.getRendererType(i) == C.TRACK_TYPE_VIDEO) }
-                .findFirst() // No video renderer index with at least one track found: return unavailable index
-                .orElse(RENDERER_UNAVAILABLE)
-        } //endregion
 
     companion object {
         const val DEBUG: Boolean = MainActivity.DEBUG

@@ -20,8 +20,7 @@ import kotlin.concurrent.Volatile
 import kotlin.math.max
 import kotlin.math.min
 
-class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Char, psInstance: Postprocessing?) :
-    Mission() {
+class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Char, psInstance: Postprocessing?) : Mission() {
     /**
      * The urls of the file to download
      */
@@ -153,6 +152,71 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
     @Transient
     var init: Thread? = null
 
+    /**
+     * Indicates if the download if fully finished
+     * @return true, otherwise, false
+     */
+    val isFinished: Boolean
+        get() = current >= urls.size && (psAlgorithm == null || psState == 2)
+
+    /**
+     * Indicates if the download file is corrupt due a failed post-processing
+     * @return `true` if this mission is unrecoverable
+     */
+    val isPsFailed: Boolean
+        get() {
+            when (errCode) {
+                ERROR_POSTPROCESSING, ERROR_POSTPROCESSING_STOPPED -> return psAlgorithm!!.worksOnSameFile
+            }
+            return false
+        }
+
+    /**
+     * Indicates if a post-processing algorithm is running
+     * @return true, otherwise, false
+     */
+    val isPsRunning: Boolean
+        get() = psAlgorithm != null && (psState == 1 || psState == 3)
+
+    /**
+     * Indicated if the mission is ready
+     * @return true, otherwise, false
+     */
+    val isInitialized: Boolean
+        get() = blocks != null // DownloadMissionInitializer was executed
+
+    /**
+     * Indicates whatever is possible to start the mission
+     * @return `true` is this mission its "healthy", otherwise, `false`
+     */
+    val isCorrupt: Boolean
+        get() {
+            if (urls.size < 1) return false
+            return (isPsFailed || errCode == ERROR_POSTPROCESSING_HOLD) || this.isFinished
+        }
+
+    /**
+     * Indicates if mission urls has expired and there an attempt to renovate them
+     * @return `true` if the mission is running a recovery procedure, otherwise, `false`
+     */
+    val isRecovering: Boolean
+        get() = threads.size > 0 && threads[0] is DownloadMissionRecover && threads[0]!!.isAlive()
+
+    /**
+     * Gets the approximated final length of the file
+     * @return the length in bytes
+     */
+    override var length: Long = 0L
+        get() {
+            if (psState == 1 || psState == 3) return field
+            var calculated = offsets[if (current < offsets.size) current else offsets.size - 1] + field
+            calculated -= offsets[0] // don't count reserved space
+            return max(calculated, nearLength)
+        }
+        set(length) {
+            super.length = length
+        }
+
     init {
         require(Objects.requireNonNull(urls).size >= 1) { "urls array is empty" }
         this.urls = urls
@@ -170,7 +234,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
 
     /**
      * Acquire a block
-     *
      * @return the block or `null` if no more blocks left
      */
     fun acquireBlock(): Block? {
@@ -192,7 +255,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
 
     /**
      * Release an block
-     *
      * @param position the index of the block
      * @param done     amount of bytes downloaded
      */
@@ -205,7 +267,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
 
     /**
      * Opens a connection
-     *
      * @param headRequest `true` for use `HEAD` request method, otherwise, `GET` is used
      * @param rangeStart  range start
      * @param rangeEnd    range end
@@ -233,7 +294,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
         if (rangeStart >= 0) {
             var req = "bytes=$rangeStart-"
             if (rangeEnd > 0) req += rangeEnd
-
             conn.setRequestProperty("Range", req)
         }
 
@@ -264,7 +324,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
         }
     }
 
-
     private fun notify(what: Int) {
         mHandler!!.obtainMessage(what, this).sendToTarget()
     }
@@ -272,11 +331,8 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
     @Synchronized
     fun notifyProgress(deltaLen: Long) {
         if (unknownLength) length += deltaLen // Update length before proceeding
-
         done += deltaLen
-
         if (metadata == null) return
-
         if (!writingToFile && (done > writingToFileNext || deltaLen < 0)) {
             writingToFile = true
             writingToFileNext = done + BLOCK_SIZE
@@ -287,29 +343,14 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
     @Synchronized
     fun notifyError(err: Exception?) {
         Log.e(TAG, "notifyError()", err)
-
         when (err) {
-            is FileNotFoundException -> {
-                notifyError(ERROR_FILE_CREATION, null)
-            }
-            is SSLException -> {
-                notifyError(ERROR_SSL_EXCEPTION, null)
-            }
-            is HttpError -> {
-                notifyError(err.statusCode, null)
-            }
-            is ConnectException -> {
-                notifyError(ERROR_CONNECT_HOST, null)
-            }
-            is UnknownHostException -> {
-                notifyError(ERROR_UNKNOWN_HOST, null)
-            }
-            is SocketTimeoutException -> {
-                notifyError(ERROR_TIMEOUT, null)
-            }
-            else -> {
-                notifyError(ERROR_UNKNOWN_EXCEPTION, err)
-            }
+            is FileNotFoundException -> notifyError(ERROR_FILE_CREATION, null)
+            is SSLException -> notifyError(ERROR_SSL_EXCEPTION, null)
+            is HttpError -> notifyError(err.statusCode, null)
+            is ConnectException -> notifyError(ERROR_CONNECT_HOST, null)
+            is UnknownHostException -> notifyError(ERROR_UNKNOWN_HOST, null)
+            is SocketTimeoutException -> notifyError(ERROR_TIMEOUT, null)
+            else -> notifyError(ERROR_UNKNOWN_EXCEPTION, err)
         }
     }
 
@@ -408,7 +449,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
         }
     }
 
-
     /**
      * Start downloading with multiple threads.
      */
@@ -491,9 +531,8 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
             return
         }
 
-        if (BuildConfig.DEBUG && unknownLength) {
+        if (BuildConfig.DEBUG && unknownLength)
             Log.w(TAG, "pausing a download that can not be resumed (range requests not allowed by the server).")
-        }
 
         init = null
         pauseThreads()
@@ -518,7 +557,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
         if (!super.delete()) return false
         return res
     }
-
 
     /**
      * Resets the mission state
@@ -560,66 +598,8 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
         }
     }
 
-    val isFinished: Boolean
-        /**
-         * Indicates if the download if fully finished
-         *
-         * @return true, otherwise, false
-         */
-        get() = current >= urls.size && (psAlgorithm == null || psState == 2)
-
-    val isPsFailed: Boolean
-        /**
-         * Indicates if the download file is corrupt due a failed post-processing
-         *
-         * @return `true` if this mission is unrecoverable
-         */
-        get() {
-            when (errCode) {
-                ERROR_POSTPROCESSING, ERROR_POSTPROCESSING_STOPPED -> return psAlgorithm!!.worksOnSameFile
-            }
-            return false
-        }
-
-    val isPsRunning: Boolean
-        /**
-         * Indicates if a post-processing algorithm is running
-         *
-         * @return true, otherwise, false
-         */
-        get() = psAlgorithm != null && (psState == 1 || psState == 3)
-
-    val isInitialized: Boolean
-        /**
-         * Indicated if the mission is ready
-         *
-         * @return true, otherwise, false
-         */
-        get() = blocks != null // DownloadMissionInitializer was executed
-
-    override var length: Long = 0L
-        /**
-         * Gets the approximated final length of the file
-         *
-         * @return the length in bytes
-         */
-        get() {
-            if (psState == 1 || psState == 3) {
-                return field
-            }
-
-            var calculated = offsets[if (current < offsets.size) current else offsets.size - 1] + field
-            calculated -= offsets[0] // don't count reserved space
-
-            return max(calculated, nearLength)
-        }
-        set(length) {
-            super.length = length
-        }
-
     /**
      * set this mission state on the queue
-     *
      * @param queue true to add to the queue, otherwise, false
      */
     fun setEnqueued(queue: Boolean) {
@@ -640,31 +620,11 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
 
     /**
      * Indicates whatever the backed storage is invalid
-     *
      * @return `true`, if storage is invalid and cannot be used
      */
     fun hasInvalidStorage(): Boolean {
         return errCode == ERROR_PROGRESS_LOST || storage == null || !storage!!.existsAsFile()
     }
-
-    val isCorrupt: Boolean
-        /**
-         * Indicates whatever is possible to start the mission
-         *
-         * @return `true` is this mission its "healthy", otherwise, `false`
-         */
-        get() {
-            if (urls.size < 1) return false
-            return (isPsFailed || errCode == ERROR_POSTPROCESSING_HOLD) || this.isFinished
-        }
-
-    val isRecovering: Boolean
-        /**
-         * Indicates if mission urls has expired and there an attempt to renovate them
-         *
-         * @return `true` if the mission is running a recovery procedure, otherwise, `false`
-         */
-        get() = threads.size > 0 && threads[0] is DownloadMissionRecover && threads[0]!!.isAlive()
 
     private fun doPostprocessing() {
         errCode = ERROR_NOTHING
@@ -808,7 +768,6 @@ class DownloadMission(urls: Array<String?>, storage: StoredFileHelper?, kind: Ch
             throw RuntimeException("A download thread is still running", e)
         }
     }
-
 
     internal class HttpError(val statusCode: Int) : Exception() {
         override val message: String

@@ -102,9 +102,7 @@ object Localization {
         return nf.format(number)
     }
 
-    fun formatDate(context: Context,
-                   offsetDateTime: OffsetDateTime
-    ): String {
+    fun formatDate(context: Context, offsetDateTime: OffsetDateTime): String {
         return DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
             .withLocale(getAppLocale(context)).format(offsetDateTime
                 .atZoneSameInstant(ZoneId.systemDefault()))
@@ -112,9 +110,7 @@ object Localization {
 
     @JvmStatic
     @SuppressLint("StringFormatInvalid")
-    fun localizeUploadDate(context: Context,
-                           offsetDateTime: OffsetDateTime
-    ): String {
+    fun localizeUploadDate(context: Context, offsetDateTime: OffsetDateTime): String {
         return context.getString(R.string.upload_date_text, formatDate(context, offsetDateTime))
     }
 
@@ -125,9 +121,7 @@ object Localization {
     }
 
     @JvmStatic
-    fun localizeStreamCount(context: Context,
-                            streamCount: Long
-    ): String {
+    fun localizeStreamCount(context: Context, streamCount: Long): String {
         return when (streamCount.toInt()) {
             ListExtractor.ITEM_COUNT_UNKNOWN.toInt() -> ""
             ListExtractor.ITEM_COUNT_INFINITE.toInt() -> context.resources.getString(R.string.infinite_videos)
@@ -141,9 +135,7 @@ object Localization {
     }
 
     @JvmStatic
-    fun localizeStreamCountMini(context: Context,
-                                streamCount: Long
-    ): String {
+    fun localizeStreamCountMini(context: Context, streamCount: Long): String {
         return when (streamCount.toInt()) {
             ListExtractor.ITEM_COUNT_UNKNOWN.toInt() -> ""
             ListExtractor.ITEM_COUNT_INFINITE.toInt() -> context.resources.getString(R.string.infinite_videos_mini)
@@ -153,11 +145,8 @@ object Localization {
     }
 
     @JvmStatic
-    fun localizeWatchingCount(context: Context,
-                              watchingCount: Long
-    ): String {
-        return getQuantity(context, R.plurals.watching, R.string.no_one_watching, watchingCount,
-            localizeNumber(context, watchingCount))
+    fun localizeWatchingCount(context: Context, watchingCount: Long): String {
+        return getQuantity(context, R.plurals.watching, R.string.no_one_watching, watchingCount, localizeNumber(context, watchingCount))
     }
 
     @JvmStatic
@@ -192,11 +181,8 @@ object Localization {
     }
 
     @JvmStatic
-    fun shortWatchingCount(context: Context,
-                           watchingCount: Long
-    ): String {
-        return getQuantity(context, R.plurals.watching, R.string.no_one_watching, watchingCount,
-            shortCount(context, watchingCount))
+    fun shortWatchingCount(context: Context, watchingCount: Long): String {
+        return getQuantity(context, R.plurals.watching, R.string.no_one_watching, watchingCount, shortCount(context, watchingCount))
     }
 
     @JvmStatic
@@ -206,11 +192,8 @@ object Localization {
     }
 
     @JvmStatic
-    fun shortSubscriberCount(context: Context,
-                             subscriberCount: Long
-    ): String {
-        return getQuantity(context, R.plurals.subscribers, R.string.no_subscribers, subscriberCount,
-            shortCount(context, subscriberCount))
+    fun shortSubscriberCount(context: Context, subscriberCount: Long): String {
+        return getQuantity(context, R.plurals.subscribers, R.string.no_subscribers, subscriberCount, shortCount(context, subscriberCount))
     }
 
     @JvmStatic
@@ -220,9 +203,7 @@ object Localization {
     }
 
     @JvmStatic
-    fun deletedDownloadCount(context: Context,
-                             deletedCount: Int
-    ): String {
+    fun deletedDownloadCount(context: Context, deletedCount: Int): String {
         return getQuantity(context, R.plurals.deleted_downloads_toast, 0,
             deletedCount.toLong(), shortCount(context, deletedCount.toLong()))
     }
@@ -282,9 +263,7 @@ object Localization {
      * @param durationInSecs an amount of seconds.
      * @return duration in a human readable string.
      */
-    fun localizeDuration(context: Context,
-                         durationInSecs: Int
-    ): String {
+    fun localizeDuration(context: Context, durationInSecs: Int): String {
         require(durationInSecs >= 0) { "duration can not be negative" }
 
         val days = (durationInSecs / (24 * 60 * 60L)).toInt()
@@ -339,9 +318,7 @@ object Localization {
         return name
     }
 
-    private fun audioTrackType(context: Context,
-                               trackType: AudioTrackType?
-    ): String? {
+    private fun audioTrackType(context: Context, trackType: AudioTrackType?): String? {
         when (trackType) {
             AudioTrackType.ORIGINAL -> return context.getString(R.string.audio_track_type_original)
             AudioTrackType.DUBBED -> return context.getString(R.string.audio_track_type_dubbed)
@@ -382,10 +359,7 @@ object Localization {
      * be appended to the returned string for debugging purposes.
      */
     @JvmStatic
-    fun relativeTimeOrTextual(context: Context?,
-                              parsed: DateWrapper?,
-                              textual: String
-    ): String {
+    fun relativeTimeOrTextual(context: Context?, parsed: DateWrapper?, textual: String): String {
         return if (parsed == null) {
             textual
         } else if (MainActivity.DEBUG && context != null && PreferenceManager
@@ -406,9 +380,7 @@ object Localization {
         res.updateConfiguration(conf, dm)
     }
 
-    private fun getLocaleFromPrefs(context: Context,
-                                   @StringRes prefKey: Int
-    ): Locale {
+    private fun getLocaleFromPrefs(context: Context, @StringRes prefKey: Int): Locale {
         val sp = PreferenceManager.getDefaultSharedPreferences(context)
         val defaultKey = context.getString(R.string.default_localization_key)
         val languageCode = sp.getString(context.getString(prefKey), defaultKey)
@@ -424,12 +396,7 @@ object Localization {
         return BigDecimal(value).setScale(1, RoundingMode.HALF_UP).toDouble()
     }
 
-    private fun getQuantity(context: Context,
-                            @PluralsRes pluralId: Int,
-                            @StringRes zeroCaseStringId: Int,
-                            count: Long,
-                            formattedCount: String
-    ): String {
+    private fun getQuantity(context: Context, @PluralsRes pluralId: Int, @StringRes zeroCaseStringId: Int, count: Long, formattedCount: String): String {
         if (count == 0L) {
             return context.getString(zeroCaseStringId)
         }

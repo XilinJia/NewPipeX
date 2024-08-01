@@ -10,24 +10,22 @@ import java.time.ZoneOffset
 class Converters {
     /**
      * Convert a long value to a [OffsetDateTime].
-     *
      * @param value the long value
      * @return the `OffsetDateTime`
      */
     @TypeConverter
-    fun offsetDateTimeFromTimestamp(value: Long?): OffsetDateTime? {
-        return value?.let { OffsetDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneOffset.UTC) }
+    fun offsetDateTimeFromTimestamp(value: Long?): OffsetDateTime {
+        return value?.let { OffsetDateTime.ofInstant(Instant.ofEpochMilli(it), ZoneOffset.UTC) } ?: OffsetDateTime.MIN
     }
 
     /**
      * Convert a [OffsetDateTime] to a long value.
-     *
      * @param offsetDateTime the `OffsetDateTime`
      * @return the long value
      */
     @TypeConverter
-    fun offsetDateTimeToTimestamp(offsetDateTime: OffsetDateTime?): Long? {
-        return offsetDateTime?.withOffsetSameInstant(ZoneOffset.UTC)?.toInstant()?.toEpochMilli()
+    fun offsetDateTimeToTimestamp(offsetDateTime: OffsetDateTime?): Long {
+        return offsetDateTime?.withOffsetSameInstant(ZoneOffset.UTC)?.toInstant()?.toEpochMilli() ?: 0L
     }
 
     @TypeConverter

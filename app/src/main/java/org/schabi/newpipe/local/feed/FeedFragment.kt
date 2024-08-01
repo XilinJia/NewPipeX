@@ -108,6 +108,26 @@ class FeedFragment : BaseStateFragment<FeedState>() {
 
     private var lastNewItemsCount = 0
 
+    private val listenerStreamItem = object : OnItemClickListener, OnItemLongClickListener {
+        override fun onItemClick(item: Item<*>, view: View) {
+            if (item is StreamItem && !isRefreshing) {
+                val stream = item.streamWithState.stream
+                val fm = requireActivity().supportFragmentManager
+                Logd(TAG, "onItemClick: ${stream.serviceId}, ${stream.url}, ${stream.title}")
+                NavigationHelper.openVideoDetailFragment(requireContext(), fm, stream.serviceId, stream.url, stream.title,
+                    null, false)
+            }
+        }
+
+        override fun onItemLongClick(item: Item<*>, view: View): Boolean {
+            if (item is StreamItem && !isRefreshing) {
+                showInfoItemDialog(item.streamWithState.stream.toStreamInfoItem())
+                return true
+            }
+            return false
+        }
+    }
+
     init {
         setHasOptionsMenu(true)
     }
@@ -370,26 +390,6 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         if (context == null || context.resources == null || activity == null) return
 
         InfoItemDialog.Builder(activity, context, this, item).create().show()
-    }
-
-    private val listenerStreamItem = object : OnItemClickListener, OnItemLongClickListener {
-        override fun onItemClick(item: Item<*>, view: View) {
-            if (item is StreamItem && !isRefreshing) {
-                val stream = item.streamWithState.stream
-                val fm = requireActivity().supportFragmentManager
-                Logd(TAG, "onItemClick: ${stream.serviceId}, ${stream.url}, ${stream.title}")
-                NavigationHelper.openVideoDetailFragment(requireContext(), fm, stream.serviceId, stream.url, stream.title,
-                    null, false)
-            }
-        }
-
-        override fun onItemLongClick(item: Item<*>, view: View): Boolean {
-            if (item is StreamItem && !isRefreshing) {
-                showInfoItemDialog(item.streamWithState.stream.toStreamInfoItem())
-                return true
-            }
-            return false
-        }
     }
 
     @SuppressLint("StringFormatMatches")
