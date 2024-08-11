@@ -20,7 +20,7 @@ import org.acra.config.CoreConfigurationBuilder
 import org.schabi.newpipe.error.ReCaptchaActivity
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.downloader.Downloader
-import org.schabi.newpipe.ktx.hasAssignableCause
+import org.schabi.newpipe.util.hasAssignableCause
 import org.schabi.newpipe.settings.NewPipeSettings.initSettings
 import org.schabi.newpipe.util.Localization.getPreferredContentCountry
 import org.schabi.newpipe.util.Localization.getPreferredLocalization

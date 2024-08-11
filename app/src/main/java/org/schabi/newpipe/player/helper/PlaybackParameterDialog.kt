@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.DialogInterface
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.CheckBox
 import android.widget.CompoundButton
@@ -21,13 +20,12 @@ import icepick.Icepick
 import icepick.State
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.DialogPlaybackParameterBinding
-import org.schabi.newpipe.ktx.animateRotation
-import org.schabi.newpipe.player.PlayerManager
+import org.schabi.newpipe.ui.ktx.animateRotation
+import org.schabi.newpipe.player.helper.PlaybackParameterDialog.PlayerSemitoneHelper.formatPitchSemitones
+import org.schabi.newpipe.player.helper.PlaybackParameterDialog.PlayerSemitoneHelper.percentToSemitones
+import org.schabi.newpipe.player.helper.PlaybackParameterDialog.PlayerSemitoneHelper.semitonesToPercent
 import org.schabi.newpipe.player.helper.PlayerHelper.formatPitch
 import org.schabi.newpipe.player.helper.PlayerHelper.formatSpeed
-import org.schabi.newpipe.player.helper.PlayerSemitoneHelper.formatPitchSemitones
-import org.schabi.newpipe.player.helper.PlayerSemitoneHelper.percentToSemitones
-import org.schabi.newpipe.player.helper.PlayerSemitoneHelper.semitonesToPercent
 import org.schabi.newpipe.player.ui.VideoPlayerUi
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
 import org.schabi.newpipe.util.Logd
@@ -40,7 +38,9 @@ import java.util.function.Consumer
 import java.util.function.DoubleConsumer
 import java.util.function.DoubleFunction
 import java.util.function.DoubleSupplier
+import kotlin.math.ln
 import kotlin.math.min
+import kotlin.math.pow
 
 class PlaybackParameterDialog : DialogFragment() {
     private var callback: Callback? = null
@@ -124,10 +124,10 @@ class PlaybackParameterDialog : DialogFragment() {
     private fun initUI() {
         // Tempo
         setText(binding!!.tempoMinimumText,
-            DoubleFunction<String> { obj: Double -> formatSpeed(obj) },
+            { obj: Double -> formatSpeed(obj) },
             MIN_PITCH_OR_SPEED)
         setText(binding!!.tempoMaximumText,
-            DoubleFunction<String> { obj: Double -> formatSpeed(obj) },
+            { obj: Double -> formatSpeed(obj) },
             MAX_PITCH_OR_SPEED)
 
         binding!!.tempoSeekbar.max = QUADRATIC_STRATEGY.progressOf(MAX_PITCH_OR_SPEED)
@@ -170,10 +170,10 @@ class PlaybackParameterDialog : DialogFragment() {
 
         // Pitch - Percent
         setText(binding!!.pitchPercentMinimumText,
-            DoubleFunction<String> { obj: Double -> formatSpeed(obj) },
+            { obj: Double -> formatSpeed(obj) },
             MIN_PITCH_OR_SPEED)
         setText(binding!!.pitchPercentMaximumText,
-            DoubleFunction<String> { obj: Double -> formatSpeed(obj) },
+            { obj: Double -> formatSpeed(obj) },
             MAX_PITCH_OR_SPEED)
 
         binding!!.pitchPercentSeekbar.max = QUADRATIC_STRATEGY.progressOf(MAX_PITCH_OR_SPEED)
@@ -266,8 +266,7 @@ class PlaybackParameterDialog : DialogFragment() {
             newValueConsumer: DoubleConsumer
     ) {
         stepTextView.setOnClickListener { view: View? ->
-            newValueConsumer.accept(semitonesToPercent(
-                percentToSemitones(this.pitchPercent) + direction))
+            newValueConsumer.accept(semitonesToPercent(percentToSemitones(this.pitchPercent) + direction))
             updateCallback()
         }
     }
@@ -471,7 +470,7 @@ class PlaybackParameterDialog : DialogFragment() {
         this.tempo = MathUtils.clamp(newTempo, MIN_PITCH_OR_SPEED, MAX_PITCH_OR_SPEED)
 
         binding!!.tempoSeekbar.progress = QUADRATIC_STRATEGY.progressOf(tempo)
-        setText(binding!!.tempoCurrentText, DoubleFunction<String> { obj: Double -> formatSpeed(obj) }, tempo)
+        setText(binding!!.tempoCurrentText, { obj: Double -> formatSpeed(obj) }, tempo)
     }
 
     private fun setAndUpdatePitch(newPitch: Double) {
@@ -480,11 +479,9 @@ class PlaybackParameterDialog : DialogFragment() {
         binding!!.pitchPercentSeekbar.progress = QUADRATIC_STRATEGY.progressOf(pitchPercent)
         binding!!.pitchSemitoneSeekbar.progress = SEMITONE_STRATEGY.progressOf(pitchPercent)
         setText(binding!!.pitchPercentCurrentText,
-            DoubleFunction<String> { obj: Double -> formatSpeed(obj) },
+            { obj: Double -> formatSpeed(obj) },
             pitchPercent)
-        setText(binding!!.pitchSemitoneCurrentText,
-            DoubleFunction<String> { obj: Double -> formatPitchSemitones(obj) },
-            pitchPercent)
+        setText(binding!!.pitchSemitoneCurrentText, { obj: Double -> formatPitchSemitones(obj) }, pitchPercent)
     }
 
     private fun calcValidPitch(newPitch: Double): Double {
@@ -509,6 +506,41 @@ class PlaybackParameterDialog : DialogFragment() {
 
     interface Callback {
         fun onPlaybackParameterChanged(playbackTempo: Float, playbackPitch: Float, playbackSkipSilence: Boolean)
+    }
+
+    /**
+     * Converts between percent and 12-tone equal temperament semitones.
+     * <br></br>
+     * @see  [
+     * Wikipedia: Equal temperament.Twelve-tone equal temperament
+    ](https://en.wikipedia.org/wiki/Equal_temperament.Twelve-tone_equal_temperament) *
+     */
+    object PlayerSemitoneHelper {
+        const val SEMITONE_COUNT: Int = 12
+
+        @JvmStatic
+        fun formatPitchSemitones(percent: Double): String {
+            return formatPitchSemitones(percentToSemitones(percent))
+        }
+
+        fun formatPitchSemitones(semitones: Int): String {
+            return if (semitones > 0) "+$semitones" else "" + semitones
+        }
+
+        @JvmStatic
+        fun semitonesToPercent(semitones: Int): Double {
+            return (2.0).pow(ensureSemitonesInRange(semitones) / SEMITONE_COUNT.toDouble())
+        }
+
+        @JvmStatic
+        fun percentToSemitones(percent: Double): Int {
+            return ensureSemitonesInRange(
+                Math.round(SEMITONE_COUNT * ln(percent) / ln(2.0)).toInt())
+        }
+
+        private fun ensureSemitonesInRange(semitones: Int): Int {
+            return MathUtils.clamp(semitones, -SEMITONE_COUNT, SEMITONE_COUNT)
+        }
     }
 
     companion object {

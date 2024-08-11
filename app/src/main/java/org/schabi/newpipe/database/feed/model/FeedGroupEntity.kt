@@ -6,21 +6,21 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity.Companion.FEED_GROUP_TABLE
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity.Companion.SORT_ORDER
-import org.schabi.newpipe.local.subscription.FeedGroupIcon
+import org.schabi.newpipe.ui.local.subscription.FeedGroupIcon
 
 @Entity(
     tableName = FEED_GROUP_TABLE,
     indices = [Index(SORT_ORDER)],
 )
 data class FeedGroupEntity(
-    @PrimaryKey(autoGenerate = true)
+        @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = ID)
     val uid: Long,
-    @ColumnInfo(name = NAME)
+        @ColumnInfo(name = NAME)
     var name: String,
-    @ColumnInfo(name = ICON)
+        @ColumnInfo(name = ICON)
     var icon: FeedGroupIcon?,
-    @ColumnInfo(name = SORT_ORDER)
+        @ColumnInfo(name = SORT_ORDER)
     var sortOrder: Long = -1,
 ) {
     constructor(): this(0L, "", null, -1)

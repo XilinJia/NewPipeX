@@ -22,7 +22,7 @@ import org.schabi.newpipe.extractor.stream.Stream
 import org.schabi.newpipe.extractor.stream.SubtitlesStream
 import org.schabi.newpipe.extractor.stream.VideoStream
 import org.schabi.newpipe.extractor.utils.Utils
-import us.shandian.giga.util.Utility
+import org.schabi.newpipe.giga.util.Utility
 import java.io.Serializable
 import java.util.*
 import java.util.concurrent.Callable

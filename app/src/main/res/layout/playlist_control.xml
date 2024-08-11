@@ -16,7 +16,7 @@
         android:focusable="true"
         android:gravity="center">
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:drawableStart="@drawable/ic_headset"
@@ -45,7 +45,7 @@
         android:focusable="true"
         android:gravity="center">
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:drawableStart="@drawable/ic_playlist_play"
@@ -74,7 +74,7 @@
         android:focusable="true"
         android:gravity="center">
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:drawableStart="@drawable/ic_picture_in_picture"

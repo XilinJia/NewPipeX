@@ -3,6 +3,7 @@ package org.schabi.newpipe.local.subscription
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.schabi.newpipe.ui.local.subscription.FeedGroupIcon
 
 class FeedGroupIconTest {
     @Test

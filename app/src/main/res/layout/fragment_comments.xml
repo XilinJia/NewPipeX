@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <org.schabi.newpipe.views.NewPipeRecyclerView
+    <org.schabi.newpipe.ui.views.NewPipeRecyclerView
         android:id="@+id/items_list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -30,7 +30,7 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
@@ -40,7 +40,7 @@
             android:textSize="35sp"
             tools:ignore="HardcodedText,UnusedAttribute" />
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/empty_state_desc"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

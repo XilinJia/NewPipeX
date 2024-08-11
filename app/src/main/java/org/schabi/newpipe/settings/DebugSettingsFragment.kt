@@ -8,7 +8,7 @@ import org.schabi.newpipe.error.ErrorInfo
 import org.schabi.newpipe.error.ErrorUtil.Companion.createNotification
 import org.schabi.newpipe.error.ErrorUtil.Companion.showUiErrorSnackbar
 import org.schabi.newpipe.error.UserAction
-import org.schabi.newpipe.local.feed.notifications.NotificationWorker.Companion.runNow
+import org.schabi.newpipe.ui.local.feed.notifications.NotificationWorker.Companion.runNow
 import org.schabi.newpipe.util.image.PicassoHelper.setIndicatorsEnabled
 import java.util.*
 

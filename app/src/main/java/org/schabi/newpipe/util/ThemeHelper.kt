@@ -34,7 +34,7 @@ import org.schabi.newpipe.R
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.StreamingService
 import org.schabi.newpipe.extractor.exceptions.ExtractionException
-import org.schabi.newpipe.info_list.ItemViewMode
+import org.schabi.newpipe.ui.info_list.ItemViewMode
 import kotlin.math.max
 
 object ThemeHelper {

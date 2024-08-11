@@ -3,11 +3,11 @@ import com.android.tools.profgen.ArtProfileSerializer
 import com.android.tools.profgen.DexFile
 
 plugins {
-    id "com.android.application"
-    id "kotlin-android"
+    id 'com.android.application'
+    id 'kotlin-android'
     id 'com.google.devtools.ksp'
-    id "kotlin-parcelize"
-    id "org.sonarqube" version "4.0.0.2929"
+    id 'kotlin-parcelize'
+    id 'org.sonarqube' version "4.0.0.2929"
 }
 
 android {
@@ -20,8 +20,8 @@ android {
         minSdk 24
         //noinspection EditedTargetSdkVersion
         targetSdk 34
-        versionCode 1007
-        versionName "0.26.12"
+        versionCode 1008
+        versionName "0.30.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -41,6 +41,10 @@ android {
             keyAlias project.getProperties().getOrDefault("releaseKeyAlias", "alias")
             keyPassword project.getProperties().getOrDefault("releaseKeyPassword", "password")
         }
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -119,7 +123,7 @@ android {
 
 ext {
     androidxRoomVersion = '2.6.1'
-    androidxWorkVersion = '2.9.0'
+    androidxWorkVersion = '2.9.1'
 
     icepickVersion = '3.2.0'
     googleAutoServiceVersion = '1.1.1'
@@ -189,17 +193,17 @@ dependencies {
     // HTTP client
     implementation "com.squareup.okhttp3:okhttp:4.12.0"
 
+//     TODO: media3 1.4.0 has issue with legacy formats
+// https://developer.android.com/jetpack/androidx/releases/media3
     // Media player
-    implementation "androidx.media3:media3-exoplayer:1.3.1"
-    implementation "androidx.media3:media3-exoplayer-dash:1.3.1"
-    implementation "androidx.media3:media3-database:1.3.1"
-    implementation "androidx.media3:media3-datasource:1.3.1"
-    implementation "androidx.media3:media3-exoplayer-hls:1.3.1"
-    implementation "androidx.media3:media3-exoplayer-smoothstreaming:1.3.1"
-    implementation "androidx.media3:media3-ui:1.3.1"
-    implementation "androidx.media3:media3-session:1.3.1"
-
-//    implementation "com.google.android.exoplayer:extension-mediasession:2.19.1"
+    implementation "androidx.media3:media3-exoplayer:1.4.0"
+    implementation "androidx.media3:media3-exoplayer-dash:1.4.0"
+    implementation "androidx.media3:media3-database:1.4.0"
+    implementation "androidx.media3:media3-datasource:1.4.0"
+    implementation "androidx.media3:media3-exoplayer-hls:1.4.0"
+    implementation "androidx.media3:media3-exoplayer-smoothstreaming:1.4.0"
+    implementation "androidx.media3:media3-ui:1.4.0"
+    implementation "androidx.media3:media3-session:1.4.0"
 
     // Metadata generator for service descriptors
     compileOnly "com.google.auto.service:auto-service-annotations:${googleAutoServiceVersion}"

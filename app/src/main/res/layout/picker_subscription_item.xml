@@ -25,7 +25,7 @@
             app:strokeColor="@null"
             tools:src="@drawable/placeholder_person" />
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/title_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

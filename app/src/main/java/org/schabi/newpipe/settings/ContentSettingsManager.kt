@@ -2,9 +2,8 @@ package org.schabi.newpipe.settings
 
 import android.content.SharedPreferences
 import android.util.Log
-import org.schabi.newpipe.MainActivity.Companion.DEBUG
-import org.schabi.newpipe.streams.io.SharpOutputStream
-import org.schabi.newpipe.streams.io.StoredFileHelper
+import org.schabi.newpipe.giga.io.SharpOutputStream
+import org.schabi.newpipe.giga.io.StoredFileHelper
 import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ZipHelper
 import java.io.IOException
@@ -23,8 +22,8 @@ class ContentSettingsManager(private val fileLocator: NewPipeFileLocator) {
      */
     @Throws(Exception::class)
     fun exportDatabase(
-        preferences: SharedPreferences,
-        file: StoredFileHelper,
+            preferences: SharedPreferences,
+            file: StoredFileHelper,
     ) {
         file.create()
         ZipOutputStream(SharpOutputStream(file.stream).buffered())

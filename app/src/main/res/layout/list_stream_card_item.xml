@@ -25,7 +25,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/itemDurationView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -42,7 +42,7 @@
         app:layout_constraintRight_toRightOf="@id/itemThumbnailView"
         tools:text="1:09:10" />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/itemVideoTitleView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -57,7 +57,7 @@
         app:layout_constraintTop_toBottomOf="@id/itemThumbnailView"
         tools:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc tristique vitae sem vitae blanditLorem ipsumLorem ipsumLorem ipsumLorem ipsumLorem ipsumLorem ipsumLorem ipsum" />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/itemUploaderView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -72,7 +72,7 @@
         app:layout_constraintTop_toBottomOf="@+id/itemVideoTitleView"
         tools:text="Uploader" />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/itemAdditionalDetails"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -86,7 +86,7 @@
         app:layout_constraintTop_toTopOf="@id/itemUploaderView"
         tools:text="2 years ago • 10M views" />
 
-    <org.schabi.newpipe.views.AnimatedProgressBar
+    <org.schabi.newpipe.ui.views.AnimatedProgressBar
         android:id="@+id/itemProgressView"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="0dp"

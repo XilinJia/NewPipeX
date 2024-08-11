@@ -7,14 +7,14 @@
     android:minHeight="128dp"
     android:orientation="vertical">
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="¯\\_(ツ)_/¯"
         android:textAppearance="?android:attr/textAppearanceLarge"
         tools:ignore="HardcodedText" />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"

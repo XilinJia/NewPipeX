@@ -6,7 +6,7 @@
         android:layout_height="wrap_content"
         android:paddingTop="16dp">
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/summary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

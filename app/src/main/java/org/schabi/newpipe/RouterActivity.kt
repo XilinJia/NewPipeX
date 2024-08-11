@@ -23,6 +23,7 @@ import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.appcompat.widget.Toolbar
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.math.MathUtils
@@ -44,12 +45,11 @@ import io.reactivex.rxjava3.core.SingleOnSubscribe
 import io.reactivex.rxjava3.disposables.CompositeDisposable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
-import org.schabi.newpipe.RouterActivity.FetcherService
 import org.schabi.newpipe.database.stream.model.StreamEntity
+import org.schabi.newpipe.databinding.DownloadLoadingDialogBinding
 import org.schabi.newpipe.databinding.ListRadioIconItemBinding
 import org.schabi.newpipe.databinding.SingleChoiceDialogViewBinding
-import org.schabi.newpipe.download.DownloadDialog
-import org.schabi.newpipe.download.LoadingDialog
+import org.schabi.newpipe.ui.download.DownloadDialog
 import org.schabi.newpipe.error.ErrorInfo
 import org.schabi.newpipe.error.ErrorUtil.Companion.createNotification
 import org.schabi.newpipe.error.ReCaptchaActivity
@@ -64,8 +64,8 @@ import org.schabi.newpipe.extractor.exceptions.*
 import org.schabi.newpipe.extractor.linkhandler.ListLinkHandler
 import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.stream.StreamInfo
-import org.schabi.newpipe.ktx.isNetworkRelated
-import org.schabi.newpipe.local.dialog.PlaylistDialog
+import org.schabi.newpipe.util.isNetworkRelated
+import org.schabi.newpipe.ui.local.dialog.PlaylistDialog
 import org.schabi.newpipe.player.PlayerType
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.helper.PlayerHolder
@@ -80,6 +80,7 @@ import org.schabi.newpipe.util.ExtractorHelper.getPlaylistInfo
 import org.schabi.newpipe.util.ExtractorHelper.getStreamInfo
 import org.schabi.newpipe.util.KEY_SERVICE_ID
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
+import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.getIntentByLink
 import org.schabi.newpipe.util.NavigationHelper.openSearch
 import org.schabi.newpipe.util.NavigationHelper.playOnBackgroundPlayer
@@ -95,7 +96,7 @@ import org.schabi.newpipe.util.ThemeHelper.setDayNightMode
 import org.schabi.newpipe.util.external_communication.ShareUtils.openUrlInBrowser
 import org.schabi.newpipe.util.external_communication.ShareUtils.shareText
 import org.schabi.newpipe.util.urlfinder.UrlFinder.Companion.firstUrlFromInput
-import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
+import org.schabi.newpipe.ui.views.FocusOverlayView.Companion.setupFocusObserver
 import java.io.Serializable
 import java.lang.ref.WeakReference
 import java.util.*
@@ -920,6 +921,58 @@ import java.util.function.Predicate
         }
 
         return foundUrl
+    }
+
+    /**
+     * This class contains a dialog which shows a loading indicator and has a customizable title.
+     */
+    class LoadingDialog
+    /**
+     * Create a new LoadingDialog.
+     *
+     *
+     *
+     * The dialog contains a loading indicator and has a customizable title.
+     * <br></br>
+     * Use `show()` to display the dialog to the user.
+     *
+     *
+     * @param title an informative title shown in the dialog's toolbar
+     */(@field:StringRes @param:StringRes private val title: Int) : DialogFragment() {
+        private var dialogLoadingBinding: DownloadLoadingDialogBinding? = null
+
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            Logd(TAG, "onCreate() called with: savedInstanceState = [$savedInstanceState]")
+            this.isCancelable = false
+        }
+
+        override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+            Logd(TAG, "onCreateView() called with: inflater = [$inflater], container = [$container], savedInstanceState = [$savedInstanceState]")
+            return inflater.inflate(R.layout.download_loading_dialog, container)
+        }
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            dialogLoadingBinding = DownloadLoadingDialogBinding.bind(view)
+            initToolbar(dialogLoadingBinding!!.toolbarLayout.toolbar)
+        }
+
+        private fun initToolbar(toolbar: Toolbar) {
+            Logd(TAG, "initToolbar() called with: toolbar = [$toolbar]")
+
+            toolbar.title = requireContext().getString(title)
+            toolbar.setNavigationOnClickListener { v: View? -> dismiss() }
+        }
+
+        override fun onDestroyView() {
+            dialogLoadingBinding = null
+            super.onDestroyView()
+        }
+
+        companion object {
+            private const val TAG = "LoadingDialog"
+        }
     }
 
     companion object {

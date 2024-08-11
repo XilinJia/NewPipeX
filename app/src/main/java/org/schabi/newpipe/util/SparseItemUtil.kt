@@ -5,7 +5,7 @@ import android.widget.Toast
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.schedulers.Schedulers
-import org.schabi.newpipe.NewPipeDatabase
+import org.schabi.newpipe.database.NewPipeDatabase
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.stream.model.StreamEntity
 import org.schabi.newpipe.error.ErrorInfo

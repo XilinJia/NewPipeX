@@ -6,7 +6,6 @@ import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
 import android.provider.Settings
-import android.util.Log
 import android.view.*
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
@@ -16,14 +15,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
-import org.schabi.newpipe.QueueItemMenuUtil.openPopupMenu
+import org.schabi.newpipe.ui.QueueItemMenuUtil.openPopupMenu
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.ActivityPlayerQueueControlBinding
 import org.schabi.newpipe.extractor.stream.AudioStream
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamType
-import org.schabi.newpipe.fragments.OnScrollBelowItemsListener
-import org.schabi.newpipe.local.dialog.PlaylistDialog.Companion.showForPlayQueue
+import org.schabi.newpipe.ui.OnScrollBelowItemsListener
+import org.schabi.newpipe.ui.local.dialog.PlaylistDialog.Companion.showForPlayQueue
 import org.schabi.newpipe.player.PlayerService.LocalBinder
 import org.schabi.newpipe.player.event.PlayerEventListener
 import org.schabi.newpipe.player.helper.PlaybackParameterDialog

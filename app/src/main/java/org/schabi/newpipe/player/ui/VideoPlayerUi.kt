@@ -1,5 +1,6 @@
 package org.schabi.newpipe.player.ui
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
 import android.graphics.Bitmap
@@ -13,51 +14,47 @@ import android.os.Looper
 import android.util.Log
 import android.view.*
 import android.view.View.OnLayoutChangeListener
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
+import androidx.annotation.IntDef
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.view.ContextThemeWrapper
 import androidx.appcompat.widget.PopupMenu
+import androidx.collection.SparseArrayCompat
 import androidx.core.graphics.BitmapCompat
 import androidx.core.graphics.Insets
 import androidx.core.math.MathUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.media3.common.C
-import androidx.media3.common.Format
-import androidx.media3.common.PlaybackParameters
-import androidx.media3.common.Tracks
-import androidx.media3.common.TrackGroup
+import androidx.media3.common.*
 import androidx.media3.common.text.Cue
-import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.video.PlaceholderSurface
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.CaptionStyleCompat
+import androidx.preference.PreferenceManager
+import com.google.common.base.Stopwatch
 import org.schabi.newpipe.App
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
 //import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.PlayerBinding
 import org.schabi.newpipe.extractor.MediaFormat
-import org.schabi.newpipe.extractor.stream.AudioStream
-import org.schabi.newpipe.extractor.stream.StreamInfo
-import org.schabi.newpipe.extractor.stream.StreamType
-import org.schabi.newpipe.extractor.stream.VideoStream
-import org.schabi.newpipe.fragments.detail.VideoDetailFragment
-import org.schabi.newpipe.ktx.AnimationType
-import org.schabi.newpipe.ktx.animate
-import org.schabi.newpipe.ktx.animateRotation
+import org.schabi.newpipe.extractor.stream.*
+import org.schabi.newpipe.ui.detail.VideoDetailFragment
+import org.schabi.newpipe.ui.ktx.AnimationType
+import org.schabi.newpipe.ui.ktx.animate
+import org.schabi.newpipe.ui.ktx.animateRotation
 import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.gesture.BasePlayerGestureListener
 import org.schabi.newpipe.player.gesture.DisplayPortion
 import org.schabi.newpipe.player.helper.PlayerHelper
 import org.schabi.newpipe.player.mediaitem.MediaItemTag
-import org.schabi.newpipe.player.playback.SurfaceHolderCallback
-import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHelper
-import org.schabi.newpipe.player.seekbarpreview.SeekbarPreviewThumbnailHolder
+import org.schabi.newpipe.util.DeviceUtils.dpToPx
 import org.schabi.newpipe.util.DeviceUtils.isTv
 import org.schabi.newpipe.util.Localization.audioTrackName
 import org.schabi.newpipe.util.Logd
@@ -66,12 +63,17 @@ import org.schabi.newpipe.util.external_communication.KoreUtils.playWithKore
 import org.schabi.newpipe.util.external_communication.ShareUtils.copyToClipboard
 import org.schabi.newpipe.util.external_communication.ShareUtils.openUrlInBrowser
 import org.schabi.newpipe.util.external_communication.ShareUtils.shareText
-import org.schabi.newpipe.views.player.PlayerFastSeekOverlay.PerformListener
-import org.schabi.newpipe.views.player.PlayerFastSeekOverlay.PerformListener.FastSeekDirection
+import org.schabi.newpipe.util.image.PicassoHelper.loadSeekbarThumbnailPreview
+import org.schabi.newpipe.ui.views.player.PlayerFastSeekOverlay.PerformListener
+import org.schabi.newpipe.ui.views.player.PlayerFastSeekOverlay.PerformListener.FastSeekDirection
 import java.util.*
+import java.util.concurrent.Executors
 import java.util.function.Function
+import java.util.function.IntSupplier
 import java.util.function.Predicate
+import java.util.function.Supplier
 import java.util.stream.Collectors
+import kotlin.math.abs
 
 @UnstableApi
 abstract class VideoPlayerUi protected constructor(playerManager: PlayerManager, playerBinding: PlayerBinding) :
@@ -1377,6 +1379,271 @@ abstract class VideoPlayerUi protected constructor(playerManager: PlayerManager,
 //        }
         Optional.ofNullable(playerManager.exoPlayer).ifPresent { obj: ExoPlayer -> obj.clearVideoSurface() }
         surfaceIsSetup = false
+    }
+
+    @UnstableApi class SurfaceHolderCallback(private val context: Context, private val player: Player) : SurfaceHolder.Callback {
+        private var placeholderSurface: PlaceholderSurface? = null
+
+        override fun surfaceCreated(holder: SurfaceHolder) {
+            player.setVideoSurface(holder.surface)
+        }
+
+        override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+
+        override fun surfaceDestroyed(holder: SurfaceHolder) {
+            if (placeholderSurface == null) placeholderSurface = PlaceholderSurface.newInstanceV17(context, false)
+
+            player.setVideoSurface(placeholderSurface)
+        }
+
+        fun release() {
+            placeholderSurface?.release()
+            placeholderSurface = null
+        }
+    }
+
+    class SeekbarPreviewThumbnailHolder {
+        // Key = Position of the picture in milliseconds
+        // Supplier = Supplies the bitmap for that position
+        private val seekbarPreviewData = SparseArrayCompat<Supplier<Bitmap?>>()
+
+        // This ensures that if the reset is still undergoing
+        // and another reset starts, only the last reset is processed
+        private var currentUpdateRequestIdentifier: UUID = UUID.randomUUID()
+
+        fun resetFrom(context: Context, framesets: List<Frameset?>) {
+            val seekbarPreviewType = SeekbarPreviewThumbnailHelper.getSeekbarPreviewThumbnailType(context)
+
+            val updateRequestIdentifier = UUID.randomUUID()
+            this.currentUpdateRequestIdentifier = updateRequestIdentifier
+
+            val executorService = Executors.newSingleThreadExecutor()
+            executorService.submit {
+                try {
+                    resetFromAsync(seekbarPreviewType, framesets, updateRequestIdentifier)
+                } catch (ex: Exception) {
+                    Log.e(TAG, "Failed to execute async", ex)
+                }
+            }
+            // ensure that the executorService stops/destroys it's threads
+            // after the task is finished
+            executorService.shutdown()
+        }
+
+        private fun resetFromAsync(seekbarPreviewType: Int, framesets: List<Frameset?>, updateRequestIdentifier: UUID) {
+            Logd(TAG, "Clearing seekbarPreviewData")
+            synchronized(seekbarPreviewData) {
+                seekbarPreviewData.clear()
+            }
+
+            if (seekbarPreviewType == SeekbarPreviewThumbnailHelper.SeekbarPreviewThumbnailType.NONE) {
+                Logd(TAG, "Not processing seekbarPreviewData due to settings")
+                return
+            }
+
+            val frameset = getFrameSetForType(framesets, seekbarPreviewType)
+            if (frameset == null) {
+                Logd(TAG, "No frameset was found to fill seekbarPreviewData")
+                return
+            }
+            Logd(TAG, "Frameset quality info: [width=${frameset.frameWidth}, heigh=${frameset.frameHeight}]")
+
+            // Abort method execution if we are not the latest request
+            if (!isRequestIdentifierCurrent(updateRequestIdentifier)) return
+
+            generateDataFrom(frameset, updateRequestIdentifier)
+        }
+
+        private fun getFrameSetForType(framesets: List<Frameset?>,
+                                       seekbarPreviewType: Int
+        ): Frameset? {
+            if (seekbarPreviewType == SeekbarPreviewThumbnailHelper.SeekbarPreviewThumbnailType.HIGH_QUALITY) {
+                Logd(TAG, "Strategy for seekbarPreviewData: high quality")
+                return framesets.stream()
+                    .max(Comparator.comparingInt { fs: Frameset? -> fs!!.frameHeight * fs.frameWidth })
+                    .orElse(null)
+            } else {
+                Logd(TAG, "Strategy for seekbarPreviewData: low quality")
+                return framesets.stream()
+                    .min(Comparator.comparingInt { fs: Frameset? -> fs!!.frameHeight * fs.frameWidth })
+                    .orElse(null)
+            }
+        }
+
+        private fun generateDataFrom(frameset: Frameset, updateRequestIdentifier: UUID) {
+            Logd(TAG, "Starting generation of seekbarPreviewData")
+            val sw = if (Log.isLoggable(TAG, Log.DEBUG)) Stopwatch.createStarted() else null
+
+            var currentPosMs = 0
+            var pos = 1
+
+            val urlFrameCount = frameset.framesPerPageX * frameset.framesPerPageY
+
+            // Process each url in the frameset
+            for (url in frameset.urls) {
+                // get the bitmap
+                val srcBitMap = getBitMapFrom(url)
+
+                // The data is not added directly to "seekbarPreviewData" due to
+                // concurrency and checks for "updateRequestIdentifier"
+                val generatedDataForUrl = SparseArrayCompat<Supplier<Bitmap?>>(urlFrameCount)
+
+                // The bitmap consists of several images, which we process here
+                // foreach frame in the returned bitmap
+                for (i in 0 until urlFrameCount) {
+                    // Frames outside the video length are skipped
+                    if (pos > frameset.totalCount) break
+
+                    // Get the bounds where the frame is found
+                    val bounds = frameset.getFrameBoundsAt(currentPosMs.toLong())
+                    generatedDataForUrl.put(currentPosMs, Supplier<Bitmap?> {
+                        // It can happen, that the original bitmap could not be downloaded
+                        // In such a case - we don't want a NullPointer - simply return null
+                        if (srcBitMap == null) return@Supplier null
+
+                        Bitmap.createBitmap(srcBitMap, bounds[1], bounds[2], frameset.frameWidth, frameset.frameHeight)
+                    })
+
+                    currentPosMs += frameset.durationPerFrame
+                    pos++
+                }
+
+                // Check if we are still the latest request
+                // If not abort method execution
+                if (isRequestIdentifierCurrent(updateRequestIdentifier)) {
+                    synchronized(seekbarPreviewData) {
+                        seekbarPreviewData.putAll(generatedDataForUrl)
+                    }
+                } else {
+                    Logd(TAG, "Aborted of generation of seekbarPreviewData")
+                    break
+                }
+            }
+
+            if (sw != null) {
+                Logd(TAG, "Generation of seekbarPreviewData took " + sw.stop())
+            }
+        }
+
+        private fun getBitMapFrom(url: String?): Bitmap? {
+            if (url == null) {
+                Log.w(TAG, "url is null; This should never happen")
+                return null
+            }
+
+            val sw = if (Log.isLoggable(TAG, Log.DEBUG)) Stopwatch.createStarted() else null
+            try {
+                Logd(TAG, "Downloading bitmap for seekbarPreview from '$url'")
+
+                // Gets the bitmap within the timeout of 15 seconds imposed by default by OkHttpClient
+                // Ensure that your are not running on the main-Thread this will otherwise hang
+                val bitmap = loadSeekbarThumbnailPreview(url).get()
+
+                if (sw != null) {
+                    Logd(TAG, "Download of bitmap for seekbarPreview from '$url' took ${sw.stop()}")
+                }
+
+                return bitmap
+            } catch (ex: Exception) {
+                Log.w(TAG, "Failed to get bitmap for seekbarPreview from url='$url' in time", ex)
+                return null
+            }
+        }
+
+        private fun isRequestIdentifierCurrent(requestIdentifier: UUID): Boolean {
+            return this.currentUpdateRequestIdentifier == requestIdentifier
+        }
+
+        fun getBitmapAt(positionInMs: Int): Optional<Bitmap> {
+            // Get the frame supplier closest to the requested position
+            var closestFrame = Supplier<Bitmap?> { null }
+            synchronized(seekbarPreviewData) {
+                var min = Int.MAX_VALUE
+                for (i in 0 until seekbarPreviewData.size()) {
+                    val pos = abs((seekbarPreviewData.keyAt(i) - positionInMs).toDouble()).toInt()
+                    if (pos < min) {
+                        closestFrame = seekbarPreviewData.valueAt(i)
+                        min = pos
+                    }
+                }
+            }
+
+            return Optional.ofNullable(closestFrame.get())
+        }
+
+        companion object {
+            // This has to be <= 23 chars on devices running Android 7 or lower (API <= 25)
+            // or it fails with an IllegalArgumentException
+            // https://stackoverflow.com/a/54744028
+            const val TAG: String = "SeekbarPrevThumbHolder"
+        }
+    }
+
+    object SeekbarPreviewThumbnailHelper {
+        // This has to be <= 23 chars on devices running Android 7 or lower (API <= 25)
+        // or it fails with an IllegalArgumentException
+        // https://stackoverflow.com/a/54744028
+        const val TAG: String = "SeekbarPrevThumbHelper"
+
+        ////////////////////////////////////////////////////////////////////////////
+        // Settings Resolution
+        ///////////////////////////////////////////////////////////////////////////
+        @SeekbarPreviewThumbnailType
+        fun getSeekbarPreviewThumbnailType(context: Context): Int {
+            val type = PreferenceManager.getDefaultSharedPreferences(context).getString(
+                context.getString(R.string.seekbar_preview_thumbnail_key), "")
+            return if (type == context.getString(R.string.seekbar_preview_thumbnail_none)) {
+                SeekbarPreviewThumbnailType.NONE
+            } else if (type == context.getString(R.string.seekbar_preview_thumbnail_low_quality)) {
+                SeekbarPreviewThumbnailType.LOW_QUALITY
+            } else {
+                SeekbarPreviewThumbnailType.HIGH_QUALITY // default
+            }
+        }
+
+        fun tryResizeAndSetSeekbarPreviewThumbnail(
+                context: Context,
+                previewThumbnail: Bitmap?,
+                currentSeekbarPreviewThumbnail: ImageView,
+                baseViewWidthSupplier: IntSupplier
+        ) {
+            if (previewThumbnail == null) {
+                currentSeekbarPreviewThumbnail.visibility = View.GONE
+                return
+            }
+
+            currentSeekbarPreviewThumbnail.visibility = View.VISIBLE
+
+            // Resize original bitmap
+            try {
+                val srcWidth = if (previewThumbnail.width > 0) previewThumbnail.width else 1
+                val newWidth = MathUtils.clamp( // Use 1/4 of the width for the preview
+                    Math.round(baseViewWidthSupplier.asInt / 4f),  // But have a min width of 10dp
+                    dpToPx(10, context),  // And scaling more than that factor looks really pixelated -> max
+                    Math.round(srcWidth * 2.5f))
+
+                val scaleFactor = newWidth.toFloat() / srcWidth
+                val newHeight = (previewThumbnail.height * scaleFactor).toInt()
+
+                currentSeekbarPreviewThumbnail.setImageBitmap(BitmapCompat
+                    .createScaledBitmap(previewThumbnail, newWidth, newHeight, null, true))
+            } catch (ex: Exception) {
+                Log.e(TAG, "Failed to resize and set seekbar preview thumbnail", ex)
+                currentSeekbarPreviewThumbnail.visibility = View.GONE
+            } finally {
+                previewThumbnail.recycle()
+            }
+        }
+
+        @Retention(AnnotationRetention.SOURCE)
+        @IntDef(SeekbarPreviewThumbnailType.HIGH_QUALITY, SeekbarPreviewThumbnailType.LOW_QUALITY, SeekbarPreviewThumbnailType.NONE)
+        annotation class SeekbarPreviewThumbnailType {
+            companion object {
+                const val HIGH_QUALITY: Int = 0
+                const val LOW_QUALITY: Int = 1
+                const val NONE: Int = 2
+            }
+        }
     }
 
     companion object {

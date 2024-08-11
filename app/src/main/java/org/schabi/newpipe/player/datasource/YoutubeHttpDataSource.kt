@@ -53,8 +53,7 @@ import kotlin.math.min
                                                 private val rnParameterEnabled: Boolean,
                                                 private val defaultRequestProperties: HttpDataSource.RequestProperties?,
                                                 private val contentTypePredicate: Predicate<String>?,
-                                                keepPostFor302Redirects: Boolean
-) : BaseDataSource(true), HttpDataSource {
+                                                keepPostFor302Redirects: Boolean) : BaseDataSource(true), HttpDataSource {
     /**
      * [DataSource.Factory] for [YoutubeHttpDataSource] instances.
      */

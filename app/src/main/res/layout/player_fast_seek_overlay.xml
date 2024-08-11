@@ -5,14 +5,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <org.schabi.newpipe.views.player.CircleClipTapView
+    <org.schabi.newpipe.ui.views.player.CircleClipTapView
         android:id="@+id/circle_clip_tap_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="false"
         android:focusable="false" />
 
-    <org.schabi.newpipe.views.player.SecondsView
+    <org.schabi.newpipe.ui.views.player.SecondsView
         android:id="@+id/seconds_view"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

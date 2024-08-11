@@ -17,8 +17,8 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.withSettings
 import org.mockito.junit.MockitoJUnitRunner
-import org.schabi.newpipe.streams.io.StoredFileHelper
-import us.shandian.giga.io.FileStream
+import org.schabi.newpipe.giga.io.StoredFileHelper
+import org.schabi.newpipe.giga.io.FileStream
 import java.io.File
 import java.io.ObjectInputStream
 import java.nio.file.Files

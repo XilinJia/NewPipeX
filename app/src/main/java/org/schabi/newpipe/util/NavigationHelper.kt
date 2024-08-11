@@ -20,12 +20,12 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.media3.common.util.UnstableApi
 import com.jakewharton.processphoenix.ProcessPhoenix
 import org.schabi.newpipe.MainActivity
-import org.schabi.newpipe.NewPipeDatabase
+import org.schabi.newpipe.database.NewPipeDatabase
 import org.schabi.newpipe.R
 import org.schabi.newpipe.RouterActivity
-import org.schabi.newpipe.about.AboutActivity
+import org.schabi.newpipe.ui.about.AboutActivity
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
-import org.schabi.newpipe.download.DownloadActivity
+import org.schabi.newpipe.ui.download.DownloadActivity
 import org.schabi.newpipe.error.ErrorUtil.Companion.showUiErrorSnackbar
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.StreamingService
@@ -33,19 +33,19 @@ import org.schabi.newpipe.extractor.StreamingService.LinkType
 import org.schabi.newpipe.extractor.comments.CommentsInfoItem
 import org.schabi.newpipe.extractor.exceptions.ExtractionException
 import org.schabi.newpipe.extractor.stream.*
-import org.schabi.newpipe.fragments.MainFragment
-import org.schabi.newpipe.fragments.detail.VideoDetailFragment
-import org.schabi.newpipe.fragments.list.channel.ChannelFragment
-import org.schabi.newpipe.fragments.list.comments.CommentRepliesFragment
-import org.schabi.newpipe.fragments.list.kiosk.KioskFragment
-import org.schabi.newpipe.fragments.list.playlist.PlaylistFragment
-import org.schabi.newpipe.fragments.list.search.SearchFragment
-import org.schabi.newpipe.local.bookmark.BookmarkFragment
-import org.schabi.newpipe.local.feed.FeedFragment.Companion.newInstance
-import org.schabi.newpipe.local.history.StatisticsPlaylistFragment
-import org.schabi.newpipe.local.playlist.LocalPlaylistFragment
-import org.schabi.newpipe.local.subscription.SubscriptionFragment
-import org.schabi.newpipe.local.subscription.SubscriptionsImportFragment
+import org.schabi.newpipe.ui.fragments.MainFragment
+import org.schabi.newpipe.ui.detail.VideoDetailFragment
+import org.schabi.newpipe.ui.list.ChannelFragment
+import org.schabi.newpipe.ui.list.CommentRepliesFragment
+import org.schabi.newpipe.ui.list.KioskFragment
+import org.schabi.newpipe.ui.list.PlaylistFragment
+import org.schabi.newpipe.ui.list.SearchFragment
+import org.schabi.newpipe.ui.local.BookmarkFragment
+import org.schabi.newpipe.ui.local.feed.FeedFragment.Companion.newInstance
+import org.schabi.newpipe.ui.local.history.StatisticsPlaylistFragment
+import org.schabi.newpipe.ui.local.playlist.LocalPlaylistFragment
+import org.schabi.newpipe.ui.local.subscription.SubscriptionFragment
+import org.schabi.newpipe.ui.local.subscription.SubscriptionsImportFragment
 import org.schabi.newpipe.player.PlayQueueActivity
 import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.PlayerService
@@ -77,9 +77,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
 
         if (playQueue != null) {
             val cacheKey = SerializedCache.instance.put(playQueue, PlayQueue::class.java)
-            if (cacheKey != null) {
-                intent.putExtra(PlayerManager.PLAY_QUEUE_KEY, cacheKey)
-            }
+            if (cacheKey != null) intent.putExtra(PlayerManager.PLAY_QUEUE_KEY, cacheKey)
         }
         intent.putExtra(PlayerManager.PLAYER_TYPE, PlayerType.MAIN.valueForIntent())
         intent.putExtra(PlayerManager.RESUME_PLAYBACK, resumePlayback)
@@ -89,8 +87,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
 
     @JvmStatic
     fun <T> getPlayerIntent(context: Context, targetClazz: Class<T>, playQueue: PlayQueue?, resumePlayback: Boolean, playWhenReady: Boolean): Intent {
-        return getPlayerIntent(context, targetClazz, playQueue, resumePlayback)
-            .putExtra(PlayerManager.PLAY_WHEN_READY, playWhenReady)
+        return getPlayerIntent(context, targetClazz, playQueue, resumePlayback).putExtra(PlayerManager.PLAY_WHEN_READY, playWhenReady)
     }
 
     fun <T> getPlayerEnqueueIntent(context: Context, targetClazz: Class<T>, playQueue: PlayQueue?): Intent {
@@ -113,25 +110,20 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun playOnMainPlayer(activity: AppCompatActivity, playQueue: PlayQueue) {
         val item = playQueue.item
-        if (item != null) {
+        if (item != null)
             openVideoDetailFragment(activity, activity.supportFragmentManager, item.serviceId, item.url, item.title, playQueue, false)
-        }
     }
 
     @JvmStatic
     fun playOnMainPlayer(context: Context, playQueue: PlayQueue, switchingPlayers: Boolean) {
         val item = playQueue.item
-        if (item != null) {
-            openVideoDetail(context, item.serviceId, item.url, item.title, playQueue, switchingPlayers)
-        }
+        if (item != null) openVideoDetail(context, item.serviceId, item.url, item.title, playQueue, switchingPlayers)
     }
 
     @JvmStatic
     fun playOnPopupPlayer(context: Context, queue: PlayQueue?, resumePlayback: Boolean) {
         if (!PermissionHelper.isPopupEnabledElseAsk(context)) return
-
         Toast.makeText(context, R.string.popup_playing_toast, Toast.LENGTH_SHORT).show()
-
         val intent = getPlayerIntent(context, PlayerService::class.java, queue, resumePlayback)
         intent.putExtra(PlayerManager.PLAYER_TYPE, PlayerType.POPUP.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
@@ -140,7 +132,6 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun playOnBackgroundPlayer(context: Context, queue: PlayQueue?, resumePlayback: Boolean) {
         Toast.makeText(context, R.string.background_player_playing_toast, Toast.LENGTH_SHORT).show()
-
         val intent = getPlayerIntent(context, PlayerService::class.java, queue, resumePlayback)
         intent.putExtra(PlayerManager.PLAYER_TYPE, PlayerType.AUDIO.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
@@ -150,10 +141,8 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun enqueueOnPlayer(context: Context, queue: PlayQueue?, playerType: PlayerType) {
         if (playerType == PlayerType.POPUP && !PermissionHelper.isPopupEnabledElseAsk(context)) return
-
         Toast.makeText(context, R.string.enqueued, Toast.LENGTH_SHORT).show()
         val intent = getPlayerEnqueueIntent(context, PlayerService::class.java, queue)
-
         intent.putExtra(PlayerManager.PLAYER_TYPE, playerType.valueForIntent())
         ContextCompat.startForegroundService(context, intent)
     }
@@ -165,7 +154,6 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
             Log.e(TAG, "Enqueueing but no player is open; defaulting to background player")
             playerType = PlayerType.AUDIO
         }
-
         enqueueOnPlayer(context, queue, playerType)
     }
 
@@ -193,16 +181,13 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
             Toast.makeText(context, R.string.audio_streams_empty, Toast.LENGTH_SHORT).show()
             return
         }
-
         val audioStreamsForExternalPlayers: List<AudioStream?> = getUrlAndNonTorrentStreams(audioStreams)
         if (audioStreamsForExternalPlayers.isEmpty()) {
             Toast.makeText(context, R.string.no_audio_streams_available_for_external_players, Toast.LENGTH_SHORT).show()
             return
         }
-
         val index = getDefaultAudioFormat(context, audioStreamsForExternalPlayers)
         val audioStream = audioStreamsForExternalPlayers[index]!!
-
         playOnExternalPlayer(context, info.name, info.uploaderName, audioStream)
     }
 
@@ -213,16 +198,13 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
             Toast.makeText(context, R.string.video_streams_empty, Toast.LENGTH_SHORT).show()
             return
         }
-
         val videoStreamsForExternalPlayers = getSortedStreamVideosList(context,
             getUrlAndNonTorrentStreams(videoStreams), null, false, false)
         if (videoStreamsForExternalPlayers.isEmpty()) {
             Toast.makeText(context, R.string.no_video_streams_available_for_external_players, Toast.LENGTH_SHORT).show()
             return
         }
-
         val index = getDefaultResolutionIndex(context, videoStreamsForExternalPlayers)
-
         val videoStream = videoStreamsForExternalPlayers[index]
         playOnExternalPlayer(context, info.name, info.uploaderName, videoStream)
     }
@@ -230,27 +212,21 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun playOnExternalPlayer(context: Context, name: String?, artist: String?, stream: Stream) {
         val deliveryMethod = stream.deliveryMethod
-
         if (!stream.isUrl || deliveryMethod == DeliveryMethod.TORRENT) {
             Toast.makeText(context, R.string.selected_stream_external_player_not_supported, Toast.LENGTH_SHORT).show()
             return
         }
-
         val mimeType = when (deliveryMethod) {
             DeliveryMethod.PROGRESSIVE_HTTP ->
                 if (stream.format == null) {
                     when (stream) {
                         is AudioStream -> "audio/*"
                         is VideoStream -> "video/*"
-                        else -> {
-                            // This should never be reached, because subtitles are not opened in
-                            // external players
-                            return
-                        }
+                        // This should never be reached, because subtitles are not opened in
+                        // external players
+                        else -> return
                     }
-                } else {
-                    stream.format!!.getMimeType()
-                }
+                } else stream.format!!.getMimeType()
             DeliveryMethod.HLS -> "application/x-mpegURL"
             DeliveryMethod.DASH -> "application/dash+xml"
             DeliveryMethod.SS -> "application/vnd.ms-sstr+xml"
@@ -264,21 +240,17 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         intent.putExtra("title", name)
         intent.putExtra("artist", artist)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-
         resolveActivityOrAskToInstall(context, intent)
     }
 
     fun resolveActivityOrAskToInstall(context: Context, intent: Intent) {
         if (!tryOpenIntentInApp(context, intent)) {
-            if (context is Activity) {
-                AlertDialog.Builder(context)
-                    .setMessage(R.string.no_player_found)
-                    .setPositiveButton(R.string.install) { dialog: DialogInterface?, which: Int -> installApp(context, context.getString(R.string.vlc_package)) }
-                    .setNegativeButton(R.string.cancel) { dialog: DialogInterface?, which: Int -> Log.i("NavigationHelper", "You unlocked a secret unicorn.") }
-                    .show()
-            } else {
-                Toast.makeText(context, R.string.no_player_found_toast, Toast.LENGTH_LONG).show()
-            }
+            if (context is Activity) AlertDialog.Builder(context)
+                .setMessage(R.string.no_player_found)
+                .setPositiveButton(R.string.install) { dialog: DialogInterface?, which: Int -> installApp(context, context.getString(R.string.vlc_package)) }
+                .setNegativeButton(R.string.cancel) { dialog: DialogInterface?, which: Int -> Log.i("NavigationHelper", "You unlocked a secret unicorn.") }
+                .show()
+            else Toast.makeText(context, R.string.no_player_found_toast, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -293,16 +265,15 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
 
     @JvmStatic
     fun gotoMainFragment(fragmentManager: FragmentManager) {
-        val popped = fragmentManager.popBackStackImmediate(MAIN_FRAGMENT_TAG, 0)
-        if (!popped) {
-            openMainFragment(fragmentManager)
-        }
+//        if calling popBackStackImmediate directly, it can throw an exception of IllegalStateException: Fragment no longer exists for key f0
+        if (fragmentManager.findFragmentByTag(MAIN_FRAGMENT_TAG) != null) fragmentManager.popBackStack(MAIN_FRAGMENT_TAG, 0)
+//            fragmentManager.popBackStackImmediate(MAIN_FRAGMENT_TAG, 0)
+        else openMainFragment(fragmentManager)
     }
 
     @JvmStatic
     fun openMainFragment(fragmentManager: FragmentManager) {
         InfoCache.instance.trimCache()
-
         fragmentManager.popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
         defaultTransaction(fragmentManager)
             .replace(R.id.fragment_holder, MainFragment())
@@ -312,10 +283,9 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
 
     @JvmStatic
     fun tryGotoSearchFragment(fragmentManager: FragmentManager): Boolean {
-            for (i in 0 until fragmentManager.backStackEntryCount) {
-                Logd("NavigationHelper", "tryGoToSearchFragment() [$i] = [${fragmentManager.getBackStackEntryAt(i)}]")
-            }
-
+        for (i in 0 until fragmentManager.backStackEntryCount) {
+            Logd("NavigationHelper", "tryGoToSearchFragment() [$i] = [${fragmentManager.getBackStackEntryAt(i)}]")
+        }
         return fragmentManager.popBackStackImmediate(SEARCH_FRAGMENT_TAG, 0)
     }
 
@@ -365,29 +335,23 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         val onVideoDetailFragmentReady: RunnableWithVideoDetailFragment = object: RunnableWithVideoDetailFragment {
             override fun run(detailFragment: VideoDetailFragment?) {
                 if (detailFragment == null) return
-
                 expandMainPlayer(detailFragment.requireActivity())
                 detailFragment.setAutoPlay(autoPlay)
-                if (switchingPlayers) {
-                    // Situation when user switches from players to main player. All needed data is
-                    // here, we can start watching (assuming newQueue equals playQueue).
-                    // Starting directly in fullscreen if the previous player type was popup.
-                    detailFragment.openVideoPlayer(
-                        playerType == PlayerType.POPUP || PlayerHelper.isStartMainPlayerFullscreenEnabled(context))
-                } else {
-                    detailFragment.selectAndLoadVideo(serviceId, url, title, playQueue)
-                }
+                // Situation when user switches from players to main player. All needed data is
+                // here, we can start watching (assuming newQueue equals playQueue).
+                // Starting directly in fullscreen if the previous player type was popup.
+                if (switchingPlayers) detailFragment.openVideoPlayer(
+                    playerType == PlayerType.POPUP || PlayerHelper.isStartMainPlayerFullscreenEnabled(context))
+                else detailFragment.selectAndLoadVideo(serviceId, url, title, playQueue)
                 detailFragment.scrollToTop()
             }
         }
 
         val fragment = fragmentManager.findFragmentById(R.id.fragment_player_holder)
-        if (fragment is VideoDetailFragment && fragment.isVisible()) {
-            onVideoDetailFragmentReady.run(fragment as VideoDetailFragment?)
-        } else {
+        if (fragment is VideoDetailFragment && fragment.isVisible()) onVideoDetailFragmentReady.run(fragment as VideoDetailFragment?)
+        else {
             val instance = VideoDetailFragment.getInstance(serviceId, url, title, playQueue)
             instance.setAutoPlay(autoPlay)
-
             defaultTransaction(fragmentManager)
                 .replace(R.id.fragment_player_holder, instance)
                 .runOnCommit { onVideoDetailFragmentReady.run(instance) }
@@ -419,7 +383,6 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun openCommentAuthorIfPresent(activity: FragmentActivity, comment: CommentsInfoItem) {
         if (TextUtils.isEmpty(comment.uploaderUrl)) return
-
         try {
             openChannelFragment(activity.supportFragmentManager, comment.serviceId, comment.uploaderUrl, comment.uploaderName)
         } catch (e: Exception) {
@@ -513,14 +476,10 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
 
     @JvmStatic
     fun openVideoDetail(context: Context, serviceId: Int, url: String?, title: String, playQueue: PlayQueue?, switchingPlayers: Boolean) {
-        val intent = getStreamIntent(context, serviceId, url, title)
-            .putExtra(VideoDetailFragment.KEY_SWITCHING_PLAYERS, switchingPlayers)
-
+        val intent = getStreamIntent(context, serviceId, url, title).putExtra(VideoDetailFragment.KEY_SWITCHING_PLAYERS, switchingPlayers)
         if (playQueue != null) {
             val cacheKey = SerializedCache.instance.put(playQueue, PlayQueue::class.java)
-            if (cacheKey != null) {
-                intent.putExtra(PlayerManager.PLAY_QUEUE_KEY, cacheKey)
-            }
+            if (cacheKey != null) intent.putExtra(PlayerManager.PLAY_QUEUE_KEY, cacheKey)
         }
         context.startActivity(intent)
     }
@@ -539,7 +498,6 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
         val intent = getOpenIntent(context, url, serviceId, LinkType.CHANNEL)
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.putExtra(KEY_TITLE, title)
-
         context.startActivity(intent)
     }
 
@@ -580,9 +538,7 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun getPlayQueueActivityIntent(context: Context?): Intent {
         val intent = Intent(context, PlayQueueActivity::class.java)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return intent
     }
 
@@ -636,7 +592,6 @@ import org.schabi.newpipe.util.external_communication.ShareUtils.tryOpenIntentIn
     @JvmStatic
     fun restartApp(activity: Activity) {
         NewPipeDatabase.close()
-
         ProcessPhoenix.triggerRebirth(activity.applicationContext)
     }
 

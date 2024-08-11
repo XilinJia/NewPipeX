@@ -85,13 +85,13 @@
             android:label="@string/settings" />
 
         <activity
-            android:name=".about.AboutActivity"
+            android:name=".ui.about.AboutActivity"
             android:exported="false"
             android:label="@string/title_activity_about" />
 
-        <service android:name=".local.subscription.services.SubscriptionsImportService" />
-        <service android:name=".local.subscription.services.SubscriptionsExportService" />
-        <service android:name=".local.feed.service.FeedLoadService" />
+        <service android:name=".ui.local.subscription.services.SubscriptionsImportService" />
+        <service android:name=".ui.local.subscription.services.SubscriptionsExportService" />
+        <service android:name=".ui.local.feed.service.FeedLoadService" />
 
         <activity
             android:name=".PanicResponderActivity"
@@ -117,12 +117,12 @@
 
         <!-- giga get related -->
         <activity
-            android:name=".download.DownloadActivity"
+            android:name=".ui.download.DownloadActivity"
             android:exported="false"
             android:label="@string/app_name"
             android:launchMode="singleTask" />
 
-        <service android:name="us.shandian.giga.service.DownloadManagerService" />
+        <service android:name="org.schabi.newpipe.giga.service.DownloadManagerService" />
 
         <activity
             android:name=".util.FilePickerActivityHelper"

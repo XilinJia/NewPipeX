@@ -17,9 +17,9 @@ import androidx.preference.Preference
 import androidx.preference.SwitchPreferenceCompat
 import org.schabi.newpipe.R
 import org.schabi.newpipe.extractor.utils.Utils
-import org.schabi.newpipe.streams.io.NoFileManagerSafeGuard.launchSafe
-import org.schabi.newpipe.streams.io.StoredDirectoryHelper
-import org.schabi.newpipe.streams.io.StoredDirectoryHelper.Companion.getPicker
+import org.schabi.newpipe.giga.io.NoFileManagerSafeGuard.launchSafe
+import org.schabi.newpipe.giga.io.StoredDirectoryHelper
+import org.schabi.newpipe.giga.io.StoredDirectoryHelper.Companion.getPicker
 import org.schabi.newpipe.util.FilePickerActivityHelper.Companion.isOwnFileUri
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
 import org.schabi.newpipe.util.Logd

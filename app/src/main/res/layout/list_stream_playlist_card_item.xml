@@ -23,7 +23,7 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="RtlHardcoded" />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/itemDurationView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -54,7 +54,7 @@
         app:layout_constraintTop_toBottomOf="@id/itemThumbnailView"
         tools:ignore="RtlHardcoded,RtlSymmetry" />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/itemVideoTitleView"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -70,7 +70,7 @@
         app:layout_constraintTop_toBottomOf="@id/itemThumbnailView"
         tools:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc tristique..." />
 
-    <org.schabi.newpipe.views.NewPipeTextView
+    <org.schabi.newpipe.ui.views.NewPipeTextView
         android:id="@+id/itemAdditionalDetails"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -83,7 +83,7 @@
         app:layout_constraintTop_toBottomOf="@id/itemVideoTitleView"
         tools:text="Uploader" />
 
-    <org.schabi.newpipe.views.AnimatedProgressBar
+    <org.schabi.newpipe.ui.views.AnimatedProgressBar
         android:id="@+id/itemProgressView"
         style="@style/Widget.AppCompat.ProgressBar.Horizontal"
         android:layout_width="0dp"

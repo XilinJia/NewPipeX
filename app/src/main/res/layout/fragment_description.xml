@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:animateLayoutChanges="true">
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/detail_upload_date_view"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -53,7 +53,7 @@
             app:barrierDirection="top"
             app:constraint_referenced_ids="detail_description_note_view,detail_description_view" />
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/detail_description_note_view"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -70,7 +70,7 @@
             app:layout_constraintTop_toBottomOf="@+id/detail_upload_date_view"
             tools:visibility="visible" />
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/detail_description_view"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

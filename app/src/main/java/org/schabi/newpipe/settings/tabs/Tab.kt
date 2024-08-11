@@ -1,6 +1,7 @@
 package org.schabi.newpipe.settings.tabs
 
 import android.content.Context
+import android.os.Bundle
 import androidx.annotation.DrawableRes
 import androidx.fragment.app.Fragment
 import com.grack.nanojson.JsonObject
@@ -12,29 +13,28 @@ import org.schabi.newpipe.error.ErrorUtil.Companion.showSnackbar
 import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.exceptions.ExtractionException
-import org.schabi.newpipe.fragments.BlankFragment
-import org.schabi.newpipe.fragments.list.channel.ChannelFragment
-import org.schabi.newpipe.fragments.list.kiosk.DefaultKioskFragment
-import org.schabi.newpipe.fragments.list.kiosk.KioskFragment
-import org.schabi.newpipe.fragments.list.playlist.PlaylistFragment
-import org.schabi.newpipe.local.bookmark.BookmarkFragment
-import org.schabi.newpipe.local.feed.FeedFragment
-import org.schabi.newpipe.local.history.StatisticsPlaylistFragment
-import org.schabi.newpipe.local.playlist.LocalPlaylistFragment
-import org.schabi.newpipe.local.subscription.SubscriptionFragment
+import org.schabi.newpipe.ui.fragments.BlankFragment
+import org.schabi.newpipe.ui.list.ChannelFragment
+import org.schabi.newpipe.ui.list.KioskFragment
+import org.schabi.newpipe.ui.list.PlaylistFragment
+import org.schabi.newpipe.ui.local.BookmarkFragment
+import org.schabi.newpipe.ui.local.feed.FeedFragment
+import org.schabi.newpipe.ui.local.history.StatisticsPlaylistFragment
+import org.schabi.newpipe.ui.local.playlist.LocalPlaylistFragment
+import org.schabi.newpipe.ui.local.subscription.SubscriptionFragment
 import org.schabi.newpipe.util.KioskTranslator.getKioskIcon
 import org.schabi.newpipe.util.KioskTranslator.getTranslatedKioskName
 import org.schabi.newpipe.util.ServiceHelper.getSelectedServiceId
 import java.util.*
 
 abstract class Tab {
+    abstract val tabId: Int
+
     internal constructor()
 
     internal constructor(jsonObject: JsonObject) {
         readDataFromJson(jsonObject)
     }
-
-    abstract val tabId: Int
 
     abstract fun getTabName(context: Context): String?
 
@@ -51,9 +51,7 @@ abstract class Tab {
     abstract fun getFragment(context: Context?): Fragment
 
     override fun equals(obj: Any?): Boolean {
-        if (obj !is Tab) {
-            return false
-        }
+        if (obj !is Tab) return false
         return tabId == obj.tabId
     }
 
@@ -66,10 +64,8 @@ abstract class Tab {
     ////////////////////////////////////////////////////////////////////////// */
     fun writeJsonOn(jsonSink: JsonStringWriter) {
         jsonSink.`object`()
-
         jsonSink.value(JSON_TAB_ID_KEY, tabId)
         writeDataToJson(jsonSink)
-
         jsonSink.end()
     }
 
@@ -224,6 +220,7 @@ abstract class Tab {
             private set
         var kioskId: String? = null
             private set
+        override val tabId: Int = ID
 
         internal constructor() : this(-1, NO_ID)
 
@@ -237,7 +234,6 @@ abstract class Tab {
 //        override fun getTabId(): Int {
 //            return ID
 //        }
-        override val tabId: Int = ID
 
         override fun getTabName(context: Context): String {
             return getTranslatedKioskName(kioskId!!, context)
@@ -246,9 +242,7 @@ abstract class Tab {
         @DrawableRes
         override fun getTabIconRes(context: Context?): Int {
             val kioskIcon = getKioskIcon(kioskId)
-
             check(kioskIcon > 0) { "Kiosk ID is not valid: \"$kioskId\"" }
-
             return kioskIcon
         }
 
@@ -268,7 +262,6 @@ abstract class Tab {
 
         override fun equals(obj: Any?): Boolean {
             if (obj !is KioskTab) return false
-
             val other = obj
             return super.equals(obj) && kioskServiceId == other.kioskServiceId && kioskId == other.kioskId
         }
@@ -291,6 +284,7 @@ abstract class Tab {
             private set
         var channelName: String? = null
             private set
+        override val tabId: Int = ID
 
         constructor() : this(-1, NO_URL, NO_NAME)
 
@@ -305,7 +299,6 @@ abstract class Tab {
 //        override fun getTabId(): Int {
 //            return ID
 //        }
-        override val tabId: Int = ID
 
         override fun getTabName(context: Context): String? {
             return channelName
@@ -378,8 +371,7 @@ abstract class Tab {
                 val service = NewPipe.getService(kioskServiceId)
                 kioskId = service.kioskList.defaultKioskId
             } catch (e: ExtractionException) {
-                showSnackbar(context, ErrorInfo(e,
-                    UserAction.REQUESTED_KIOSK, "Loading default kiosk for selected service"))
+                showSnackbar(context, ErrorInfo(e, UserAction.REQUESTED_KIOSK, "Loading default kiosk for selected service"))
             }
             return kioskId
         }
@@ -400,6 +392,7 @@ abstract class Tab {
             private set
         var playlistType: LocalItemType? = null
             private set
+        override val tabId: Int = ID
 
         constructor() : this(-1, NO_NAME)
 
@@ -411,9 +404,7 @@ abstract class Tab {
             this.playlistUrl = NO_URL
         }
 
-        constructor(playlistServiceId: Int, playlistUrl: String?,
-                    playlistName: String?
-        ) {
+        constructor(playlistServiceId: Int, playlistUrl: String?, playlistName: String?) {
             this.playlistServiceId = playlistServiceId
             this.playlistUrl = playlistUrl
             this.playlistName = playlistName
@@ -426,7 +417,6 @@ abstract class Tab {
 //        override fun getTabId(): Int {
 //            return ID
 //        }
-        override val tabId: Int = ID
 
         override fun getTabName(context: Context): String? {
             return playlistName
@@ -438,11 +428,9 @@ abstract class Tab {
         }
 
         override fun getFragment(context: Context?): Fragment {
-            return if (playlistType == LocalItemType.PLAYLIST_LOCAL_ITEM) {
-                LocalPlaylistFragment.getInstance(playlistId, playlistName?:"")
-            } else { // playlistType == LocalItemType.PLAYLIST_REMOTE_ITEM
-                PlaylistFragment.getInstance(playlistServiceId, playlistUrl, playlistName)
-            }
+            return if (playlistType == LocalItemType.PLAYLIST_LOCAL_ITEM) LocalPlaylistFragment.getInstance(playlistId, playlistName?:"")
+            // playlistType == LocalItemType.PLAYLIST_REMOTE_ITEM
+            else PlaylistFragment.getInstance(playlistServiceId, playlistUrl, playlistName)
         }
 
         override fun writeDataToJson(writerSink: JsonStringWriter) {
@@ -458,8 +446,7 @@ abstract class Tab {
             playlistUrl = jsonObject.getString(JSON_PLAYLIST_URL_KEY, NO_URL)
             playlistName = jsonObject.getString(JSON_PLAYLIST_NAME_KEY, NO_NAME)
             playlistId = jsonObject.getInt(JSON_PLAYLIST_ID_KEY, -1).toLong()
-            playlistType = LocalItemType.valueOf(jsonObject.getString(JSON_PLAYLIST_TYPE_KEY, LocalItemType.PLAYLIST_LOCAL_ITEM.toString())
-            )
+            playlistType = LocalItemType.valueOf(jsonObject.getString(JSON_PLAYLIST_TYPE_KEY, LocalItemType.PLAYLIST_LOCAL_ITEM.toString()))
         }
 
         override fun equals(obj: Any?): Boolean {
@@ -482,6 +469,40 @@ abstract class Tab {
         }
     }
 
+    class DefaultKioskFragment : KioskFragment() {
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            if (serviceId < 0) updateSelectedDefaultKiosk()
+        }
+
+        override fun onResume() {
+            super.onResume()
+            if (serviceId != getSelectedServiceId(requireContext())) {
+                currentWorker?.dispose()
+                updateSelectedDefaultKiosk()
+                reloadContent()
+            }
+        }
+
+        private fun updateSelectedDefaultKiosk() {
+            try {
+                serviceId = getSelectedServiceId(requireContext())
+
+                val kioskList = NewPipe.getService(serviceId).kioskList
+                kioskId = kioskList.defaultKioskId
+                url = kioskList.getListLinkHandlerFactoryByType(kioskId).fromId(kioskId).url
+
+                kioskTranslatedName = getTranslatedKioskName(kioskId, requireContext())
+                name = kioskTranslatedName
+
+                currentInfo = null
+                currentNextPage = null
+            } catch (e: ExtractionException) {
+                showError(ErrorInfo(e, UserAction.REQUESTED_KIOSK, "Loading default kiosk for selected service"))
+            }
+        }
+    }
+
     companion object {
         private const val JSON_TAB_ID_KEY = "tab_id"
 
@@ -495,7 +516,6 @@ abstract class Tab {
         @JvmStatic
         fun from(jsonObject: JsonObject): Tab? {
             val tabId = jsonObject.getInt(JSON_TAB_ID_KEY, -1)
-
             if (tabId == -1) return null
             return from(tabId, jsonObject)
         }
@@ -513,7 +533,6 @@ abstract class Tab {
 
         private fun from(tabId: Int, jsonObject: JsonObject?): Tab? {
             val type = typeFrom(tabId) ?: return null
-
             if (jsonObject != null) {
                 when (type) {
                     Type.KIOSK -> return KioskTab(jsonObject)
@@ -522,7 +541,6 @@ abstract class Tab {
                     else -> {}
                 }
             }
-
             return type.tab
         }
     }

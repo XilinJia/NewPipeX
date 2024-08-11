@@ -4,20 +4,41 @@ import android.content.*
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
+import android.os.Handler
 import android.util.Log
 import android.view.LayoutInflater
+import androidx.annotation.OptIn
 import androidx.core.math.MathUtils
 import androidx.media3.common.*
+import androidx.media3.common.C.RoleFlags
+import androidx.media3.common.MediaItem.LiveConfiguration
+import androidx.media3.common.MediaItem.SubtitleConfiguration
 import androidx.media3.common.Player.DiscontinuityReason
 import androidx.media3.common.Player.PositionInfo
 import androidx.media3.common.text.CueGroup
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.Renderer
+import androidx.media3.exoplayer.dash.DashMediaSource
+import androidx.media3.exoplayer.dash.manifest.DashManifest
+import androidx.media3.exoplayer.dash.manifest.DashManifestParser
+import androidx.media3.exoplayer.hls.HlsMediaSource
+import androidx.media3.exoplayer.mediacodec.MediaCodecAdapter
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
+import androidx.media3.exoplayer.smoothstreaming.SsMediaSource
+import androidx.media3.exoplayer.smoothstreaming.manifest.SsManifest
+import androidx.media3.exoplayer.smoothstreaming.manifest.SsManifestParser
 import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
+import androidx.media3.exoplayer.video.MediaCodecVideoRenderer
+import androidx.media3.exoplayer.video.VideoRendererEventListener
 import androidx.preference.PreferenceManager
 import com.squareup.picasso.Picasso.LoadedFrom
 import com.squareup.picasso.Target
@@ -35,18 +56,24 @@ import org.schabi.newpipe.error.ErrorUtil.Companion.createNotification
 import org.schabi.newpipe.error.UserAction
 import org.schabi.newpipe.extractor.Image
 import org.schabi.newpipe.extractor.ServiceList
-import org.schabi.newpipe.extractor.stream.AudioStream
-import org.schabi.newpipe.extractor.stream.StreamInfo
-import org.schabi.newpipe.extractor.stream.StreamType
-import org.schabi.newpipe.extractor.stream.VideoStream
+import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.CreationException
+import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeOtfDashManifestCreator
+import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubePostLiveStreamDvrDashManifestCreator
+import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeProgressiveDashManifestCreator
+import org.schabi.newpipe.extractor.stream.*
 import org.schabi.newpipe.extractor.utils.Utils
-import org.schabi.newpipe.fragments.detail.VideoDetailFragment
-import org.schabi.newpipe.local.history.HistoryRecordManager
+import org.schabi.newpipe.player.PlayerManager.PlaybackResolver.Companion.buildMediaSource
+import org.schabi.newpipe.player.PlayerManager.PlaybackResolver.Companion.cacheKeyOf
+import org.schabi.newpipe.player.PlayerManager.PlaybackResolver.Companion.maybeBuildLiveMediaSource
+import org.schabi.newpipe.ui.detail.VideoDetailFragment
+import org.schabi.newpipe.ui.local.history.HistoryRecordManager
 import org.schabi.newpipe.player.PlayerType.Companion.retrieveFromIntent
+import org.schabi.newpipe.player.datasource.NonUriHlsDataSourceFactory
 import org.schabi.newpipe.player.event.PlayerEventListener
 import org.schabi.newpipe.player.event.PlayerServiceEventListener
 import org.schabi.newpipe.player.helper.*
 import org.schabi.newpipe.player.mediaitem.MediaItemTag
+import org.schabi.newpipe.player.mediaitem.StreamInfoTag
 import org.schabi.newpipe.player.mediasession.MediaSessionPlayerUi
 import org.schabi.newpipe.player.notification.NotificationConstants
 import org.schabi.newpipe.player.notification.NotificationPlayerUi
@@ -54,26 +81,32 @@ import org.schabi.newpipe.player.playback.MediaSourceManager
 import org.schabi.newpipe.player.playback.PlaybackListener
 import org.schabi.newpipe.player.playqueue.PlayQueue
 import org.schabi.newpipe.player.playqueue.PlayQueueItem
-import org.schabi.newpipe.player.resolver.AudioPlaybackResolver
-import org.schabi.newpipe.player.resolver.VideoPlaybackResolver
-import org.schabi.newpipe.player.resolver.VideoPlaybackResolver.QualityResolver
-import org.schabi.newpipe.player.resolver.VideoPlaybackResolver.SourceType
 import org.schabi.newpipe.player.ui.*
 import org.schabi.newpipe.util.DependentPreferenceHelper.getResumePlaybackEnabled
+import org.schabi.newpipe.util.ListHelper.getAudioFormatIndex
 import org.schabi.newpipe.util.ListHelper.getDefaultResolutionIndex
+import org.schabi.newpipe.util.ListHelper.getFilteredAudioStreams
+import org.schabi.newpipe.util.ListHelper.getPlayableStreams
 import org.schabi.newpipe.util.ListHelper.getPopupDefaultResolutionIndex
 import org.schabi.newpipe.util.ListHelper.getPopupResolutionIndex
 import org.schabi.newpipe.util.ListHelper.getResolutionIndex
+import org.schabi.newpipe.util.ListHelper.getSortedStreamVideosList
+import org.schabi.newpipe.util.ListHelper.getUrlAndNonTorrentStreams
 import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
 import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.sendPlayerStartedEvent
 import org.schabi.newpipe.util.SerializedCache
 import org.schabi.newpipe.util.StreamTypeUtil.isAudio
+import org.schabi.newpipe.util.StreamTypeUtil.isLiveStream
 import org.schabi.newpipe.util.StreamTypeUtil.isVideo
 import org.schabi.newpipe.util.image.PicassoHelper.cancelTag
 import org.schabi.newpipe.util.image.PicassoHelper.loadScaledDownThumbnail
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
 import java.util.stream.IntStream
 import kotlin.math.max
 
@@ -160,8 +193,8 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
             return exoPlayer!!.playbackParameters
         }
 
-    private val qualityResolver: QualityResolver
-        get() = object : QualityResolver {
+    private val qualityResolver: VideoPlaybackResolver.QualityResolver
+        get() = object : VideoPlaybackResolver.QualityResolver {
             override fun getDefaultResolutionIndex(sortedVideos: List<VideoStream>?): Int {
                 return when {
                     sortedVideos == null -> 0
@@ -233,8 +266,6 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
     private val videoRendererIndex: Int
         /**
          * Get the video renderer index of the current playing stream.
-         *
-         *
          * This method returns the video renderer index of the current
          * [MappingTrackSelector.MappedTrackInfo] or [.RENDERER_UNAVAILABLE] if the current
          * [MappingTrackSelector.MappedTrackInfo] is null or if there is no video renderer index.
@@ -963,7 +994,7 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
                     // only update with the new stream info if it has actually changed
                     previousInfo == null || previousInfo.url != info.url -> updateMetadataWith(info)
                     previousAudioTrack == null || tag.maybeAudioTrack
-                        .map({ t: MediaItemTag.AudioTrack -> t.selectedAudioStreamIndex != previousAudioTrack.selectedAudioStreamIndex })
+                        .map { t: MediaItemTag.AudioTrack -> t.selectedAudioStreamIndex != previousAudioTrack.selectedAudioStreamIndex }
                         .orElse(false) -> {
                         notifyAudioTrackUpdateToListeners()
                     }
@@ -1324,7 +1355,7 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         // If the current info has only video streams with audio and if the stream is played as
         // audio, we need to use the audio resolver, otherwise the video stream will be played
         // in background.
-        if (isAudioOnly && videoResolver.getStreamSourceType().orElse(SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY) == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
+        if (isAudioOnly && videoResolver.getStreamSourceType().orElse(VideoPlaybackResolver.SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY) == VideoPlaybackResolver.SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
             return audioResolver.resolve(info!!)
 
         // Even if the stream is played in background, we need to use the video resolver if the
@@ -1418,7 +1449,7 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         currentStreamInfo.ifPresentOrElse({ info: StreamInfo ->
             // In case we don't know the source type, fall back to either video-with-audio, or
             // audio-only source type
-            val sourceType = videoResolver.getStreamSourceType().orElse(SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
+            val sourceType = videoResolver.getStreamSourceType().orElse(VideoPlaybackResolver.SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY)
             if (playQueueManagerReloadingNeeded(sourceType, info, videoRendererIndex)) reloadPlayQueueManager()
             setRecovery()
             // Disable or enable video and subtitles renderers depending of the videoEnabled value
@@ -1466,7 +1497,7 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
      * source (or [.RENDERER_UNAVAILABLE])
      * @return whether the play queue manager needs to be reloaded
      */
-    private fun playQueueManagerReloadingNeeded(sourceType: SourceType, streamInfo: StreamInfo, videoRendererIndex: Int): Boolean {
+    private fun playQueueManagerReloadingNeeded(sourceType: VideoPlaybackResolver.SourceType, streamInfo: StreamInfo, videoRendererIndex: Int): Boolean {
         val streamType = streamInfo.streamType
         val isStreamTypeAudio = isAudio(streamType)
 
@@ -1475,7 +1506,7 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         // The content is an audio stream, an audio live stream, or a live stream with a live
         // source: it's not needed to reload the play queue manager because the stream source will
         // be the same
-        if (isStreamTypeAudio || (streamType == StreamType.LIVE_STREAM && sourceType == SourceType.LIVE_STREAM)) return false
+        if (isStreamTypeAudio || (streamType == StreamType.LIVE_STREAM && sourceType == VideoPlaybackResolver.SourceType.LIVE_STREAM)) return false
 
         // The content's source is a video with separated audio or a video with audio -> the video
         // and its fetch may be disabled
@@ -1484,8 +1515,8 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
         // because the stream source will be probably the same as the current played
         // It's not needed to reload the play queue manager only if the content's stream type
         // is a video stream, a live stream or an ended live stream
-        if (sourceType == SourceType.VIDEO_WITH_SEPARATED_AUDIO
-                || (sourceType == SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY && Utils.isNullOrEmpty(streamInfo.audioStreams))) return !isVideo(streamType)
+        if (sourceType == VideoPlaybackResolver.SourceType.VIDEO_WITH_SEPARATED_AUDIO
+                || (sourceType == VideoPlaybackResolver.SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY && Utils.isNullOrEmpty(streamInfo.audioStreams))) return !isVideo(streamType)
 
         // Other cases: the play queue manager reload is needed
         return true
@@ -1524,6 +1555,890 @@ class PlayerManager(@JvmField val service: PlayerService) : PlaybackListener, Pl
 
     fun getFragmentListener(): Optional<PlayerServiceEventListener> {
         return Optional.ofNullable(fragmentListener)
+    }
+
+    @OptIn(UnstableApi::class) class LoadController : DefaultLoadControl() {
+        private var preloadingEnabled = true
+
+        override fun onPrepared() {
+            preloadingEnabled = true
+            super.onPrepared()
+        }
+
+        override fun onStopped() {
+            preloadingEnabled = true
+            super.onStopped()
+        }
+
+        override fun onReleased() {
+            preloadingEnabled = true
+            super.onReleased()
+        }
+
+        override fun shouldContinueLoading(playbackPositionUs: Long,
+                                           bufferedDurationUs: Long,
+                                           playbackSpeed: Float
+        ): Boolean {
+            if (!preloadingEnabled) {
+                return false
+            }
+            return super.shouldContinueLoading(
+                playbackPositionUs, bufferedDurationUs, playbackSpeed)
+        }
+
+        fun disablePreloadingOfCurrentTrack() {
+            preloadingEnabled = false
+        }
+
+        companion object {
+            const val TAG: String = "LoadController"
+        }
+    }
+
+    @UnstableApi
+    class CustomRenderersFactory(context: Context?) : DefaultRenderersFactory(context!!) {
+        override fun buildVideoRenderers(context: Context,
+                                         extensionRendererMode: @ExtensionRendererMode Int,
+                                         mediaCodecSelector: MediaCodecSelector,
+                                         enableDecoderFallback: Boolean,
+                                         eventHandler: Handler,
+                                         eventListener: VideoRendererEventListener,
+                                         allowedVideoJoiningTimeMs: Long,
+                                         out: ArrayList<Renderer>
+        ) {
+            out.add(CustomMediaCodecVideoRenderer(context, codecAdapterFactory,
+                mediaCodecSelector, allowedVideoJoiningTimeMs, enableDecoderFallback, eventHandler,
+                eventListener, MAX_DROPPED_VIDEO_FRAME_COUNT_TO_NOTIFY))
+        }
+
+        @UnstableApi
+        class CustomMediaCodecVideoRenderer(context: Context?,
+                                            codecAdapterFactory: MediaCodecAdapter.Factory?,
+                                            mediaCodecSelector: MediaCodecSelector?,
+                                            allowedJoiningTimeMs: Long,
+                                            enableDecoderFallback: Boolean,
+                                            eventHandler: Handler?,
+                                            eventListener: VideoRendererEventListener?,
+                                            maxDroppedFramesToNotify: Int
+        ) : MediaCodecVideoRenderer(context!!, codecAdapterFactory!!, mediaCodecSelector!!, allowedJoiningTimeMs,
+            enableDecoderFallback, eventHandler, eventListener, maxDroppedFramesToNotify) {
+            override fun codecNeedsSetOutputSurfaceWorkaround(name: String): Boolean {
+                return true
+            }
+        }
+    }
+
+    @UnstableApi class AudioPlaybackResolver(private val context: Context,
+                                             private val dataSource: PlayerDataSource) : PlaybackResolver {
+        var audioTrack: String? = null
+
+        /**
+         * Get a media source providing audio. If a service has no separate [AudioStream]s we
+         * use a video stream as audio source to support audio background playback.
+         *
+         * @param info of the stream
+         * @return the audio source to use or null if none could be found
+         */
+        override fun resolve(info: StreamInfo): MediaSource? {
+            val liveSource = maybeBuildLiveMediaSource(dataSource, info)
+            if (liveSource != null) return liveSource
+
+            val audioStreams: List<AudioStream> = getFilteredAudioStreams(context, info.audioStreams).filterNotNull()
+            val stream: Stream?
+            val tag: MediaItemTag
+
+            if (audioStreams.isNotEmpty()) {
+                val audioIndex = getAudioFormatIndex(context, audioStreams, audioTrack)
+                stream = getStreamForIndex(audioIndex, audioStreams)
+                tag = StreamInfoTag.of(info, audioStreams, audioIndex)
+            } else {
+                val videoStreams: List<VideoStream> = getPlayableStreams(info.videoStreams, info.serviceId)
+                if (videoStreams.isNotEmpty()) {
+                    val index = getDefaultResolutionIndex(context, videoStreams)
+                    stream = getStreamForIndex(index, videoStreams)
+                    tag = StreamInfoTag.of(info)
+                } else {
+                    return null
+                }
+            }
+
+            try {
+                return buildMediaSource(dataSource, stream!!, info, cacheKeyOf(info, stream)!!, tag)
+            } catch (e: PlaybackResolver.ResolverException) {
+                Log.e(TAG, "Unable to create audio source", e)
+                return null
+            }
+        }
+
+        fun getStreamForIndex(index: Int, streams: List<Stream?>): Stream? {
+            if (index >= 0 && index < streams.size) return streams[index]
+            return null
+        }
+
+        companion object {
+            private val TAG: String = AudioPlaybackResolver::class.java.simpleName
+        }
+    }
+
+    @UnstableApi class VideoPlaybackResolver(private val context: Context,
+                                             private val dataSource: PlayerDataSource,
+                                             private val qualityResolver: QualityResolver) : PlaybackResolver {
+
+        internal var streamSourceType: SourceType? = null
+
+        var playbackQuality: String? = null
+        var audioTrack: String? = null
+
+        enum class SourceType {
+            LIVE_STREAM,
+            VIDEO_WITH_SEPARATED_AUDIO,
+            VIDEO_WITH_AUDIO_OR_AUDIO_ONLY
+        }
+
+        override fun resolve(info: StreamInfo): MediaSource? {
+            val liveSource = maybeBuildLiveMediaSource(dataSource, info)
+            if (liveSource != null) {
+                streamSourceType = SourceType.LIVE_STREAM
+                return liveSource
+            }
+
+            val mediaSources: MutableList<MediaSource> = ArrayList()
+
+            // Create video stream source
+            val videoStreamsList = getSortedStreamVideosList(context, getPlayableStreams(info.videoStreams, info.serviceId),
+                getPlayableStreams(info.videoOnlyStreams, info.serviceId), false, true)
+            val audioStreamsList: List<AudioStream> = getFilteredAudioStreams(context, info.audioStreams).filterNotNull()
+            val videoIndex = when {
+                videoStreamsList.isEmpty() -> -1
+                playbackQuality == null -> qualityResolver.getDefaultResolutionIndex(videoStreamsList)
+                else -> qualityResolver.getOverrideResolutionIndex(videoStreamsList, playbackQuality)
+            }
+
+            val audioIndex = getAudioFormatIndex(context, audioStreamsList, audioTrack)
+            val tag: MediaItemTag = StreamInfoTag.of(info, videoStreamsList, videoIndex, audioStreamsList, audioIndex)
+            val video = tag.maybeQuality
+                .map<VideoStream?> { it.selectedVideoStream }
+                .orElse(null)
+            val audio = tag.maybeAudioTrack
+                .map<AudioStream?> { it.selectedAudioStream }
+                .orElse(null)
+
+            if (video != null) {
+                try {
+                    val streamSource = buildMediaSource(dataSource, video, info, cacheKeyOf(info, video)!!, tag)
+                    if (streamSource != null) mediaSources.add(streamSource)
+                } catch (e: PlaybackResolver.ResolverException) {
+                    Log.e(TAG, "Unable to create video source", e)
+                    return null
+                }
+            }
+
+            // Use the audio stream if there is no video stream, or
+            // merge with audio stream in case if video does not contain audio
+            if (audio != null && (video == null || video.isVideoOnly() || audioTrack != null)) {
+                try {
+                    val audioSource = buildMediaSource(dataSource, audio, info, cacheKeyOf(info, audio)!!, tag)
+                    if (audioSource != null) mediaSources.add(audioSource)
+                    streamSourceType = SourceType.VIDEO_WITH_SEPARATED_AUDIO
+                } catch (e: PlaybackResolver.ResolverException) {
+                    Log.e(TAG, "Unable to create audio source", e)
+                    return null
+                }
+            } else {
+                streamSourceType = SourceType.VIDEO_WITH_AUDIO_OR_AUDIO_ONLY
+            }
+
+            // If there is no audio or video sources, then this media source cannot be played back
+            if (mediaSources.isEmpty()) return null
+
+            // Below are auxiliary media sources
+
+            // Create subtitle sources
+            val subtitlesStreams = info.subtitles
+            if (subtitlesStreams != null) {
+                // Torrent and non URL subtitles are not supported by ExoPlayer
+                val nonTorrentAndUrlStreams: List<SubtitlesStream> = getUrlAndNonTorrentStreams(subtitlesStreams)
+                for (subtitle in nonTorrentAndUrlStreams) {
+                    val mediaFormat = subtitle.format
+                    if (mediaFormat != null) {
+                        val textRoleFlag: @RoleFlags Int = if (subtitle.isAutoGenerated) C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND else C.ROLE_FLAG_CAPTION
+                        val textMediaItem = SubtitleConfiguration.Builder(
+                            Uri.parse(subtitle.content))
+                            .setMimeType(mediaFormat.getMimeType())
+                            .setRoleFlags(textRoleFlag)
+                            .setLanguage(PlayerHelper.captionLanguageOf(context, subtitle))
+                            .build()
+                        val textSource: MediaSource = dataSource.singleSampleMediaSourceFactory
+                            .createMediaSource(textMediaItem, C.TIME_UNSET)
+                        mediaSources.add(textSource)
+                    }
+                }
+            }
+
+            return if (mediaSources.size == 1) {
+                mediaSources[0]
+            } else {
+                MergingMediaSource(true, *mediaSources.toTypedArray<MediaSource>())
+            }
+        }
+
+        /**
+         * Returns the last resolved [StreamInfo]'s [source type][SourceType].
+         *
+         * @return [Optional.empty] if nothing was resolved, otherwise the [SourceType]
+         * of the last resolved [StreamInfo] inside an [Optional]
+         */
+        fun getStreamSourceType(): Optional<SourceType> {
+            return Optional.ofNullable(streamSourceType)
+        }
+
+        interface QualityResolver {
+            fun getDefaultResolutionIndex(sortedVideos: List<VideoStream>?): Int
+
+            fun getOverrideResolutionIndex(sortedVideos: List<VideoStream>?, playbackQuality: String?): Int
+        }
+
+        companion object {
+            private val TAG: String = VideoPlaybackResolver::class.java.simpleName
+        }
+    }
+
+    @OptIn(UnstableApi::class)
+    class PlayerUiList(vararg initialPlayerUis: PlayerUi) {
+        val playerUis: MutableList<PlayerUi> = ArrayList()
+
+        /**
+         * Creates a [PlayerUiList] starting with the provided player uis. The provided player uis
+         * will not be prepared like those passed to [.addAndPrepare], because when
+         * the [PlayerUiList] constructor is called, the player is still not running and it
+         * wouldn't make sense to initialize uis then. Instead the player will initialize them by doing
+         * proper calls to [.call].
+         *
+         * @param initialPlayerUis the player uis this list should start with; the order will be kept
+         */
+        init {
+            playerUis.addAll(listOf(*initialPlayerUis))
+        }
+
+        /**
+         * Adds the provided player ui to the list and calls on it the initialization functions that
+         * apply based on the current player state. The preparation step needs to be done since when UIs
+         * are removed and re-added, the player will not call e.g. initPlayer again since the exoplayer
+         * is already initialized, but we need to notify the newly built UI that the player is ready
+         * nonetheless.
+         * @param playerUi the player ui to prepare and add to the list; its [                 ][PlayerUi.getPlayer] will be used to query information about the player
+         * state
+         */
+        fun addAndPrepare(playerUi: PlayerUi) {
+            if (playerUi.playerManager.getFragmentListener().isPresent) {
+                // make sure UIs know whether a service is connected or not
+                playerUi.onFragmentListenerSet()
+            }
+
+            if (!playerUi.playerManager.exoPlayerIsNull()) {
+                playerUi.initPlayer()
+                if (playerUi.playerManager.playQueue != null) {
+                    playerUi.initPlayback()
+                }
+            }
+
+            playerUis.add(playerUi)
+        }
+
+        /**
+         * Destroys all matching player UIs and removes them from the list.
+         * @param playerUiType the class of the player UI to destroy; the [                     ][Class.isInstance] method will be used, so even subclasses will be
+         * destroyed and removed
+         * @param <T>          the class type parameter
+        </T> */
+        fun <T> destroyAll(playerUiType: Class<T>) {
+            playerUis.stream()
+                .filter { obj: PlayerUi? -> playerUiType.isInstance(obj) }
+                .forEach { playerUi: PlayerUi ->
+                    playerUi.destroyPlayer()
+                    playerUi.destroy()
+                }
+            playerUis.removeIf { obj: PlayerUi? -> playerUiType.isInstance(obj) }
+        }
+
+        /**
+         * @param playerUiType the class of the player UI to return; the [                     ][Class.isInstance] method will be used, so even subclasses could
+         * be returned
+         * @param <T>          the class type parameter
+         * @return the first player UI of the required type found in the list, or an empty [         ] otherwise
+        </T> */
+        fun <T> get(playerUiType: Class<T>): Optional<T> {
+            return playerUis.stream()
+                .filter { obj: PlayerUi? -> playerUiType.isInstance(obj) }
+                .map { obj: PlayerUi? -> playerUiType.cast(obj) }
+                .findFirst()
+        }
+
+        /**
+         * Calls the provided consumer on all player UIs in the list, in order of addition.
+         * @param consumer the consumer to call with player UIs
+         */
+        fun call(consumer: Consumer<PlayerUi>?) {
+            playerUis.stream().forEachOrdered(consumer)
+        }
+    }
+
+    interface Resolver<Source, Product> {
+        fun resolve(source: Source): Product?
+    }
+
+    /**
+     * This interface is just a shorthand for [Resolver] with [StreamInfo] as source and
+     * [MediaSource] as product. It contains many static methods that can be used by classes
+     * implementing this interface, and nothing else.
+     */
+    @UnstableApi interface PlaybackResolver : Resolver<StreamInfo, MediaSource> {
+        //endregion
+        //region Resolver exception
+        class ResolverException : Exception {
+            constructor(message: String?) : super(message)
+
+            constructor(message: String?, cause: Throwable?) : super(message, cause)
+        } //endregion
+
+
+        @UnstableApi companion object {
+            //region Cache key generation
+            private fun commonCacheKeyOf(info: StreamInfo,
+                                         stream: Stream,
+                                         resolutionOrBitrateUnknown: Boolean
+            ): StringBuilder {
+                // stream info service id
+                val cacheKey = StringBuilder(info.serviceId)
+
+                // stream info id
+                cacheKey.append(" ")
+                cacheKey.append(info.id)
+
+                // stream id (even if unknown)
+                cacheKey.append(" ")
+                cacheKey.append(stream.id)
+
+                // mediaFormat (if not null)
+                val mediaFormat = stream.format
+                if (mediaFormat != null) {
+                    cacheKey.append(" ")
+                    cacheKey.append(mediaFormat.getName())
+                }
+
+                // content (only if other information is missing)
+                // If the media format and the resolution/bitrate are both missing, then we don't have
+                // enough information to distinguish this stream from other streams.
+                // So, only in that case, we use the content (i.e. url or manifest) to differentiate
+                // between streams.
+                // Note that if the content were used even when other information is present, then two
+                // streams with the same stats but with different contents (e.g. because the url was
+                // refreshed) will be considered different (i.e. with a different cacheKey), making the
+                // cache useless.
+                if (resolutionOrBitrateUnknown && mediaFormat == null) {
+                    cacheKey.append(" ")
+                    cacheKey.append(Objects.hash(stream.content, stream.manifestUrl))
+                }
+
+                return cacheKey
+            }
+
+            /**
+             * Builds the cache key of a [video stream][VideoStream].
+             *
+             *
+             *
+             * A cache key is unique to the features of the provided video stream, and when possible
+             * independent of *transient* parameters (such as the URL of the stream).
+             * This ensures that there are no conflicts, but also that the cache is used as much as
+             * possible: the same cache should be used for two streams which have the same features but
+             * e.g. a different URL, since the URL might have been reloaded in the meantime, but the stream
+             * actually referenced by the URL is still the same.
+             *
+             *
+             * @param info        the [stream info][StreamInfo], to distinguish between streams with
+             * the same features but coming from different stream infos
+             * @param videoStream the [video stream][VideoStream] for which the cache key should be
+             * created
+             * @return a key to be used to store the cache of the provided [video stream][VideoStream]
+             */
+            @JvmStatic
+            fun cacheKeyOf(info: StreamInfo, videoStream: VideoStream): String? {
+                val resolutionUnknown = videoStream.getResolution() == VideoStream.RESOLUTION_UNKNOWN
+                val cacheKey = commonCacheKeyOf(info, videoStream, resolutionUnknown)
+
+                // resolution (if known)
+                if (!resolutionUnknown) {
+                    cacheKey.append(" ")
+                    cacheKey.append(videoStream.getResolution())
+                }
+
+                // isVideoOnly
+                cacheKey.append(" ")
+                cacheKey.append(videoStream.isVideoOnly())
+
+                return cacheKey.toString()
+            }
+
+            /**
+             * Builds the cache key of an audio stream.
+             *
+             *
+             *
+             * A cache key is unique to the features of the provided [audio stream][AudioStream], and
+             * when possible independent of *transient* parameters (such as the URL of the stream).
+             * This ensures that there are no conflicts, but also that the cache is used as much as
+             * possible: the same cache should be used for two streams which have the same features but
+             * e.g. a different URL, since the URL might have been reloaded in the meantime, but the stream
+             * actually referenced by the URL is still the same.
+             *
+             *
+             * @param info        the [stream info][StreamInfo], to distinguish between streams with
+             * the same features but coming from different stream infos
+             * @param audioStream the [audio stream][AudioStream] for which the cache key should be
+             * created
+             * @return a key to be used to store the cache of the provided [audio stream][AudioStream]
+             */
+            @JvmStatic
+            fun cacheKeyOf(info: StreamInfo, audioStream: AudioStream): String? {
+                val averageBitrateUnknown = audioStream.averageBitrate == AudioStream.UNKNOWN_BITRATE
+                val cacheKey = commonCacheKeyOf(info, audioStream, averageBitrateUnknown)
+
+                // averageBitrate (if known)
+                if (!averageBitrateUnknown) {
+                    cacheKey.append(" ")
+                    cacheKey.append(audioStream.averageBitrate)
+                }
+
+                if (audioStream.audioTrackId != null) {
+                    cacheKey.append(" ")
+                    cacheKey.append(audioStream.audioTrackId)
+                }
+
+                if (audioStream.audioLocale != null) {
+                    cacheKey.append(" ")
+                    cacheKey.append(audioStream.audioLocale!!.isO3Language)
+                }
+
+                return cacheKey.toString()
+            }
+
+            /**
+             * Use common base type [Stream] to handle [AudioStream] or [VideoStream]
+             * transparently. For more info see [.cacheKeyOf] or
+             * [.cacheKeyOf].
+             *
+             * @param info   the [stream info][StreamInfo], to distinguish between streams with
+             * the same features but coming from different stream infos
+             * @param stream the [Stream] ([AudioStream] or [VideoStream])
+             * for which the cache key should be created
+             * @return a key to be used to store the cache of the provided [Stream]
+             */
+            @JvmStatic
+            fun cacheKeyOf(info: StreamInfo, stream: Stream?): String? {
+                if (stream is AudioStream) {
+                    return cacheKeyOf(info, stream)
+                } else if (stream is VideoStream) {
+                    return cacheKeyOf(info, stream)
+                }
+                throw RuntimeException("no audio or video stream. That should never happen")
+            }
+
+
+            //endregion
+            //region Live media sources
+            @JvmStatic
+            fun maybeBuildLiveMediaSource(dataSource: PlayerDataSource,
+                                          info: StreamInfo
+            ): MediaSource? {
+                if (!isLiveStream(info.streamType)) {
+                    return null
+                }
+
+                try {
+                    val tag = StreamInfoTag.of(info)
+                    if (!info.hlsUrl.isEmpty()) {
+                        return buildLiveMediaSource(dataSource, info.hlsUrl, C.CONTENT_TYPE_HLS, tag)
+                    } else if (!info.dashMpdUrl.isEmpty()) {
+                        return buildLiveMediaSource(
+                            dataSource, info.dashMpdUrl, C.CONTENT_TYPE_DASH, tag)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error when generating live media source, falling back to standard sources",
+                        e)
+                }
+
+                return null
+            }
+
+            @Throws(ResolverException::class)
+            fun buildLiveMediaSource(dataSource: PlayerDataSource,
+                                     sourceUrl: String?,
+                                     type: @C.ContentType Int,
+                                     metadata: MediaItemTag?
+            ): MediaSource? {
+                val factory: MediaSource.Factory = when (type) {
+                    C.CONTENT_TYPE_SS -> dataSource.liveSsMediaSourceFactory
+                    C.CONTENT_TYPE_DASH -> dataSource.liveDashMediaSourceFactory
+                    C.CONTENT_TYPE_HLS -> dataSource.liveHlsMediaSourceFactory
+                    C.CONTENT_TYPE_OTHER, C.CONTENT_TYPE_RTSP -> throw ResolverException("Unsupported type: $type")
+                    else -> throw ResolverException("Unsupported type: $type")
+                }
+                return factory.createMediaSource(
+                    MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(sourceUrl))
+                        .setLiveConfiguration(
+                            LiveConfiguration.Builder()
+                                .setTargetOffsetMs(PlayerDataSource.LIVE_STREAM_EDGE_GAP_MILLIS.toLong())
+                                .build())
+                        .build())
+            }
+
+
+            //endregion
+            //region Generic media sources
+            @JvmStatic
+            @Throws(ResolverException::class)
+            fun buildMediaSource(dataSource: PlayerDataSource,
+                                 stream: Stream,
+                                 streamInfo: StreamInfo,
+                                 cacheKey: String,
+                                 metadata: MediaItemTag
+            ): MediaSource? {
+                if (streamInfo.service === ServiceList.YouTube) {
+                    return createYoutubeMediaSource(stream, streamInfo, dataSource, cacheKey, metadata)
+                }
+
+                val deliveryMethod = stream.deliveryMethod
+                return when (deliveryMethod) {
+                    DeliveryMethod.PROGRESSIVE_HTTP -> buildProgressiveMediaSource(dataSource,
+                        stream,
+                        cacheKey,
+                        metadata)
+                    DeliveryMethod.DASH -> buildDashMediaSource(dataSource, stream, cacheKey, metadata)
+                    DeliveryMethod.HLS -> buildHlsMediaSource(dataSource, stream, cacheKey, metadata)
+                    DeliveryMethod.SS -> buildSSMediaSource(dataSource, stream, cacheKey, metadata)
+                    else -> throw ResolverException("Unsupported delivery type: $deliveryMethod")
+                }
+            }
+
+            @Throws(ResolverException::class)
+            private fun buildProgressiveMediaSource(
+                    dataSource: PlayerDataSource,
+                    stream: Stream,
+                    cacheKey: String,
+                    metadata: MediaItemTag
+            ): ProgressiveMediaSource {
+                if (!stream.isUrl) {
+                    throw ResolverException("Non URI progressive contents are not supported")
+                }
+                throwResolverExceptionIfUrlNullOrEmpty(stream.content)
+                return dataSource.progressiveMediaSourceFactory.createMediaSource(
+                    MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(stream.content))
+                        .setCustomCacheKey(cacheKey)
+                        .build())
+            }
+
+            @Throws(ResolverException::class)
+            private fun buildDashMediaSource(dataSource: PlayerDataSource,
+                                             stream: Stream,
+                                             cacheKey: String,
+                                             metadata: MediaItemTag
+            ): DashMediaSource {
+                if (stream.isUrl) {
+                    throwResolverExceptionIfUrlNullOrEmpty(stream.content)
+                    return dataSource.dashMediaSourceFactory.createMediaSource(
+                        MediaItem.Builder()
+                            .setTag(metadata)
+                            .setUri(Uri.parse(stream.content))
+                            .setCustomCacheKey(cacheKey)
+                            .build())
+                }
+
+                try {
+                    return dataSource.dashMediaSourceFactory.createMediaSource(
+                        createDashManifest(stream.content, stream),
+                        MediaItem.Builder()
+                            .setTag(metadata)
+                            .setUri(manifestUrlToUri(stream.manifestUrl))
+                            .setCustomCacheKey(cacheKey)
+                            .build())
+                } catch (e: IOException) {
+                    throw ResolverException(
+                        "Could not create a DASH media source/manifest from the manifest text", e)
+                }
+            }
+
+            @Throws(IOException::class)
+            private fun createDashManifest(manifestContent: String,
+                                           stream: Stream
+            ): DashManifest {
+                return DashManifestParser().parse(manifestUrlToUri(stream.manifestUrl),
+                    ByteArrayInputStream(manifestContent.toByteArray(StandardCharsets.UTF_8)))
+            }
+
+            @Throws(ResolverException::class)
+            private fun buildHlsMediaSource(dataSource: PlayerDataSource,
+                                            stream: Stream,
+                                            cacheKey: String,
+                                            metadata: MediaItemTag
+            ): HlsMediaSource {
+                if (stream.isUrl) {
+                    throwResolverExceptionIfUrlNullOrEmpty(stream.content)
+                    return dataSource.getHlsMediaSourceFactory(null).createMediaSource(
+                        MediaItem.Builder()
+                            .setTag(metadata)
+                            .setUri(Uri.parse(stream.content))
+                            .setCustomCacheKey(cacheKey)
+                            .build())
+                }
+
+                val hlsDataSourceFactoryBuilder =
+                    NonUriHlsDataSourceFactory.Builder()
+                hlsDataSourceFactoryBuilder.setPlaylistString(stream.content)
+
+                return dataSource.getHlsMediaSourceFactory(hlsDataSourceFactoryBuilder)
+                    .createMediaSource(MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(manifestUrlToUri(stream.manifestUrl))
+                        .setCustomCacheKey(cacheKey)
+                        .build())
+            }
+
+            @Throws(ResolverException::class)
+            private fun buildSSMediaSource(dataSource: PlayerDataSource,
+                                           stream: Stream,
+                                           cacheKey: String,
+                                           metadata: MediaItemTag
+            ): SsMediaSource {
+                if (stream.isUrl) {
+                    throwResolverExceptionIfUrlNullOrEmpty(stream.content)
+                    return dataSource.sSMediaSourceFactory.createMediaSource(
+                        MediaItem.Builder()
+                            .setTag(metadata)
+                            .setUri(Uri.parse(stream.content))
+                            .setCustomCacheKey(cacheKey)
+                            .build())
+                }
+
+                val manifestUri = manifestUrlToUri(stream.manifestUrl)
+
+                val smoothStreamingManifest: SsManifest
+                try {
+                    val smoothStreamingManifestInput = ByteArrayInputStream(
+                        stream.content.toByteArray(StandardCharsets.UTF_8))
+                    smoothStreamingManifest = SsManifestParser().parse(manifestUri,
+                        smoothStreamingManifestInput)
+                } catch (e: IOException) {
+                    throw ResolverException("Error when parsing manual SS manifest", e)
+                }
+
+                return dataSource.sSMediaSourceFactory.createMediaSource(
+                    smoothStreamingManifest,
+                    MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(manifestUri)
+                        .setCustomCacheKey(cacheKey)
+                        .build())
+            }
+
+
+            //endregion
+            //region YouTube media sources
+            @Throws(ResolverException::class)
+            private fun createYoutubeMediaSource(stream: Stream,
+                                                 streamInfo: StreamInfo,
+                                                 dataSource: PlayerDataSource,
+                                                 cacheKey: String,
+                                                 metadata: MediaItemTag
+            ): MediaSource {
+                if (!(stream is AudioStream || stream is VideoStream)) {
+                    throw ResolverException("Generation of YouTube DASH manifest for " + stream.javaClass.simpleName + " is not supported")
+                }
+
+                val streamType = streamInfo.streamType
+                when (streamType) {
+                    StreamType.VIDEO_STREAM -> {
+                        return createYoutubeMediaSourceOfVideoStreamType(dataSource, stream, streamInfo,
+                            cacheKey, metadata)
+                    }
+                    StreamType.POST_LIVE_STREAM -> {
+                        // If the content is not an URL, uses the DASH delivery method and if the stream type
+                        // of the stream is a post live stream, it means that the content is an ended
+                        // livestream so we need to generate the manifest corresponding to the content
+                        // (which is the last segment of the stream)
+
+                        try {
+                            val itagItem = stream.itagItem ?: throw ResolverException("itagItem is null")
+                            val manifestString = YoutubePostLiveStreamDvrDashManifestCreator
+                                .fromPostLiveStreamDvrStreamingUrl(stream.content,
+                                    itagItem,
+                                    itagItem.targetDurationSec,
+                                    streamInfo.duration)
+                            return buildYoutubeManualDashMediaSource(dataSource,
+                                createDashManifest(manifestString, stream), stream, cacheKey,
+                                metadata)
+                        } catch (e: CreationException) {
+                            throw ResolverException(
+                                "Error when generating the DASH manifest of YouTube ended live stream", e)
+                        } catch (e: IOException) {
+                            throw ResolverException(
+                                "Error when generating the DASH manifest of YouTube ended live stream", e)
+                        } catch (e: NullPointerException) {
+                            throw ResolverException(
+                                "Error when generating the DASH manifest of YouTube ended live stream", e)
+                        }
+                    }
+                    else -> {
+                        throw ResolverException(
+                            "DASH manifest generation of YouTube livestreams is not supported")
+                    }
+                }
+            }
+
+            @Throws(ResolverException::class)
+            private fun createYoutubeMediaSourceOfVideoStreamType(
+                    dataSource: PlayerDataSource,
+                    stream: Stream,
+                    streamInfo: StreamInfo,
+                    cacheKey: String,
+                    metadata: MediaItemTag
+            ): MediaSource {
+                val deliveryMethod = stream.deliveryMethod
+                when (deliveryMethod) {
+                    DeliveryMethod.PROGRESSIVE_HTTP -> if ((stream is VideoStream && stream.isVideoOnly()) || stream is AudioStream) {
+                        try {
+                            if (stream.itagItem == null) throw ResolverException("stream.itagItem is null")
+                            val manifestString = YoutubeProgressiveDashManifestCreator
+                                .fromProgressiveStreamingUrl(stream.content,
+                                    stream.itagItem!!,
+                                    streamInfo.duration)
+                            return buildYoutubeManualDashMediaSource(dataSource,
+                                createDashManifest(manifestString, stream), stream, cacheKey,
+                                metadata)
+                        } catch (e: CreationException) {
+                            Log.w(TAG, "Error when generating or parsing DASH manifest of "
+                                    + "YouTube progressive stream, falling back to a "
+                                    + "ProgressiveMediaSource.", e)
+                            return buildYoutubeProgressiveMediaSource(dataSource, stream, cacheKey,
+                                metadata)
+                        } catch (e: IOException) {
+                            Log.w(TAG, "Error when generating or parsing DASH manifest of "
+                                    + "YouTube progressive stream, falling back to a "
+                                    + "ProgressiveMediaSource.", e)
+                            return buildYoutubeProgressiveMediaSource(dataSource, stream, cacheKey,
+                                metadata)
+                        } catch (e: NullPointerException) {
+                            Log.w(TAG, "Error when generating or parsing DASH manifest of "
+                                    + "YouTube progressive stream, falling back to a "
+                                    + "ProgressiveMediaSource.", e)
+                            return buildYoutubeProgressiveMediaSource(dataSource, stream, cacheKey,
+                                metadata)
+                        }
+                    } else {
+                        // Legacy progressive streams, subtitles are handled by
+                        // VideoPlaybackResolver
+                        return buildYoutubeProgressiveMediaSource(dataSource, stream, cacheKey,
+                            metadata)
+                    }
+                    DeliveryMethod.DASH -> {
+                        // If the content is not a URL, uses the DASH delivery method and if the stream
+                        // type of the stream is a video stream, it means the content is an OTF stream
+                        // so we need to generate the manifest corresponding to the content (which is
+                        // the base URL of the OTF stream).
+                        try {
+                            if (stream.itagItem == null) throw ResolverException("stream.itagItem is null")
+                            val manifestString = YoutubeOtfDashManifestCreator
+                                .fromOtfStreamingUrl(stream.content,
+                                    stream.itagItem!!,
+                                    streamInfo.duration)
+                            return buildYoutubeManualDashMediaSource(dataSource,
+                                createDashManifest(manifestString, stream), stream, cacheKey,
+                                metadata)
+                        } catch (e: CreationException) {
+                            Log.e(TAG,
+                                "Error when generating the DASH manifest of YouTube OTF stream", e)
+                            throw ResolverException(
+                                "Error when generating the DASH manifest of YouTube OTF stream", e)
+                        } catch (e: IOException) {
+                            Log.e(TAG,
+                                "Error when generating the DASH manifest of YouTube OTF stream", e)
+                            throw ResolverException(
+                                "Error when generating the DASH manifest of YouTube OTF stream", e)
+                        } catch (e: NullPointerException) {
+                            Log.e(TAG,
+                                "Error when generating the DASH manifest of YouTube OTF stream", e)
+                            throw ResolverException(
+                                "Error when generating the DASH manifest of YouTube OTF stream", e)
+                        }
+                        return dataSource.youtubeHlsMediaSourceFactory.createMediaSource(
+                            MediaItem.Builder()
+                                .setTag(metadata)
+                                .setUri(Uri.parse(stream.content))
+                                .setCustomCacheKey(cacheKey)
+                                .build())
+                    }
+                    DeliveryMethod.HLS -> return dataSource.youtubeHlsMediaSourceFactory.createMediaSource(
+                        MediaItem.Builder()
+                            .setTag(metadata)
+                            .setUri(Uri.parse(stream.content))
+                            .setCustomCacheKey(cacheKey)
+                            .build())
+                    else -> throw ResolverException("Unsupported delivery method for YouTube contents: "
+                            + deliveryMethod)
+                }
+            }
+
+            private fun buildYoutubeManualDashMediaSource(
+                    dataSource: PlayerDataSource,
+                    dashManifest: DashManifest,
+                    stream: Stream,
+                    cacheKey: String,
+                    metadata: MediaItemTag
+            ): DashMediaSource {
+                return dataSource.youtubeDashMediaSourceFactory.createMediaSource(dashManifest,
+                    MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(stream.content))
+                        .setCustomCacheKey(cacheKey)
+                        .build())
+            }
+
+            private fun buildYoutubeProgressiveMediaSource(
+                    dataSource: PlayerDataSource,
+                    stream: Stream,
+                    cacheKey: String,
+                    metadata: MediaItemTag
+            ): ProgressiveMediaSource {
+                return dataSource.youtubeProgressiveMediaSourceFactory
+                    .createMediaSource(MediaItem.Builder()
+                        .setTag(metadata)
+                        .setUri(Uri.parse(stream.content))
+                        .setCustomCacheKey(cacheKey)
+                        .build())
+            }
+
+
+            //endregion
+            //region Utils
+            private fun manifestUrlToUri(manifestUrl: String?): Uri {
+                return Uri.parse(Objects.requireNonNullElse(manifestUrl, ""))
+            }
+
+            @Throws(ResolverException::class)
+            private fun throwResolverExceptionIfUrlNullOrEmpty(url: String?) {
+                if (url == null) {
+                    throw ResolverException("Null stream URL")
+                } else if (url.isEmpty()) {
+                    throw ResolverException("Empty stream URL")
+                }
+            }
+
+            val TAG: String = PlaybackResolver::class.java.simpleName
+        }
     }
 
     companion object {

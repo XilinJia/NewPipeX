@@ -9,6 +9,7 @@ import org.schabi.newpipe.database.stream.model.StreamEntity
 import org.schabi.newpipe.extractor.stream.StreamType
 import org.schabi.newpipe.testUtil.TestDatabase
 import org.schabi.newpipe.testUtil.TrampolineSchedulerRule
+import org.schabi.newpipe.ui.local.playlist.LocalPlaylistManager
 
 class LocalPlaylistManagerTest {
     private lateinit var manager: LocalPlaylistManager

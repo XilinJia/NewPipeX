@@ -16,8 +16,7 @@ import java.util.*
 class StreamInfoTag private constructor(private val streamInfo: StreamInfo,
                                         private val quality: MediaItemTag.Quality?,
                                         private val audioTrack: MediaItemTag.AudioTrack?,
-                                        private val extras: Any?
-) : MediaItemTag {
+                                        private val extras: Any?) : MediaItemTag {
     override val errors: List<Exception>
         get() = emptyList()
 

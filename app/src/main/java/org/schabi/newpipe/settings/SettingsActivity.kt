@@ -28,10 +28,9 @@ import org.schabi.newpipe.util.Localization.assureCorrectAppLanguage
 import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.ReleaseVersionUtil.isReleaseApk
 import org.schabi.newpipe.util.ThemeHelper.getSettingsThemeStyle
-import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
+import org.schabi.newpipe.ui.views.FocusOverlayView.Companion.setupFocusObserver
 import java.util.concurrent.TimeUnit
 import java.util.function.Function
-import java.util.function.Predicate
 
 /*
 * Created by Christian Schabesberger on 31.08.15.

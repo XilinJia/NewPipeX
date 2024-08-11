@@ -4,6 +4,7 @@ import org.junit.Assert
 import org.junit.Test
 import org.schabi.newpipe.extractor.subscription.SubscriptionExtractor.InvalidSourceException
 import org.schabi.newpipe.extractor.subscription.SubscriptionItem
+import org.schabi.newpipe.ui.local.subscription.services.ImportExportJsonHelper
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets

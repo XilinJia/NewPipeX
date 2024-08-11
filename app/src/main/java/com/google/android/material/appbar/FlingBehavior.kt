@@ -17,43 +17,28 @@ class FlingBehavior(context: Context?, attrs: AttributeSet?) : AppBarLayout.Beha
     private var allowScroll = true
     private val globalRect = Rect()
     private val skipInterceptionOfElements: List<Int> = listOf(
-        R.id.itemsListPanel, R.id.playbackSeekBar,
-        R.id.playPauseButton, R.id.playPreviousButton, R.id.playNextButton)
+        R.id.itemsListPanel, R.id.playbackSeekBar, R.id.playPauseButton, R.id.playPreviousButton, R.id.playNextButton)
 
-    override fun onRequestChildRectangleOnScreen(
-            coordinatorLayout: CoordinatorLayout, child: AppBarLayout,
-            rectangle: Rect, immediate: Boolean
-    ): Boolean {
+    override fun onRequestChildRectangleOnScreen(coordinatorLayout: CoordinatorLayout, child: AppBarLayout, rectangle: Rect, immediate: Boolean): Boolean {
         focusScrollRect.set(rectangle)
 
         coordinatorLayout.offsetDescendantRectToMyCoords(child, focusScrollRect)
-
         val height = coordinatorLayout.height
+        // the child is too big to fit inside ourselves completely, ignore request
+        if (focusScrollRect.top <= 0 && focusScrollRect.bottom >= height) return false
 
-        if (focusScrollRect.top <= 0 && focusScrollRect.bottom >= height) {
-            // the child is too big to fit inside ourselves completely, ignore request
-            return false
-        }
-
-        val dy = if (focusScrollRect.bottom > height) {
-            focusScrollRect.top
-        } else if (focusScrollRect.top < 0) {
+        val dy = when {
+            focusScrollRect.bottom > height -> focusScrollRect.top
             // scrolling up
-            -(height - focusScrollRect.bottom)
-        } else {
+            focusScrollRect.top < 0 -> -(height - focusScrollRect.bottom)
             // nothing to do
-            return false
+            else -> return false
         }
-
         val consumed = scroll(coordinatorLayout, child, dy, getMaxDragOffset(child), 0)
-
         return consumed == dy
     }
 
-    override fun onInterceptTouchEvent(parent: CoordinatorLayout,
-                                       child: AppBarLayout,
-                                       ev: MotionEvent
-    ): Boolean {
+    override fun onInterceptTouchEvent(parent: CoordinatorLayout, child: AppBarLayout, ev: MotionEvent): Boolean {
         for (element in skipInterceptionOfElements) {
             val view = child.findViewById<View>(element)
             if (view != null) {
@@ -77,24 +62,13 @@ class FlingBehavior(context: Context?, attrs: AttributeSet?) : AppBarLayout.Beha
         return super.onInterceptTouchEvent(parent, child, ev)
     }
 
-    override fun onStartNestedScroll(parent: CoordinatorLayout,
-                                     child: AppBarLayout,
-                                     directTargetChild: View,
-                                     target: View,
-                                     nestedScrollAxes: Int,
-                                     type: Int
-    ): Boolean {
+    override fun onStartNestedScroll(parent: CoordinatorLayout, child: AppBarLayout, directTargetChild: View, target: View, nestedScrollAxes: Int, type: Int): Boolean {
         return allowScroll && super.onStartNestedScroll(
             parent, child, directTargetChild, target, nestedScrollAxes, type)
     }
 
-    override fun onNestedFling(coordinatorLayout: CoordinatorLayout,
-                               child: AppBarLayout,
-                               target: View, velocityX: Float,
-                               velocityY: Float, consumed: Boolean
-    ): Boolean {
-        return allowScroll && super.onNestedFling(
-            coordinatorLayout, child, target, velocityX, velocityY, consumed)
+    override fun onNestedFling(coordinatorLayout: CoordinatorLayout, child: AppBarLayout, target: View, velocityX: Float, velocityY: Float, consumed: Boolean): Boolean {
+        return allowScroll && super.onNestedFling(coordinatorLayout, child, target, velocityX, velocityY, consumed)
     }
 
     private val scrollerField: OverScroller?
@@ -133,9 +107,7 @@ class FlingBehavior(context: Context?, attrs: AttributeSet?) : AppBarLayout.Beha
         if (field != null) {
             try {
                 val value = field[this]
-                if (value != null) {
-                    field[this] = null
-                }
+                if (value != null) field[this] = null
             } catch (e: IllegalAccessException) {
                 // ?
             }

@@ -15,7 +15,7 @@
         android:scrollbars="vertical">
 
         <!-- START HERE -->
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/tempoControlText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -34,7 +34,7 @@
             android:layout_marginTop="1dp"
             android:orientation="horizontal">
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/tempoStepDown"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
@@ -59,7 +59,7 @@
                 android:layout_toEndOf="@id/tempoStepDown"
                 android:orientation="horizontal">
 
-                <org.schabi.newpipe.views.NewPipeTextView
+                <org.schabi.newpipe.ui.views.NewPipeTextView
                     android:id="@+id/tempoMinimumText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -71,7 +71,7 @@
                     tools:ignore="HardcodedText"
                     tools:text="1.00x" />
 
-                <org.schabi.newpipe.views.NewPipeTextView
+                <org.schabi.newpipe.ui.views.NewPipeTextView
                     android:id="@+id/tempoCurrentText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -83,7 +83,7 @@
                     tools:ignore="HardcodedText"
                     tools:text="100%" />
 
-                <org.schabi.newpipe.views.NewPipeTextView
+                <org.schabi.newpipe.ui.views.NewPipeTextView
                     android:id="@+id/tempoMaximumText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -105,7 +105,7 @@
                     tools:progress="50" />
             </RelativeLayout>
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/tempoStepUp"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
@@ -134,7 +134,7 @@
             android:layout_marginBottom="5dp"
             android:background="?attr/separator_color" />
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/pitchControlText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -167,7 +167,7 @@
             android:visibility="gone"
             tools:visibility="visible">
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/pitchControlModePercent"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -179,7 +179,7 @@
                 android:text="@string/percent"
                 android:textColor="?attr/colorAccent" />
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/pitchControlModeSemitone"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -206,7 +206,7 @@
                 android:layout_height="match_parent"
                 android:orientation="horizontal">
 
-                <org.schabi.newpipe.views.NewPipeTextView
+                <org.schabi.newpipe.ui.views.NewPipeTextView
                     android:id="@+id/pitchPercentStepDown"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
@@ -232,7 +232,7 @@
                     android:layout_toEndOf="@+id/pitchPercentStepDown"
                     android:orientation="horizontal">
 
-                    <org.schabi.newpipe.views.NewPipeTextView
+                    <org.schabi.newpipe.ui.views.NewPipeTextView
                         android:id="@+id/pitchPercentMinimumText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -244,7 +244,7 @@
                         tools:ignore="HardcodedText"
                         tools:text="25%" />
 
-                    <org.schabi.newpipe.views.NewPipeTextView
+                    <org.schabi.newpipe.ui.views.NewPipeTextView
                         android:id="@+id/pitchPercentCurrentText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -256,7 +256,7 @@
                         tools:ignore="HardcodedText"
                         tools:text="100%" />
 
-                    <org.schabi.newpipe.views.NewPipeTextView
+                    <org.schabi.newpipe.ui.views.NewPipeTextView
                         android:id="@+id/pitchPercentMaximumText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -278,7 +278,7 @@
                         tools:progress="50" />
                 </RelativeLayout>
 
-                <org.schabi.newpipe.views.NewPipeTextView
+                <org.schabi.newpipe.ui.views.NewPipeTextView
                     android:id="@+id/pitchPercentStepUp"
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
@@ -303,7 +303,7 @@
                 android:orientation="horizontal"
                 tools:visibility="gone">
 
-                <org.schabi.newpipe.views.NewPipeTextView
+                <org.schabi.newpipe.ui.views.NewPipeTextView
                     android:id="@+id/pitchSemitoneStepDown"
                     android:layout_width="24dp"
                     android:layout_height="match_parent"
@@ -329,7 +329,7 @@
                     android:layout_toEndOf="@+id/pitchSemitoneStepDown"
                     android:orientation="horizontal">
 
-                    <org.schabi.newpipe.views.NewPipeTextView
+                    <org.schabi.newpipe.ui.views.NewPipeTextView
                         android:id="@+id/pitchSemitoneMinimumText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -340,7 +340,7 @@
                         android:textColor="?attr/colorAccent"
                         tools:ignore="HardcodedText" />
 
-                    <org.schabi.newpipe.views.NewPipeTextView
+                    <org.schabi.newpipe.ui.views.NewPipeTextView
                         android:id="@+id/pitchSemitoneCurrentText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -351,7 +351,7 @@
                         tools:text="0"
                         tools:ignore="RelativeOverlap" />
 
-                    <org.schabi.newpipe.views.NewPipeTextView
+                    <org.schabi.newpipe.ui.views.NewPipeTextView
                         android:id="@+id/pitchSemitoneMaximumText"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -373,7 +373,7 @@
                         android:progress="12" />
                 </RelativeLayout>
 
-                <org.schabi.newpipe.views.NewPipeTextView
+                <org.schabi.newpipe.ui.views.NewPipeTextView
                     android:id="@+id/pitchSemitoneStepUp"
                     android:layout_width="24dp"
                     android:layout_height="match_parent"
@@ -410,7 +410,7 @@
             android:layout_below="@id/separatorStepSizeSelector"
             android:orientation="horizontal">
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/playback_step_type"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -421,7 +421,7 @@
                 android:textColor="?attr/colorAccent"
                 android:textStyle="bold" />
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/stepSizeOnePercent"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -433,7 +433,7 @@
                 android:textColor="?attr/colorAccent"
                 tools:text="1%" />
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/stepSizeFivePercent"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -445,7 +445,7 @@
                 android:textColor="?attr/colorAccent"
                 tools:text="5%" />
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/stepSizeTenPercent"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -457,7 +457,7 @@
                 android:textColor="?attr/colorAccent"
                 tools:text="10%" />
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/stepSizeTwentyFivePercent"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -469,7 +469,7 @@
                 android:textColor="?attr/colorAccent"
                 tools:text="25%" />
 
-            <org.schabi.newpipe.views.NewPipeTextView
+            <org.schabi.newpipe.ui.views.NewPipeTextView
                 android:id="@+id/stepSizeOneHundredPercent"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"

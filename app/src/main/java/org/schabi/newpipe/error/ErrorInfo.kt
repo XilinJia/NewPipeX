@@ -1,6 +1,5 @@
 package org.schabi.newpipe.error
 
-import android.os.Parcel
 import android.os.Parcelable
 import androidx.annotation.OptIn
 import androidx.annotation.StringRes
@@ -14,7 +13,7 @@ import org.schabi.newpipe.extractor.exceptions.AccountTerminatedException
 import org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException
 import org.schabi.newpipe.extractor.exceptions.ContentNotSupportedException
 import org.schabi.newpipe.extractor.exceptions.ExtractionException
-import org.schabi.newpipe.ktx.isNetworkRelated
+import org.schabi.newpipe.util.isNetworkRelated
 import org.schabi.newpipe.util.ServiceHelper
 
 @Parcelize

@@ -20,7 +20,7 @@ import org.schabi.newpipe.databinding.SingleChoiceDialogViewBinding
 import org.schabi.newpipe.player.notification.NotificationConstants
 import org.schabi.newpipe.util.DeviceUtils.isTv
 import org.schabi.newpipe.util.ThemeHelper.resolveColorFromAttr
-import org.schabi.newpipe.views.FocusOverlayView.Companion.setupFocusObserver
+import org.schabi.newpipe.ui.views.FocusOverlayView.Companion.setupFocusObserver
 import java.util.*
 import java.util.function.BiConsumer
 

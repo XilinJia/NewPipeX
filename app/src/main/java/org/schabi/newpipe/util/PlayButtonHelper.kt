@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.PlaylistControlBinding
-import org.schabi.newpipe.fragments.list.playlist.PlaylistControlViewHolder
+import org.schabi.newpipe.ui.list.PlaylistControlViewHolder
 import org.schabi.newpipe.player.PlayerType
 import org.schabi.newpipe.util.NavigationHelper.enqueueOnPlayer
 import org.schabi.newpipe.util.NavigationHelper.playOnBackgroundPlayer

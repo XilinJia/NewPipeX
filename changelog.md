@@ -1,3 +1,14 @@
+## 0.30.0
+
+* upgraded gradle to 8.9
+* updated AGP to 8.5.1
+* first step in large restructuring
+* some code cleaning
+* fixed issue with back-pressed
+* media3 is back upped to 1.4.0 and legacy format issues resolved
+* some stability enhancement
+* known issue: download of mp4 file still not working correctly
+
 ## 0.26.12
 
 * fixed null pointer bug in time conversion that prevent some new installs

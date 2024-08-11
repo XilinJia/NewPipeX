@@ -14,10 +14,10 @@ import org.schabi.newpipe.database.subscription.SubscriptionEntity
 import org.schabi.newpipe.error.ErrorInfo
 import org.schabi.newpipe.error.ErrorUtil
 import org.schabi.newpipe.error.UserAction
-import org.schabi.newpipe.local.feed.notifications.NotificationHelper
-import org.schabi.newpipe.local.feed.notifications.NotificationWorker
-import org.schabi.newpipe.local.feed.notifications.ScheduleOptions
-import org.schabi.newpipe.local.subscription.SubscriptionManager
+import org.schabi.newpipe.ui.local.feed.notifications.NotificationHelper
+import org.schabi.newpipe.ui.local.feed.notifications.NotificationWorker
+import org.schabi.newpipe.ui.local.feed.notifications.ScheduleOptions
+import org.schabi.newpipe.ui.local.subscription.SubscriptionManager
 
 class NotificationsSettingsFragment : BasePreferenceFragment(), OnSharedPreferenceChangeListener {
     private var notificationWarningSnackbar: Snackbar? = null

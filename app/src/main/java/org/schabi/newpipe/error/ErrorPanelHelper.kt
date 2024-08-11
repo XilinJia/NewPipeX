@@ -25,9 +25,9 @@ import org.schabi.newpipe.extractor.exceptions.ReCaptchaException
 import org.schabi.newpipe.extractor.exceptions.SoundCloudGoPlusContentException
 import org.schabi.newpipe.extractor.exceptions.YoutubeMusicPremiumContentException
 import org.schabi.newpipe.extractor.utils.Utils.isNullOrEmpty
-import org.schabi.newpipe.ktx.animate
-import org.schabi.newpipe.ktx.isInterruptedCaused
-import org.schabi.newpipe.ktx.isNetworkRelated
+import org.schabi.newpipe.ui.ktx.animate
+import org.schabi.newpipe.util.isInterruptedCaused
+import org.schabi.newpipe.util.isNetworkRelated
 import org.schabi.newpipe.util.ServiceHelper
 import org.schabi.newpipe.util.external_communication.ShareUtils
 import java.util.concurrent.TimeUnit

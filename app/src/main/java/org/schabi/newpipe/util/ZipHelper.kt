@@ -1,7 +1,7 @@
 package org.schabi.newpipe.util
 
-import org.schabi.newpipe.streams.io.SharpInputStream
-import org.schabi.newpipe.streams.io.StoredFileHelper
+import org.schabi.newpipe.giga.io.SharpInputStream
+import org.schabi.newpipe.giga.io.StoredFileHelper
 import java.io.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream

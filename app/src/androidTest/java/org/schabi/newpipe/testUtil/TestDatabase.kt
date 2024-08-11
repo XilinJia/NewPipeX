@@ -3,7 +3,7 @@ package org.schabi.newpipe.testUtil
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertSame
-import org.schabi.newpipe.NewPipeDatabase
+import org.schabi.newpipe.database.NewPipeDatabase
 import org.schabi.newpipe.database.AppDatabase
 
 class TestDatabase {

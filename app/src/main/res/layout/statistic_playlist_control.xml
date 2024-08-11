@@ -24,7 +24,7 @@
             android:src="@drawable/ic_filter_list"
             tools:ignore="ContentDescription,RtlHardcoded" />
 
-        <org.schabi.newpipe.views.NewPipeTextView
+        <org.schabi.newpipe.ui.views.NewPipeTextView
             android:id="@+id/sortButtonText"
             android:layout_width="match_parent"
             android:layout_height="50dp"

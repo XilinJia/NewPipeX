@@ -11,6 +11,7 @@ import org.schabi.newpipe.database.AppDatabase
 import org.schabi.newpipe.database.history.model.SearchHistoryEntry
 import org.schabi.newpipe.testUtil.TestDatabase
 import org.schabi.newpipe.testUtil.TrampolineSchedulerRule
+import org.schabi.newpipe.ui.local.history.HistoryRecordManager
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset

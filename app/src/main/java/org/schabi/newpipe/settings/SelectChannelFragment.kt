@@ -18,7 +18,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.subscription.SubscriptionEntity
 import org.schabi.newpipe.error.ErrorUtil.Companion.showUiErrorSnackbar
-import org.schabi.newpipe.local.subscription.SubscriptionManager
+import org.schabi.newpipe.ui.local.subscription.SubscriptionManager
 import org.schabi.newpipe.settings.SelectChannelFragment.SelectChannelAdapter.SelectChannelItemHolder
 import org.schabi.newpipe.util.ThemeHelper.getMinWidthDialogTheme
 import org.schabi.newpipe.util.image.PicassoHelper.loadAvatar

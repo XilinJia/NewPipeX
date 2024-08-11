@@ -15,7 +15,7 @@ import org.schabi.newpipe.error.ErrorInfo
 import org.schabi.newpipe.error.ErrorUtil.Companion.openActivity
 import org.schabi.newpipe.error.ReCaptchaActivity
 import org.schabi.newpipe.error.UserAction
-import org.schabi.newpipe.local.history.HistoryRecordManager
+import org.schabi.newpipe.ui.local.history.HistoryRecordManager
 import org.schabi.newpipe.util.InfoCache
 
 class HistorySettingsFragment : BasePreferenceFragment() {

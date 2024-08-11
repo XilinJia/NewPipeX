@@ -1,11 +1,10 @@
 package org.schabi.newpipe.error
 
 import org.junit.Assert
-import org.junit.Test
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.RouterActivity
 import org.schabi.newpipe.error.ErrorActivity.Companion.getReturnActivity
-import org.schabi.newpipe.fragments.detail.VideoDetailFragment
+import org.schabi.newpipe.ui.detail.VideoDetailFragment
 
 /**
  * Unit tests for [ErrorActivity].

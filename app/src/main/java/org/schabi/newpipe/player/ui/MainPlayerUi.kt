@@ -14,7 +14,9 @@ import android.util.TypedValue
 import android.view.*
 import android.view.View.OnLayoutChangeListener
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.FragmentManager
@@ -22,21 +24,20 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
-import org.schabi.newpipe.MainActivity
-import org.schabi.newpipe.QueueItemMenuUtil.openPopupMenu
+import com.xwray.groupie.GroupieAdapter
+import com.xwray.groupie.GroupieViewHolder
+import com.xwray.groupie.Item
+import org.schabi.newpipe.ui.QueueItemMenuUtil.openPopupMenu
 import org.schabi.newpipe.R
 import org.schabi.newpipe.databinding.PlayerBinding
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamSegment
-import org.schabi.newpipe.fragments.OnScrollBelowItemsListener
-import org.schabi.newpipe.fragments.detail.VideoDetailFragment
-import org.schabi.newpipe.info_list.StreamSegmentAdapter
-import org.schabi.newpipe.info_list.StreamSegmentAdapter.StreamSegmentListener
-import org.schabi.newpipe.info_list.StreamSegmentItem
-import org.schabi.newpipe.ktx.AnimationType
-import org.schabi.newpipe.ktx.animate
-import org.schabi.newpipe.local.dialog.PlaylistDialog.Companion.showForPlayQueue
+import org.schabi.newpipe.ui.OnScrollBelowItemsListener
+import org.schabi.newpipe.ui.detail.VideoDetailFragment
+import org.schabi.newpipe.ui.ktx.AnimationType
+import org.schabi.newpipe.ui.ktx.animate
+import org.schabi.newpipe.ui.local.dialog.PlaylistDialog.Companion.showForPlayQueue
 import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.event.PlayerServiceEventListener
 import org.schabi.newpipe.player.gesture.BasePlayerGestureListener
@@ -51,10 +52,12 @@ import org.schabi.newpipe.util.DeviceUtils.isLandscape
 import org.schabi.newpipe.util.DeviceUtils.isTablet
 import org.schabi.newpipe.util.DeviceUtils.isTv
 import org.schabi.newpipe.util.DeviceUtils.spToPx
+import org.schabi.newpipe.util.Localization
 import org.schabi.newpipe.util.Logd
 import org.schabi.newpipe.util.NavigationHelper.playOnPopupPlayer
 import org.schabi.newpipe.util.external_communication.KoreUtils.shouldShowPlayWithKodi
 import org.schabi.newpipe.util.external_communication.ShareUtils.shareText
+import org.schabi.newpipe.util.image.PicassoHelper
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -594,15 +597,15 @@ import kotlin.math.min
             }
         }
 
-    private val streamSegmentListener: StreamSegmentListener
-        get() = object : StreamSegmentListener {
-            override fun onItemClick(item: StreamSegmentItem, seconds: Int) {
+    private val streamSegmentListener: StreamSegmentAdapter.StreamSegmentListener
+        get() = object : StreamSegmentAdapter.StreamSegmentListener {
+            override fun onItemClick(item: StreamSegmentAdapter.StreamSegmentItem, seconds: Int) {
                 segmentAdapter!!.selectSegment(item)
                 playerManager.seekTo(seconds * 1000L)
                 playerManager.triggerProgressUpdate()
             }
 
-            override fun onItemLongClick(item: StreamSegmentItem, seconds: Int) {
+            override fun onItemLongClick(item: StreamSegmentAdapter.StreamSegmentItem, seconds: Int) {
                 val currentMetadata = playerManager.currentMetadata
                 if (currentMetadata == null || currentMetadata.serviceId != ServiceList.YouTube.serviceId) return
 
@@ -793,10 +796,110 @@ import kotlin.math.min
             .filter { obj: Context? -> AppCompatActivity::class.java.isInstance(obj) }
             .map { obj: Context? -> AppCompatActivity::class.java.cast(obj) }
 
+    // DisplayMetrics from activity context knows about MultiWindow feature
+    // while DisplayMetrics from app context doesn't
     val isLandscape: Boolean
-        get() =// DisplayMetrics from activity context knows about MultiWindow feature
-            // while DisplayMetrics from app context doesn't
-            isLandscape(parentContext.orElse(playerManager.service)) //endregion
+        get() = isLandscape(parentContext.orElse(playerManager.service)) //endregion
+
+    /**
+     * Custom RecyclerView.Adapter/GroupieAdapter for [StreamSegmentItem] for handling selection state.
+     */
+    class StreamSegmentAdapter(private val listener: StreamSegmentListener) : GroupieAdapter() {
+        var currentIndex: Int = 0
+            private set
+
+        /**
+         * Returns `true` if the provided [StreamInfo] contains segments, `false` otherwise.
+         */
+        fun setItems(info: StreamInfo): Boolean {
+            if (info.streamSegments.isNotEmpty()) {
+                clear()
+                addAll(info.streamSegments.map { StreamSegmentItem(it, listener) })
+                return true
+            }
+            return false
+        }
+
+        fun selectSegment(segment: StreamSegmentItem) {
+            unSelectCurrentSegment()
+            currentIndex = max(0, getAdapterPosition(segment))
+            segment.isSelected = true
+            segment.notifyChanged(StreamSegmentItem.PAYLOAD_SELECT)
+        }
+
+        fun selectSegmentAt(position: Int) {
+            try {
+                selectSegment(getGroupAtAdapterPosition(position) as StreamSegmentItem)
+            } catch (e: IndexOutOfBoundsException) {
+                // Just to make sure that getGroupAtAdapterPosition doesn't close the app
+                // Shouldn't happen since setItems is always called before select-methods but just in case
+                currentIndex = 0
+                Log.e("StreamSegmentAdapter", "selectSegmentAt: ${e.message}")
+            }
+        }
+
+        private fun unSelectCurrentSegment() {
+            try {
+                val segmentItem = getGroupAtAdapterPosition(currentIndex) as StreamSegmentItem
+                currentIndex = 0
+                segmentItem.isSelected = false
+                segmentItem.notifyChanged(StreamSegmentItem.PAYLOAD_SELECT)
+            } catch (e: IndexOutOfBoundsException) {
+                // Just to make sure that getGroupAtAdapterPosition doesn't close the app
+                // Shouldn't happen since setItems is always called before select-methods but just in case
+                currentIndex = 0
+                Log.e("StreamSegmentAdapter", "unSelectCurrentSegment: ${e.message}")
+            }
+        }
+
+        interface StreamSegmentListener {
+            fun onItemClick(item: StreamSegmentItem, seconds: Int)
+            fun onItemLongClick(item: StreamSegmentItem, seconds: Int)
+        }
+
+        class StreamSegmentItem(private val item: StreamSegment, private val onClick: StreamSegmentAdapter.StreamSegmentListener) : Item<GroupieViewHolder>() {
+            var isSelected = false
+
+            companion object {
+                const val PAYLOAD_SELECT = 1
+            }
+
+            override fun bind(viewHolder: GroupieViewHolder, position: Int) {
+                item.previewUrl?.let {
+                    PicassoHelper.loadThumbnail(it).into(viewHolder.root.findViewById<ImageView>(R.id.previewImage))
+                }
+                viewHolder.root.findViewById<TextView>(R.id.textViewTitle).text = item.title
+                if (item.channelName == null) {
+                    viewHolder.root.findViewById<TextView>(R.id.textViewChannel).visibility = View.GONE
+                    // When the channel name is displayed there is less space
+                    // and thus the segment title needs to be only one line height.
+                    // But when there is no channel name displayed, the title can be two lines long.
+                    // The default maxLines value is set to 1 to display all elements in the AS preview,
+                    viewHolder.root.findViewById<TextView>(R.id.textViewTitle).maxLines = 2
+                } else {
+                    viewHolder.root.findViewById<TextView>(R.id.textViewChannel).text = item.channelName
+                    viewHolder.root.findViewById<TextView>(R.id.textViewChannel).visibility = View.VISIBLE
+                }
+                viewHolder.root.findViewById<TextView>(R.id.textViewStartSeconds).text = Localization.getDurationString(item.startTimeSeconds.toLong())
+                viewHolder.root.setOnClickListener { onClick.onItemClick(this, item.startTimeSeconds) }
+                viewHolder.root.setOnLongClickListener {
+                    onClick.onItemLongClick(this, item.startTimeSeconds)
+                    true
+                }
+                viewHolder.root.isSelected = isSelected
+            }
+
+            override fun bind(viewHolder: GroupieViewHolder, position: Int, payloads: MutableList<Any>) {
+                if (payloads.contains(PAYLOAD_SELECT)) {
+                    viewHolder.root.isSelected = isSelected
+                    return
+                }
+                super.bind(viewHolder, position, payloads)
+            }
+
+            override fun getLayout() = R.layout.item_stream_segment
+        }
+    }
 
     companion object {
         private val TAG: String = MainPlayerUi::class.java.simpleName

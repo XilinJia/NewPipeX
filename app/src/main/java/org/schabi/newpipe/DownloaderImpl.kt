@@ -1,12 +1,5 @@
 package org.schabi.newpipe
 
-//import okhttp3.OkHttpClient
-//import okhttp3.OkHttpClient.Builder.readTimeout
-//import okhttp3.Request.Builder.build
-//import okhttp3.Request.Builder.header
-//import okhttp3.Request.Builder.method
-//import okhttp3.Request.Builder.removeHeader
-//import okhttp3.Request.Builder.url
 import android.content.Context
 import androidx.preference.PreferenceManager
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -32,7 +25,7 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
         //                .cache(new Cache(new File(context.getExternalCacheDir(), "okhttp"), 16 * 1024 * 1024))
         .build()
 
-    fun getCookies(url: String): String {
+    private fun getCookies(url: String): String {
         val youtubeCookie = if (url.contains(YOUTUBE_DOMAIN)) getCookie(YOUTUBE_RESTRICTED_MODE_COOKIE_KEY) else null
 
         // Recaptcha cookie is always added TODO: not sure if this is necessary
@@ -43,7 +36,7 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
             .collect(Collectors.joining("; "))
     }
 
-    fun getCookie(key: String): String? {
+    private fun getCookie(key: String): String? {
         return mCookies[key]
     }
 
@@ -51,7 +44,7 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
         mCookies[key] = cookie
     }
 
-    fun removeCookie(key: String) {
+    private fun removeCookie(key: String) {
         mCookies.remove(key)
     }
 
@@ -62,12 +55,9 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
         updateYoutubeRestrictedModeCookies(restrictedModeEnabled)
     }
 
-    fun updateYoutubeRestrictedModeCookies(youtubeRestrictedModeEnabled: Boolean) {
-        if (youtubeRestrictedModeEnabled) {
-            setCookie(YOUTUBE_RESTRICTED_MODE_COOKIE_KEY, YOUTUBE_RESTRICTED_MODE_COOKIE)
-        } else {
-            removeCookie(YOUTUBE_RESTRICTED_MODE_COOKIE_KEY)
-        }
+    private fun updateYoutubeRestrictedModeCookies(youtubeRestrictedModeEnabled: Boolean) {
+        if (youtubeRestrictedModeEnabled) setCookie(YOUTUBE_RESTRICTED_MODE_COOKIE_KEY, YOUTUBE_RESTRICTED_MODE_COOKIE)
+        else removeCookie(YOUTUBE_RESTRICTED_MODE_COOKIE_KEY)
         InfoCache.instance.clearCache()
     }
 
@@ -97,18 +87,14 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
         val dataToSend = request.dataToSend()
 
         var requestBody: RequestBody? = null
-        if (dataToSend != null) {
-            requestBody = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), dataToSend)
-        }
+        if (dataToSend != null) requestBody = RequestBody.create("application/json; charset=utf-8".toMediaTypeOrNull(), dataToSend)
 
         val requestBuilder: Builder = Builder()
             .method(httpMethod, requestBody).url(url)
             .addHeader("User-Agent", USER_AGENT)
 
         val cookies = getCookies(url)
-        if (cookies.isNotEmpty()) {
-            requestBuilder.addHeader("Cookie", cookies)
-        }
+        if (cookies.isNotEmpty()) requestBuilder.addHeader("Cookie", cookies)
 
         for ((headerName, headerValueList) in headers) {
             when {
@@ -118,14 +104,11 @@ class DownloaderImpl private constructor(builder: OkHttpClient.Builder) : Downlo
                         requestBuilder.addHeader(headerName, headerValue)
                     }
                 }
-                headerValueList.size == 1 -> {
-                    requestBuilder.header(headerName, headerValueList[0])
-                }
+                headerValueList.size == 1 -> requestBuilder.header(headerName, headerValueList[0])
             }
         }
 
         val response = client.newCall(requestBuilder.build()).execute()
-
         if (response.code == 429) {
             response.close()
             throw ReCaptchaException("reCaptcha Challenge requested", url)

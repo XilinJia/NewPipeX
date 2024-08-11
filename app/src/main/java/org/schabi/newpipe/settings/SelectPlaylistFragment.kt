@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
 import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.disposables.Disposable
-import org.schabi.newpipe.NewPipeDatabase
+import org.schabi.newpipe.database.NewPipeDatabase
 import org.schabi.newpipe.R
 import org.schabi.newpipe.database.LocalItem
 import org.schabi.newpipe.database.playlist.PlaylistLocalItem
@@ -22,8 +22,8 @@ import org.schabi.newpipe.database.playlist.model.PlaylistRemoteEntity
 import org.schabi.newpipe.error.ErrorInfo
 import org.schabi.newpipe.error.ErrorUtil.Companion.showSnackbar
 import org.schabi.newpipe.error.UserAction
-import org.schabi.newpipe.local.playlist.LocalPlaylistManager
-import org.schabi.newpipe.local.playlist.RemotePlaylistManager
+import org.schabi.newpipe.ui.local.playlist.LocalPlaylistManager
+import org.schabi.newpipe.ui.local.playlist.RemotePlaylistManager
 import org.schabi.newpipe.settings.SelectPlaylistFragment.SelectPlaylistAdapter.SelectPlaylistItemHolder
 import org.schabi.newpipe.util.image.PicassoHelper.loadPlaylistThumbnail
 import java.util.*

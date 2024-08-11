@@ -1,6 +1,5 @@
 package org.schabi.newpipe.player.gesture
 
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnTouchListener
@@ -10,8 +9,8 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.isVisible
 import org.schabi.newpipe.MainActivity
 import org.schabi.newpipe.R
-import org.schabi.newpipe.ktx.AnimationType
-import org.schabi.newpipe.ktx.animate
+import org.schabi.newpipe.ui.ktx.AnimationType
+import org.schabi.newpipe.ui.ktx.animate
 import org.schabi.newpipe.player.PlayerManager
 import org.schabi.newpipe.player.helper.AudioReactor
 import org.schabi.newpipe.player.helper.PlayerHelper

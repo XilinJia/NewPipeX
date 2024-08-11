@@ -10,6 +10,7 @@ import org.schabi.newpipe.extractor.channel.ChannelInfo
 import org.schabi.newpipe.extractor.exceptions.ExtractionException
 import org.schabi.newpipe.testUtil.TestDatabase.Companion.createReplacingNewPipeDatabase
 import org.schabi.newpipe.testUtil.TrampolineSchedulerRule
+import org.schabi.newpipe.ui.local.subscription.SubscriptionManager
 import java.io.IOException
 
 class SubscriptionManagerTest {
