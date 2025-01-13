@@ -1,3 +1,5 @@
+### This project is no longer developed or maintained.  Use it at your own risk.
+
 This project is a full conversion of [NewPipe](https://github.com/TeamNewPipe/NewPipe) (cloned as of Feb 5 2024) to Kotlin.  Most existing dependencies are updated.  ~Built SDK is 34 and target SDK is 33.~  Code and null safety issues are resolved after the conversion.  ~Other than that, there is no logic or structural change from the original project.~
 
 Migration and tuning with androidx.media3 and removal of exoplayer2.  Though not having been thoroughly tested, things appear to work.
